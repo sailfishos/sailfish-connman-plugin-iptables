@@ -11,7 +11,7 @@ all: debug release
 #
 # Library name
 #
-NAME = sailfish-iptables-api-plugin
+NAME = sailfish-connman-iptables-plugin
 LIB_NAME = $(NAME)
 LIB_SONAME = $(LIB_NAME).so
 LIB = $(LIB_SONAME)
@@ -20,7 +20,8 @@ LIB = $(LIB_SONAME)
 # Sources
 #
 SRC = \
- sailfish-iptables-api.c \
+ sailfish-iptables.c \
+ sailfish-iptables-dbus.c
 
 #
 # Directories
@@ -39,8 +40,12 @@ CC = $(CROSS_COMPILE)gcc
 LD = $(CC)
 WARNINGS = -Wall
 BASE_FLAGS = -fPIC
-FULL_CFLAGS = $(BASE_FLAGS) $(CFLAGS) $(DEFINES) $(WARNINGS) -MMD -MP
-FULL_LDFLAGS = $(BASE_FLAGS) $(LDFLAGS) -shared -Wl,-soname -Wl,$(LIB_SONAME)
+
+ADD_CFLAGS=`pkg-config --cflags glib-2.0 dbus-1`
+ADD_LDFLAGS=`pkg-config --libs glib-2.0 dbus-1`
+
+FULL_CFLAGS = $(BASE_FLAGS) $(CFLAGS) $(ADD_CFLAGS) $(DEFINES) $(WARNINGS) -MMD -MP
+FULL_LDFLAGS = $(BASE_FLAGS) $(LDFLAGS) $(ADD_LDFLAGS) -shared -Wl,-soname -Wl,$(LIB_SONAME)
 DEBUG_FLAGS = -g
 RELEASE_FLAGS = -g
 
