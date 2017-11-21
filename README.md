@@ -22,7 +22,7 @@ This plugin allows to:
  - Change policy of a filter table chain INPUT and OUTPUT
  - Save firewall (all iptables content) to disk
  - Load firewall (iptables content) to disk (WIP, not implemented)
- - Clear firewall (all iptables tables)
+ - Clear firewall (filter table of iptables)
  - Get version of plugin interface
 
 Rules can be added to INPUT or OUTPUT chains of iptables filter table. Each rule
