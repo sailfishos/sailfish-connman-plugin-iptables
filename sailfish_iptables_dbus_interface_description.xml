@@ -27,8 +27,9 @@ The returned result codes and string pairs are:
 -->
 
 <!--
-Saves firewall to disk, currently takes in the absolute path of the file.
-Currenlty saving is allowed only to /var/lib/connman
+Saves the content of iptables (all tables) to disk in the same format as 
+iptables-save.  Takes in the absolute path of the file. Currently saving is
+allowed only to /var/lib/connman
 Sends signal FirewallSaved
 -->
 <method name="SaveFirewallToDisk">
@@ -38,7 +39,7 @@ Sends signal FirewallSaved
 </method>
 
 <!--
-Loads firewall from disk. NOT IMPLEMENTED YET.
+Loads iptables configuration from disk. NOT IMPLEMENTED YET.
 Sends signal FirewallLoaded
 -->
 <method name="LoadFirewallFromDisk">
@@ -48,7 +49,7 @@ Sends signal FirewallLoaded
 </method>
 
 <!-- 
-Clears firewall.
+Clears the iptables filter table.
 Sends signal FirewallCleared
 -->
 <method name="ClearFirewall">
