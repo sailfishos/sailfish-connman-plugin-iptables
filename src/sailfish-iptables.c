@@ -1,22 +1,39 @@
 /*
  *
- *  Connection Manager Sailfish iptables API plugin
+ *  Sailfish Connection Manager iptables plugin
  *
- *  Copyright (C) 2017 Jolla Ltd.
+ *  Copyright (C) 2017 Jolla Ltd. All rights reserved.
  *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 as
- *  published by the Free Software Foundation.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *  BSD 3-Clause License
+ * 
+ *  Copyright (c) 2017, 
+ *  All rights reserved.
+
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ * 
+ *  * Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 
+ *  * Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ *    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ *    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ *    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -36,7 +53,7 @@
 #define DBG(fmt,arg...) connman_debug(fmt, ## arg)
 
 const gchar const * OP_STR[] = {"Add", "Remove", "Undefined"};
-const gchar * const RESULT_STR[] = {
+const gchar const * RESULT_STR[] = {
 	"Ok",
 	"Invalid IP",
 	"Invalid port",
@@ -48,6 +65,7 @@ const gchar * const RESULT_STR[] = {
 	"Cannot process rule",
 	"Cannot perform operation",
 };
+const gchar const * EMPTY_STR = "";
 
 static gboolean negated_ip_address(const gchar* ip)
 {
@@ -56,7 +74,7 @@ static gboolean negated_ip_address(const gchar* ip)
 
 gchar* get_protocol_for_service(const gchar *service)
 {
-	if(service && strlen(service))
+	if(service && *service)
 	{
 		struct servent *s = getservbyname(service, NULL);
 		if(s)
@@ -109,18 +127,21 @@ static guint32 mask_to_cidr(gint type, const gchar* mask_address)
 	
 	ip_tokens = g_strsplit(mask_address,IP_DELIM,4);
 	
-	// Mask was given as cidr
-	if(g_strv_length(ip_tokens) == 1)
+	if(ip_tokens)
 	{
-		mask = ((guint32)g_ascii_strtoull(ip_tokens[0],NULL,10));
-	}
-	// Dot notation
-	else if(g_strv_length(ip_tokens) == 4)
-	{
-		for(index = 0; index < 4 && ip_tokens[index]; index++)
+		// Mask was given as cidr
+		if(g_strv_length(ip_tokens) == 1)
 		{
-			b = 24 - 8 * index; // 24,16,8,0
-			mask += ((guint32)g_ascii_strtoull(ip_tokens[index],NULL,10)) << b;
+			mask = ((guint32)g_ascii_strtoull(ip_tokens[0],NULL,10));
+		}
+		// Dot notation
+		else if(g_strv_length(ip_tokens) == 4)
+		{
+			for(index = 0; index < 4 && ip_tokens[index]; index++)
+			{
+				b = 24 - 8 * index; // 24,16,8,0
+				mask += ((guint32)g_ascii_strtoull(ip_tokens[index],NULL,10)) << b;
+			}
 		}
 	}
 	
@@ -135,15 +156,12 @@ static guint32 mask_to_cidr(gint type, const gchar* mask_address)
 		return mask;
 
 	// Value between protocol max and 2^32, calculate cidr mask
-	else
-	{
-		// Create cidr notation (bitmask for nw mask)
-		bits = G_MAXUINT32 - 1;
-		while(--i >= 0 && mask != bits)
-			bits <<= 1;
+	// Create cidr notation (bitmask for nw mask)
+	bits = G_MAXUINT32 - 1;
+	while(--i >= 0 && mask != bits)
+		bits <<= 1;
 
-		return i;
-	}
+	return i;
 }
 
 gchar* format_ip(gint type, const gchar* ip)
@@ -203,16 +221,14 @@ static gboolean validate_ip_mask(gint type, const gchar* mask)
 		// Dot notation mask
 		if(strchr(mask,'.'))
 			return validate_address(type, mask);
-		else
-		{
-			guint32 int_mask = g_ascii_strtoull(mask,NULL,10);
-			
-			// 0, acceptable
-			if(!int_mask || 
-				(int_mask & (~int_mask >> 1)) ||
-				int_mask == G_MAXUINT32)
-				return true;
-		}
+
+		guint32 int_mask = g_ascii_strtoull(mask,NULL,10);
+
+		// 0, acceptable
+		if(!int_mask || 
+			(int_mask & (~int_mask >> 1)) ||
+			int_mask == G_MAXUINT32)
+			return true;
 	}
 	
 	return false;
@@ -222,14 +238,14 @@ static gboolean validate_ip_address(gint type, const gchar* ip)
 {
 	gboolean rval = false;
 	
-	if(ip && strlen(ip))
+	if(ip && *ip)
 	{
 		const gchar *address = NULL;
 		gchar **ip_and_mask = NULL;
 		
 		// Allow negation
 		if(negated_ip_address(ip))
-			address = &(ip[1]);
+			address = &ip[1];
 		else
 			address = ip;
 			
@@ -243,15 +259,14 @@ static gboolean validate_ip_address(gint type, const gchar* ip)
 		else
 			rval = address && validate_address(type, address);
 		
-		if(ip_and_mask)
-			g_strfreev(ip_and_mask);
+		g_strfreev(ip_and_mask);
 	}
 	return rval;
 }
 
 static guint16 validate_service_name(const gchar *service)
 {
-	if(service && strlen(service))
+	if(service && *service)
 	{	
 		struct servent *s = getservbyname(service, NULL);
 		if(s)
@@ -262,7 +277,7 @@ static guint16 validate_service_name(const gchar *service)
 
 gboolean validate_protocol(const gchar *protocol)
 {
-	if(protocol && strlen(protocol))
+	if(protocol && *protocol)
 	{
 		struct protoent *p = getprotobyname(protocol);
 		if(p)
@@ -279,19 +294,14 @@ static gboolean validate_port(guint16 port)
 static rule_operation validate_operation(const gchar *operation)
 {
 	rule_operation op = UNDEFINED;
-	gchar *operation_uppercase = NULL;
 	
-	if(operation && strlen(operation))
+	if(operation && *operation)
 	{
-		operation_uppercase = g_utf8_strup(operation,-1);
-
-		if(!g_strcmp0(operation_uppercase,"ADD"))
+		if(!g_ascii_strcasecmp(operation,"ADD"))
 			op = ADD;
 
-		if(!g_strcmp0(operation_uppercase,"REMOVE"))
+		if(!g_ascii_strcasecmp(operation,"REMOVE"))
 			op = REMOVE;
-
-		g_free(operation_uppercase);
 	}
 	
 	return op;
@@ -299,7 +309,7 @@ static rule_operation validate_operation(const gchar *operation)
 
 static gboolean validate_path(const gchar *path)
 {
-	if(path && strlen(path))
+	if(path && *path)
 	{
 		// Do proper validation in connman, or add our own validation rules here
 		return true;
@@ -309,7 +319,7 @@ static gboolean validate_path(const gchar *path)
 
 static gboolean validate_policy(const gchar* policy)
 {
-	if(policy && strlen(policy))
+	if(policy && *policy)
 	{
 		if(!g_strcmp0(policy,IPTABLES_ACCEPT) ||
 			!g_strcmp0(policy,IPTABLES_DROP))
@@ -320,7 +330,7 @@ static gboolean validate_policy(const gchar* policy)
 
 gchar** get_port_range_tokens(const gchar* port_str)
 {
-	if(port_str && strlen(port_str))
+	if(port_str && *port_str)
 		return g_strsplit(port_str,PORT_RANGE_DELIM,2);
 	return NULL;
 }
@@ -352,18 +362,12 @@ void rule_params_free(rule_params *params)
 {
 	if(params)
 	{
-		if(params->ip)
-			g_free(params->ip);
-		if(params->service)
-			g_free(params->service);
-		if(params->protocol)
-			g_free(params->protocol);
-		if(params->path)
-			g_free(params->path);
-		if(params->table)
-			g_free(params->table);
-		if(params->policy)
-			g_free(params->policy);
+		g_free(params->ip);
+		g_free(params->service);
+		g_free(params->protocol);
+		g_free(params->path);
+		g_free(params->table);
+		g_free(params->policy);
 		g_free(params);
 	}
 }
@@ -387,6 +391,9 @@ rule_params* rule_params_new(rule_args args)
 
 api_result check_parameters(rule_params* params)
 {
+	if(!params)
+		return INVALID;
+
 	switch(params->args)
 	{
 		case ARGS_IP:
@@ -436,19 +443,21 @@ api_result check_parameters(rule_params* params)
 	}
 }
 
-DBusMessage* __signal_from_rule_params(rule_params* params)
+DBusMessage* signal_from_rule_params(rule_params* params)
 {
 	DBusMessage* signal = NULL;
 	gchar *port_str = port_to_str(params);
+	const gchar *empty = EMPTY_STR;
+	const gchar *op = OP_STR[params->operation];
 
 	switch(params->args)
 	{
 		case ARGS_IP:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_RULE,
-				DBUS_TYPE_STRING,	params->ip,
-				DBUS_TYPE_STRING,	"",
-				DBUS_TYPE_STRING,	OP_STR[params->operation],
+				DBUS_TYPE_STRING,	&(params->ip),
+				DBUS_TYPE_STRING,	&empty,
+				DBUS_TYPE_STRING,	&op,
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_IP_PORT:
@@ -456,9 +465,9 @@ DBusMessage* __signal_from_rule_params(rule_params* params)
 		case ARGS_IP_SERVICE:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_RULE,
-				DBUS_TYPE_STRING,	params->ip,
-				DBUS_TYPE_STRING,	port_str,
-				DBUS_TYPE_STRING,	OP_STR[params->operation],
+				DBUS_TYPE_STRING,	&(params->ip),
+				DBUS_TYPE_STRING,	&port_str,
+				DBUS_TYPE_STRING,	&op,
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_PORT:
@@ -466,9 +475,9 @@ DBusMessage* __signal_from_rule_params(rule_params* params)
 		case ARGS_SERVICE:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_RULE,
-				DBUS_TYPE_STRING,	"",
-				DBUS_TYPE_STRING,	port_str,
-				DBUS_TYPE_STRING,	OP_STR[params->operation],
+				DBUS_TYPE_STRING,	&empty,
+				DBUS_TYPE_STRING,	&port_str,
+				DBUS_TYPE_STRING,	&op,
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_SAVE:
@@ -489,14 +498,14 @@ DBusMessage* __signal_from_rule_params(rule_params* params)
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_POLICY,
 				DBUS_TYPE_STRING,	IPTABLES_CHAIN_INPUT,
-				DBUS_TYPE_STRING,	params->policy,
+				DBUS_TYPE_STRING,	&(params->policy),
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_POLICY_OUT:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_POLICY,
 				DBUS_TYPE_STRING,	IPTABLES_CHAIN_OUTPUT,
-				DBUS_TYPE_STRING,	params->policy,
+				DBUS_TYPE_STRING,	&(params->policy),
 				DBUS_TYPE_INVALID);
 			break;
 	}
@@ -504,14 +513,14 @@ DBusMessage* __signal_from_rule_params(rule_params* params)
 	return signal;
 }
 
-rule_params* __get_parameters_from_message(DBusMessage* message, rule_args args)
+rule_params* get_parameters_from_message(DBusMessage* message, rule_args args)
 {
 	rule_params *params = rule_params_new(args);
 	DBusError* error = NULL;
 	
 	gchar *ip = NULL, *service = NULL, *protocol = NULL, *port_str = NULL;
 	gchar *path = NULL, *table = NULL, *policy = NULL, *operation = NULL;
-	guint16 port[2] = {0};
+	dbus_uint16_t port[2] = {0};
 	rule_operation op = UNDEFINED;
 	gint index = 0;
 	
@@ -592,6 +601,7 @@ rule_params* __get_parameters_from_message(DBusMessage* message, rule_args args)
 		DBG("Error, %s %s",
 			!rval ? "Could not get args from dbus message" : "", error->message);
 		rule_params_free(params);
+		dbus_error_free(error);
 		return NULL;
 	}
 	
@@ -632,13 +642,13 @@ rule_params* __get_parameters_from_message(DBusMessage* message, rule_args args)
 	}
 	
 	// Port in string format
-	if(port_str && strlen(port_str))
+	if(port_str && *port_str)
 	{
 		gchar **tokens = get_port_range_tokens(port_str);
 		
 		if(tokens)
 		{
-			for(index = 0; tokens[index] && index < 2; index++)
+			for(index = 0; index < 2 && tokens[index] ; index++)
 				port[index] = (guint16)g_ascii_strtoull(tokens[index],NULL,10);
 		
 			// No second port was found, treat as ARGS_PORT/ARGS_IP_PORT
@@ -667,7 +677,7 @@ rule_params* __get_parameters_from_message(DBusMessage* message, rule_args args)
 	}
 	
 	// Operation defined
-	if(operation && strlen(operation))
+	if(operation && *operation)
 	{
 		if((op = validate_operation(operation)) != UNDEFINED)
 			params->operation = op;
@@ -680,7 +690,7 @@ rule_params* __get_parameters_from_message(DBusMessage* message, rule_args args)
 	if(path && g_utf8_validate(path,-1,NULL) && validate_path(path))
 		params->path = g_strdup(path);
 	
-	if(table && strlen(table) && g_utf8_validate(table,-1,NULL))
+	if(table && *table && g_utf8_validate(table,-1,NULL))
 		params->table = g_utf8_strdown(table,-1);
 	
 	if(policy && g_utf8_validate(policy,-1,NULL))
@@ -693,7 +703,7 @@ rule_params* __get_parameters_from_message(DBusMessage* message, rule_args args)
 	return params;
 }
 
-static api_result __save_firewall(rule_params* params)
+static api_result save_firewall(rule_params* params)
 {
 	DBG("%s %s %s", PLUGIN_NAME, "SAVE", (params->path ? params->path : "null"));
 	
@@ -701,14 +711,14 @@ static api_result __save_firewall(rule_params* params)
 	return INVALID_FILE_PATH;
 }
 
-static api_result __load_firewall(rule_params* params)
+static api_result load_firewall(rule_params* params)
 {	
 	DBG("%s %s %s", PLUGIN_NAME, "LOAD", (params->path ? params->path : "null"));
 	if(!connman_iptables_restore(params->path)) return OK;
 	return INVALID_FILE_PATH;
 }
 
-static api_result __clear_firewall(rule_params* params)
+static api_result clear_firewall(rule_params* params)
 {
 	DBG("%s %s %s", PLUGIN_NAME, "CLEAR",
 		params->table ? params->table : SAILFISH_IPTABLES_TABLE_NAME);
@@ -716,10 +726,10 @@ static api_result __clear_firewall(rule_params* params)
 	return INVALID_REQUEST;
 }
 
-static api_result __set_policy(rule_params* params)
+static api_result set_policy(rule_params* params)
 {
 	gint ret = 0;
-	api_result rval = OK;
+	api_result rval = INVALID;
 	const gchar* ipt_operation = NULL;
 	
 	if(params && (rval = check_parameters(params)) == OK)
@@ -733,22 +743,19 @@ static api_result __set_policy(rule_params* params)
 				ipt_operation = IPTABLES_CHAIN_INPUT;
 				break;
 			default:
-				return INVALID;
+				return rval;
 		}
 
-		if(!(ret = connman_iptables_change_policy(
-			SAILFISH_IPTABLES_TABLE_NAME,
-			ipt_operation,
-			params->policy)))
+		if(!(ret = connman_iptables_change_policy(SAILFISH_IPTABLES_TABLE_NAME,
+					ipt_operation, params->policy)))
 		{
 			if(!(ret = connman_iptables_commit(SAILFISH_IPTABLES_TABLE_NAME)))
 			{
 				rval = OK;
 				
-				DBG("%s %s %s", "__set_policy(): changed policy", 
+				DBG("%s %s %s", "set_policy(): changed policy", 
 					ipt_operation, params->policy);
-			}	
-			rval = OK;
+			}
 		}
 		else
 			rval = INVALID_POLICY;
@@ -757,10 +764,10 @@ static api_result __set_policy(rule_params* params)
 	return rval;
 }
 
-static api_result __add_rule_to_iptables(rule_params *params, guint16 op)
+static api_result add_rule_to_iptables(rule_params *params, guint16 op)
 {	
 	api_result rval = INVALID;
-	gint result = 0;
+	gint error = 0;
 	GString *rule = NULL;
 	gchar* str_rule = NULL;
 	const gchar* ipt_operation = NULL;
@@ -878,35 +885,35 @@ static api_result __add_rule_to_iptables(rule_params *params, guint16 op)
 	{
 		if(params->operation == ADD)
 		{	
-			if(!(result = connman_iptables_append(SAILFISH_IPTABLES_TABLE_NAME,
+			if(!(error = connman_iptables_append(SAILFISH_IPTABLES_TABLE_NAME,
 				ipt_operation, str_rule)))
 				DBG("%s %s %s %s", PLUGIN_NAME, "connman_iptables_append",
 					ipt_operation, str_rule);
 			else
 				DBG("%s %s %s %s  %d", PLUGIN_NAME,
 					"connman_iptables_append failure", ipt_operation, str_rule,
-					result);
+					error);
 		}
 		else if(params->operation == REMOVE)
 		{
-			if(!(result = connman_iptables_delete(SAILFISH_IPTABLES_TABLE_NAME, 
+			if(!(error = connman_iptables_delete(SAILFISH_IPTABLES_TABLE_NAME, 
 				ipt_operation, str_rule)))
 				DBG("%s %s %s %s", PLUGIN_NAME,
 					"connman_iptables_delete success", ipt_operation, str_rule);
 			else
 				DBG("%s %s %s %s %d", PLUGIN_NAME,
 					"connman_iptables_delete failure", ipt_operation, str_rule,
-					result);
+					error);
 		}
 	
-		if(!result)
+		if(!error)
 		{
-			if(!(result = connman_iptables_commit(SAILFISH_IPTABLES_TABLE_NAME)))
-				DBG("%s %s %d", PLUGIN_NAME, "connman_iptables_commit", result);
+			if(!(error = connman_iptables_commit(SAILFISH_IPTABLES_TABLE_NAME)))
+				DBG("%s %s %d", PLUGIN_NAME, "connman_iptables_commit", error);
 			else
 			{
 				DBG("%s %s %d", PLUGIN_NAME,
-					"connman_iptables_commit failed:", result);
+					"connman_iptables_commit failed:", error);
 					
 				if(params->operation == ADD)
 				{
@@ -935,51 +942,54 @@ static api_result __add_rule_to_iptables(rule_params *params, guint16 op)
 	return params->operation == UNDEFINED ? INVALID_REQUEST : rval;
 }
 
-static api_result __allow_incoming(rule_params* params)
+static api_result allow_incoming(rule_params* params)
 {
-	return __add_rule_to_iptables(params, OPERATION_IN |OPERATION_ACCEPT);
+	return add_rule_to_iptables(params, OPERATION_IN | OPERATION_ACCEPT);
 }
 
-static api_result __allow_outgoing(rule_params* params)
+static api_result allow_outgoing(rule_params* params)
 {
-	return __add_rule_to_iptables(params, OPERATION_OUT | OPERATION_ACCEPT);
+	return add_rule_to_iptables(params, OPERATION_OUT | OPERATION_ACCEPT);
 }
 
-static api_result __deny_incoming(rule_params* params)
+static api_result deny_incoming(rule_params* params)
 {
-	return __add_rule_to_iptables(params,OPERATION_IN | OPERATION_DENY);
+	return add_rule_to_iptables(params,OPERATION_IN | OPERATION_DENY);
 }
 
-static api_result __deny_outgoing(rule_params* params)
+static api_result deny_outgoing(rule_params* params)
 {
-	return __add_rule_to_iptables(params,OPERATION_OUT | OPERATION_DENY);
+	return add_rule_to_iptables(params,OPERATION_OUT | OPERATION_DENY);
 }
 
-DBusMessage* __process_request(DBusMessage *message,
+DBusMessage* process_request(DBusMessage *message,
 	api_result (*func)(rule_params* params), rule_args args)
 {
 	api_result result = INVALID;
 	rule_params *params = NULL;
 	
-	if((params =  __get_parameters_from_message(message,args)))
+	if((params =  get_parameters_from_message(message,args)))
 	{	
 		if((result = func(params)) == OK)
 		{
-			DBusMessage *signal = __signal_from_rule_params(params);
+			DBusMessage *signal = signal_from_rule_params(params);
 			if(signal)
 				sailfish_iptables_dbus_send_signal(signal);
 		}
 		else
 			ERR("%s %s %d",
-				"__process_request():", "request was not successful",
+				"process_request():", "request was not successful",
 				result);
 	}
 	
 	rule_params_free(params);
 	
-	DBusMessage* reply = sailfish_iptables_dbus_method_return(message,
-			DBUS_TYPE_UINT16,	(guint16)result,
-			DBUS_TYPE_STRING, 	api_result_message(result),
+	dbus_uint16_t res = (dbus_uint16_t)result;
+	const gchar* msg = api_result_message(result);
+
+	DBusMessage* reply = g_dbus_create_reply(message,
+			DBUS_TYPE_UINT16,	&res,
+			DBUS_TYPE_STRING, 	&msg,
 			DBUS_TYPE_INVALID);
 
 	if(!reply)
@@ -993,26 +1003,28 @@ DBusMessage* __process_request(DBusMessage *message,
 DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	return __process_request(message, &__save_firewall, ARGS_SAVE);
+	return process_request(message, &save_firewall, ARGS_SAVE);
 }
 					
 DBusMessage* sailfish_iptables_load_firewall(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	return __process_request(message, &__load_firewall, ARGS_LOAD);
+	return process_request(message, &load_firewall, ARGS_LOAD);
 }
 
 DBusMessage* sailfish_iptables_clear_firewall(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	return __process_request(message, &__clear_firewall, ARGS_CLEAR);
+	return process_request(message, &clear_firewall, ARGS_CLEAR);
 }
 
 DBusMessage* sailfish_iptables_version(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {	
-	DBusMessage* reply = sailfish_iptables_dbus_method_return(message,
-		DBUS_TYPE_INT32,	(gint)SAILFISH_IPTABLES_INTERFACE_VERSION, 
+	dbus_int32_t res = (dbus_int32_t)SAILFISH_IPTABLES_INTERFACE_VERSION;
+
+	DBusMessage* reply = g_dbus_create_reply(message,
+		DBUS_TYPE_INT32,	&res,
 		DBUS_TYPE_INVALID);
 	
 	if(!reply)
@@ -1024,142 +1036,142 @@ DBusMessage* sailfish_iptables_version(DBusConnection *connection,
 DBusMessage* sailfish_iptables_change_input_policy(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message, &__set_policy, ARGS_POLICY_IN);
+	return process_request(message, &set_policy, ARGS_POLICY_IN);
 }
 
 DBusMessage* sailfish_iptables_change_output_policy(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message, &__set_policy, ARGS_POLICY_OUT);
+	return process_request(message, &set_policy, ARGS_POLICY_OUT);
 }
 
 // ALLOW INCOMING
 DBusMessage* sailfish_iptables_allow_incoming_ip(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_incoming, ARGS_IP);
+	return process_request(message,&allow_incoming, ARGS_IP);
 }
 
 DBusMessage* sailfish_iptables_allow_incoming_ip_port(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_incoming, ARGS_IP_PORT);
+	return process_request(message,&allow_incoming, ARGS_IP_PORT);
 }
 
 DBusMessage* sailfish_iptables_allow_incoming_ip_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_incoming, ARGS_IP_PORT_RANGE);
+	return process_request(message,&allow_incoming, ARGS_IP_PORT_RANGE);
 }
 
 DBusMessage* sailfish_iptables_allow_incoming_port(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_incoming, ARGS_PORT);
+	return process_request(message,&allow_incoming, ARGS_PORT);
 }
 
 DBusMessage* sailfish_iptables_allow_incoming_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_incoming, ARGS_PORT_RANGE);
+	return process_request(message,&allow_incoming, ARGS_PORT_RANGE);
 }
 
 DBusMessage* sailfish_iptables_allow_incoming_ip_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_incoming, ARGS_IP_SERVICE);
+	return process_request(message,&allow_incoming, ARGS_IP_SERVICE);
 }
 
 DBusMessage* sailfish_iptables_allow_incoming_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_incoming, ARGS_SERVICE);
+	return process_request(message,&allow_incoming, ARGS_SERVICE);
 }
 
 // ALLOW OUTGOING
 DBusMessage* sailfish_iptables_allow_outgoing_ip(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_outgoing, ARGS_IP);
+	return process_request(message,&allow_outgoing, ARGS_IP);
 }
 
 DBusMessage* sailfish_iptables_allow_outgoing_ip_port(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_outgoing, ARGS_IP_PORT);
+	return process_request(message,&allow_outgoing, ARGS_IP_PORT);
 }
 
 DBusMessage* sailfish_iptables_allow_outgoing_ip_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_outgoing, ARGS_IP_PORT_RANGE);
+	return process_request(message,&allow_outgoing, ARGS_IP_PORT_RANGE);
 }
 
 DBusMessage* sailfish_iptables_allow_outgoing_port(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_outgoing, ARGS_PORT);
+	return process_request(message,&allow_outgoing, ARGS_PORT);
 }
 
 DBusMessage* sailfish_iptables_allow_outgoing_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_outgoing, ARGS_PORT_RANGE);
+	return process_request(message,&allow_outgoing, ARGS_PORT_RANGE);
 }
 
 DBusMessage* sailfish_iptables_allow_outgoing_ip_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_outgoing, ARGS_IP_SERVICE);
+	return process_request(message,&allow_outgoing, ARGS_IP_SERVICE);
 }
 
 DBusMessage* sailfish_iptables_allow_outgoing_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__allow_outgoing, ARGS_SERVICE);
+	return process_request(message,&allow_outgoing, ARGS_SERVICE);
 }
 
 // DENY INCOMING			
 DBusMessage* sailfish_iptables_deny_incoming_ip(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_incoming, ARGS_IP);
+	return process_request(message,&deny_incoming, ARGS_IP);
 }
 
 DBusMessage* sailfish_iptables_deny_incoming_ip_port(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_incoming, ARGS_IP_PORT);
+	return process_request(message,&deny_incoming, ARGS_IP_PORT);
 }
 
 DBusMessage* sailfish_iptables_deny_incoming_ip_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_incoming, ARGS_IP_PORT_RANGE);
+	return process_request(message,&deny_incoming, ARGS_IP_PORT_RANGE);
 }
 
 DBusMessage* sailfish_iptables_deny_incoming_port(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_incoming, ARGS_PORT);
+	return process_request(message,&deny_incoming, ARGS_PORT);
 }
 
 DBusMessage* sailfish_iptables_deny_incoming_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_incoming, ARGS_PORT_RANGE);
+	return process_request(message,&deny_incoming, ARGS_PORT_RANGE);
 }
 
 DBusMessage* sailfish_iptables_deny_incoming_ip_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_incoming, ARGS_IP_SERVICE);
+	return process_request(message,&deny_incoming, ARGS_IP_SERVICE);
 }
 
 DBusMessage* sailfish_iptables_deny_incoming_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_incoming, ARGS_SERVICE);
+	return process_request(message,&deny_incoming, ARGS_SERVICE);
 }
 
 
@@ -1167,43 +1179,43 @@ DBusMessage* sailfish_iptables_deny_incoming_service(
 DBusMessage* sailfish_iptables_deny_outgoing_ip(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_outgoing, ARGS_IP);
+	return process_request(message,&deny_outgoing, ARGS_IP);
 }
 
 DBusMessage* sailfish_iptables_deny_outgoing_ip_port(
 			DBusConnection *connection, DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_outgoing, ARGS_IP_PORT);
+	return process_request(message,&deny_outgoing, ARGS_IP_PORT);
 }
 
 DBusMessage* sailfish_iptables_deny_outgoing_ip_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_outgoing, ARGS_IP_PORT_RANGE);
+	return process_request(message,&deny_outgoing, ARGS_IP_PORT_RANGE);
 }
 
 DBusMessage* sailfish_iptables_deny_outgoing_port(
 			DBusConnection *connection, DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_outgoing, ARGS_PORT);
+	return process_request(message,&deny_outgoing, ARGS_PORT);
 }
 
 DBusMessage* sailfish_iptables_deny_outgoing_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_outgoing, ARGS_PORT_RANGE);
+	return process_request(message,&deny_outgoing, ARGS_PORT_RANGE);
 }
 
 DBusMessage* sailfish_iptables_deny_outgoing_ip_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_outgoing, ARGS_IP_SERVICE);
+	return process_request(message,&deny_outgoing, ARGS_IP_SERVICE);
 }
 
 DBusMessage* sailfish_iptables_deny_outgoing_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return __process_request(message,&__deny_outgoing, ARGS_SERVICE);
+	return process_request(message,&deny_outgoing, ARGS_SERVICE);
 }
 
 

@@ -1,27 +1,44 @@
 /*
  *
- *  Connection Manager dbus api implementation for SailfishOS
+ *  Sailfish Connection Manager iptables plugin
  *
  *  Copyright (C) 2017 Jolla Ltd. All rights reserved.
  *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 as
- *  published by the Free Software Foundation.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *  BSD 3-Clause License
+ * 
+ *  Copyright (c) 2017, 
+ *  All rights reserved.
+
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ * 
+ *  * Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 
+ *  * Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ *    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ *    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ *    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
  
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
 #define CONNMAN_API_SUBJECT_TO_CHANGE
@@ -34,50 +51,49 @@
 
 // Method names
 
-#define SAILFISH_IPTABLES_GET_VERSION				"GetVersion"
+#define SAILFISH_IPTABLES_GET_VERSION			"GetVersion"
 
-#define SAILFISH_IPTABLES_ALLOW_IN_IP				"AllowIncomingIp"
-#define SAILFISH_IPTABLES_ALLOW_IN_IP_PORT			"AllowIncomingIpWithPort"
+#define SAILFISH_IPTABLES_ALLOW_IN_IP			"AllowIncomingIp"
+#define SAILFISH_IPTABLES_ALLOW_IN_IP_PORT		"AllowIncomingIpWithPort"
 #define SAILFISH_IPTABLES_ALLOW_IN_IP_PORT_RANGE	"AllowIncomingIpWithPortRange"
-#define SAILFISH_IPTABLES_ALLOW_IN_PORT				"AllowIncomingPort"
+#define SAILFISH_IPTABLES_ALLOW_IN_PORT			"AllowIncomingPort"
 #define SAILFISH_IPTABLES_ALLOW_IN_PORT_RANGE		"AllowIncomingPortRange"
 #define SAILFISH_IPTABLES_ALLOW_IN_IP_SERVICE		"AllowIncomingIpWithService"
-#define SAILFISH_IPTABLES_ALLOW_IN_SERVICE			"AllowIncomingService"
+#define SAILFISH_IPTABLES_ALLOW_IN_SERVICE		"AllowIncomingService"
 
-#define SAILFISH_IPTABLES_ALLOW_OUT_IP				"AllowOutgoingIp"
-#define SAILFISH_IPTABLES_ALLOW_OUT_IP_PORT			"AllowOutgoingIpWithPort"
+#define SAILFISH_IPTABLES_ALLOW_OUT_IP			"AllowOutgoingIp"
+#define SAILFISH_IPTABLES_ALLOW_OUT_IP_PORT		"AllowOutgoingIpWithPort"
 #define SAILFISH_IPTABLES_ALLOW_OUT_IP_PORT_RANGE	"AllowOutgoingIpWithPortRange"
-#define SAILFISH_IPTABLES_ALLOW_OUT_PORT			"AllowOutgoingPort"
+#define SAILFISH_IPTABLES_ALLOW_OUT_PORT		"AllowOutgoingPort"
 #define SAILFISH_IPTABLES_ALLOW_OUT_PORT_RANGE		"AllowOutgoingPortRange"
 #define SAILFISH_IPTABLES_ALLOW_OUT_IP_SERVICE		"AllowOutgoingIpWithService"
-#define SAILFISH_IPTABLES_ALLOW_OUT_SERVICE			"AllowOutgoingService"
+#define SAILFISH_IPTABLES_ALLOW_OUT_SERVICE		"AllowOutgoingService"
 
-#define SAILFISH_IPTABLES_DENY_IN_IP				"DenyIncomingIp"
-#define SAILFISH_IPTABLES_DENY_IN_IP_PORT			"DenyIncomingIpWithPort"
+#define SAILFISH_IPTABLES_DENY_IN_IP			"DenyIncomingIp"
+#define SAILFISH_IPTABLES_DENY_IN_IP_PORT		"DenyIncomingIpWithPort"
 #define SAILFISH_IPTABLES_DENY_IN_IP_PORT_RANGE		"DenyIncomingIpWithPortRange"
-#define SAILFISH_IPTABLES_DENY_IN_PORT				"DenyIncomingPort"
+#define SAILFISH_IPTABLES_DENY_IN_PORT			"DenyIncomingPort"
 #define SAILFISH_IPTABLES_DENY_IN_PORT_RANGE		"DenyIncomingPortRange"
 #define SAILFISH_IPTABLES_DENY_IN_IP_SERVICE		"DenyIncomingIpWithService"
-#define SAILFISH_IPTABLES_DENY_IN_SERVICE			"DenyIncomingService"
+#define SAILFISH_IPTABLES_DENY_IN_SERVICE		"DenyIncomingService"
 
-#define SAILFISH_IPTABLES_DENY_OUT_IP				"DenyOutgoingIp"
-#define SAILFISH_IPTABLES_DENY_OUT_IP_PORT			"DenyOutgoingIpWithPort"
+#define SAILFISH_IPTABLES_DENY_OUT_IP			"DenyOutgoingIp"
+#define SAILFISH_IPTABLES_DENY_OUT_IP_PORT		"DenyOutgoingIpWithPort"
 #define SAILFISH_IPTABLES_DENY_OUT_IP_PORT_RANGE	"DenyOutgoingIpWithPortRange"
-#define SAILFISH_IPTABLES_DENY_OUT_PORT				"DenyOutgoingPort"
+#define SAILFISH_IPTABLES_DENY_OUT_PORT			"DenyOutgoingPort"
 #define SAILFISH_IPTABLES_DENY_OUT_PORT_RANGE		"DenyOutgoingPortRange"
 #define SAILFISH_IPTABLES_DENY_OUT_IP_SERVICE		"DenyOutgoingIpWithService"
-#define SAILFISH_IPTABLES_DENY_OUT_SERVICE			"DenyOutgoingService"
+#define SAILFISH_IPTABLES_DENY_OUT_SERVICE		"DenyOutgoingService"
 
-#define SAILFISH_IPTABLES_CHANGE_IN_POLICY			"ChangeInputPolicy"
-#define SAILFISH_IPTABLES_CHANGE_OUT_POLICY			"ChangeOutputPolicy"
+#define SAILFISH_IPTABLES_CHANGE_IN_POLICY		"ChangeInputPolicy"
+#define SAILFISH_IPTABLES_CHANGE_OUT_POLICY		"ChangeOutputPolicy"
 
-#define SAILFISH_IPTABLES_SAVE_FIREWALL				"SaveFirewallToDisk"
-#define SAILFISH_IPTABLES_LOAD_FIREWALL				"LoadFirewallFromDisk"
-#define SAILFISH_IPTABLES_CLEAR_FIREWALL			"ClearFirewall"
+#define SAILFISH_IPTABLES_SAVE_FIREWALL			"SaveFirewallToDisk"
+#define SAILFISH_IPTABLES_LOAD_FIREWALL			"LoadFirewallFromDisk"
+#define SAILFISH_IPTABLES_CLEAR_FIREWALL		"ClearFirewall"
 
-#define SAILFISH_IPTABLES_RESULT				{"result", "b"}
 /*
-	Result codes:
+	Result codes (enum sailfish_iptables_result):
 	
 	0 = ok
 	1 = invalid IP
@@ -96,8 +112,8 @@
 #define SAILFISH_IPTABLES_RESULT_VERSION		{"version", "i"}
 
 
-#define SAILFISH_IPTABLES_INPUT_ABSOLUTE_PATH	{"absolute_path","s"}
-#define SAILFISH_IPTABLES_INPUT_IP				{"ip","s"}
+#define SAILFISH_IPTABLES_INPUT_ABSOLUTE_PATH		{"absolute_path","s"}
+#define SAILFISH_IPTABLES_INPUT_IP			{"ip","s"}
 #define SAILFISH_IPTABLES_INPUT_PORT			{"port","q"}
 #define SAILFISH_IPTABLES_INPUT_PORT_STR		{"port","s"}
 #define SAILFISH_IPTABLES_INPUT_SERVICE			{"service","s"}
@@ -105,8 +121,8 @@
 #define SAILFISH_IPTABLES_INPUT_OPERATION		{"operation","s"}
 #define SAILFISH_IPTABLES_INPUT_POLICY			{"policy", "s"}
 
-#define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN	{"chain", "s"}
-#define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE	SAILFISH_IPTABLES_INPUT_POLICY
+#define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		{"chain", "s"}
+#define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		SAILFISH_IPTABLES_INPUT_POLICY
 
 // Signal names are defined in sailfish_iptables_dbus.h
 static const GDBusSignalTable signals[] = {
@@ -530,27 +546,6 @@ static const GDBusMethodTable methods[] = {
 		{ }
 	};
 
-gint dbus_message_append_parameters_valist(DBusMessage *message,
-	gint first_arg_type, va_list *params)
-{
-	if(message && params && first_arg_type != DBUS_TYPE_INVALID)
-	{
-		gint type = first_arg_type;
-		DBusMessageIter iter;
-		dbus_message_iter_init_append(message,&iter);
-		
-		while(type != DBUS_TYPE_INVALID)
-		{
-			const DBusBasicValue *val;
-			val = va_arg(*params, const DBusBasicValue*);
-			if(!dbus_message_iter_append_basic(&iter,type,&val))
-				return 1;
-			type = va_arg(*params,gint);
-		}
-	}
-	return 0;
-}
-
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal)
 {
 	DBusConnection* connman_dbus = dbus_connection_ref(
@@ -573,9 +568,9 @@ DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal_name,
 	if(first_arg_type != DBUS_TYPE_INVALID && signal)
 	{
 		va_list params;
-		va_start(params,first_arg_type);	
+		va_start(params,first_arg_type);
 		
-		if(dbus_message_append_parameters_valist(signal, first_arg_type, &params))
+		if(!dbus_message_append_args_valist(signal, first_arg_type, params))
 		{
 			ERR("%s %s", "saifish_iptables_dbus_signal():",
 				"failed to add parameters to signal");
@@ -586,32 +581,6 @@ DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal_name,
 		va_end(params);
 	}
 	return signal;
-}
-
-DBusMessage* sailfish_iptables_dbus_method_return(DBusMessage* message,
-	gint first_arg_type, ...)
-{
-	if(!message) return NULL;
-	
-	DBusMessage *reply = dbus_message_new_method_return(message);
-		
-	if(first_arg_type != DBUS_TYPE_INVALID && reply)
-	{
-		va_list params;
-		va_start(params, first_arg_type);
-		
-		if(dbus_message_append_parameters_valist(reply, first_arg_type, &params))
-		{
-			ERR("%s %s", "saifish_iptables_dbus_method_return():", 
-				"failed to add parameters to reply");
-			dbus_message_unref(reply);
-			reply = NULL;
-		}
-		
-		va_end(params);
-	}
-	
-	return reply;
 }
 
 gint sailfish_iptables_dbus_register() {
@@ -693,4 +662,10 @@ gint sailfish_iptables_dbus_unregister()
 	return rval;
 }
 
-
+/*
+ * Local Variables:
+ * mode: C
+ * c-basic-offset: 8
+ * indent-tabs-mode: t
+ * End:
+ */
