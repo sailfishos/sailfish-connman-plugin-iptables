@@ -7,11 +7,11 @@ License: GPLv2
 URL: https://github.com/sailfishos/sailfish-connman-plugin-iptables
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
-Requires: connman >= 1.31+git50.1
+Requires: connman >= 1.31+git50.4
 Requires: glib2
 Requires: dbus >= 1.4
 BuildRequires: iptables-devel
-BuildRequires: connman-devel >= 1.31+git50.1
+BuildRequires: connman-devel >= 1.31+git50.4
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
 BuildRequires:  pkgconfig(dbus-1) >= 1.4
 Requires(post): /sbin/ldconfig

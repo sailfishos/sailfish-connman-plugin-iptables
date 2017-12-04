@@ -88,9 +88,7 @@
 #define SAILFISH_IPTABLES_CHANGE_IN_POLICY		"ChangeInputPolicy"
 #define SAILFISH_IPTABLES_CHANGE_OUT_POLICY		"ChangeOutputPolicy"
 
-#define SAILFISH_IPTABLES_SAVE_FIREWALL			"SaveFirewallToDisk"
-#define SAILFISH_IPTABLES_LOAD_FIREWALL			"LoadFirewallFromDisk"
-#define SAILFISH_IPTABLES_CLEAR_FIREWALL		"ClearFirewall"
+#define SAILFISH_IPTABLES_CLEAR_IPTABLES_TABLE		"ClearIptablesTable"
 
 /*
 	Result codes (enum sailfish_iptables_result):
@@ -120,6 +118,7 @@
 #define SAILFISH_IPTABLES_INPUT_PROTOCOL		{"protocol","s"}
 #define SAILFISH_IPTABLES_INPUT_OPERATION		{"operation","s"}
 #define SAILFISH_IPTABLES_INPUT_POLICY			{"policy", "s"}
+#define SAILFISH_IPTABLES_INPUT_TABLE			{"table", "s"}
 
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		{"chain", "s"}
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		SAILFISH_IPTABLES_INPUT_POLICY
@@ -132,14 +131,6 @@ static const GDBusSignalTable signals[] = {
 		},
 		{ GDBUS_SIGNAL(
 			SAILFISH_IPTABLES_SIGNAL_STOP,
-			NULL)
-		},
-		{ GDBUS_SIGNAL(
-			SAILFISH_IPTABLES_SIGNAL_LOAD,
-			NULL)
-		},
-		{ GDBUS_SIGNAL(
-			SAILFISH_IPTABLES_SIGNAL_SAVE,
 			NULL)
 		},
 		{ GDBUS_SIGNAL(
@@ -165,26 +156,12 @@ static const GDBusSignalTable signals[] = {
 	};
 	
 static const GDBusMethodTable methods[] = {
-		{ GDBUS_METHOD(SAILFISH_IPTABLES_SAVE_FIREWALL, 
-			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_ABSOLUTE_PATH),
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_CLEAR_IPTABLES_TABLE, 
+			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_TABLE),
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_RESULT_TYPE,
 				SAILFISH_IPTABLES_RESULT_STRING),
-			sailfish_iptables_save_firewall)
-		},
-		{ GDBUS_METHOD(SAILFISH_IPTABLES_LOAD_FIREWALL, 
-			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_ABSOLUTE_PATH),
-			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING),
-			sailfish_iptables_load_firewall)
-		},
-		{ GDBUS_METHOD(SAILFISH_IPTABLES_CLEAR_FIREWALL, 
-			NULL,
-			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING),
-			sailfish_iptables_clear_firewall)
+			sailfish_iptables_clear_iptables)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_CHANGE_IN_POLICY, 
 			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_POLICY),
@@ -545,7 +522,34 @@ static const GDBusMethodTable methods[] = {
 		},
 		{ }
 	};
+	
+/* New method sailfish_iptables_rule:
+	IP: str / uint32
+	Mask: uint8 (0-128)
+	Port start: uint16
+	Port end: uint16
+	Protocol: uint8 (IPPROTO_TCP/UDP/SCTP))
+	Operation: uint8 0/1 (add-default,remove)
+	Direction: uint8 0/1 (INPUT/OUTPUT)
+	Target:	uint8 0/1/2/3/4 (ACCEPT,DROP,QUEUE,RETURN,REJECT) - custom target?
+	
+*/
 
+/* New method sailfish_iptables_new_custom_rule:
+	IP: str / uint32
+	Mask: uint8 (0-128)
+	Port start: uint16
+	Port end: uint16
+	Protocol: uint8 (IPPROTO_TCP/UDP/SCTP))
+	Operation: uint8 0/1 (add-default,remove)
+	Direction: uint8 0/1 (INPUT/OUTPUT)
+	Target:	str (custom chain name)
+	
+*/
+
+/* New method: sailfish_iptables_new_chain
+	Chain name: str
+*/
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal)
 {
 	DBusConnection* connman_dbus = dbus_connection_ref(
@@ -611,7 +615,7 @@ gint sailfish_iptables_dbus_register() {
 		{
 			DBG("%s %s", "sailfish_iptables_dbus_register():",
 				"register failed");
-			rval = -1;
+			rval = 1;
 		}
 		dbus_connection_unref(conn);
 	}
@@ -619,7 +623,7 @@ gint sailfish_iptables_dbus_register() {
 	{
 		DBG("%s %s","silfish_iptables_dbus_register():",
 			"no dbus connection");
-		rval = -1;
+		rval = 1;
 	}
 	DBG("%s %s %s", "sailfish_iptables_dbus_register():",
 			SAILFISH_IPTABLES_DBUS_PATH,
@@ -648,14 +652,14 @@ gint sailfish_iptables_dbus_unregister()
 		{
 			DBG("%s %s", "sailfish_iptables_dbus_unregister():",
 				"unregsiter failed");
-			rval = -1;
+			rval = 1;
 		}
 	}
 	else 
 	{
 		DBG("%s %s","sailfish_iptables_dbus_unregister():",
 			"no dbus connection");
-		rval = -1;
+		rval = 1;
 	}
 	
 	DBG("sailfish_iptables_dbus_unregister()");
