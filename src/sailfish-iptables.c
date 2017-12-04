@@ -39,7 +39,7 @@
 
 
 #define CONNMAN_API_SUBJECT_TO_CHANGE
-#define PLUGIN_NAME "SAILFISH_IPTABLES"
+#define PLUGIN_NAME "Sailfish iptables API"
 
 
 #include <sys/types.h>
@@ -65,7 +65,7 @@ const gchar const * RESULT_STR[] = {
 	"Cannot process rule",
 	"Cannot perform operation",
 };
-const gchar const * EMPTY_STR = "";
+const gchar * EMPTY_STR = "";
 
 static gboolean negated_ip_address(const gchar* ip)
 {
@@ -703,26 +703,17 @@ rule_params* get_parameters_from_message(DBusMessage* message, rule_args args)
 	return params;
 }
 
-static api_result save_firewall(rule_params* params)
-{
-	DBG("%s %s %s", PLUGIN_NAME, "SAVE", (params->path ? params->path : "null"));
-	
-	if(!connman_iptables_save(params->path)) return OK;
-	return INVALID_FILE_PATH;
-}
-
-static api_result load_firewall(rule_params* params)
-{	
-	DBG("%s %s %s", PLUGIN_NAME, "LOAD", (params->path ? params->path : "null"));
-	if(!connman_iptables_restore(params->path)) return OK;
-	return INVALID_FILE_PATH;
-}
-
 static api_result clear_firewall(rule_params* params)
 {
-	DBG("%s %s %s", PLUGIN_NAME, "CLEAR",
-		params->table ? params->table : SAILFISH_IPTABLES_TABLE_NAME);
-	if(!connman_iptables_clear(params->table)) return OK;
+	if(!params)
+		return INVALID;
+		
+	const char* table_name = (params->table ?
+		params->table : 
+		SAILFISH_IPTABLES_TABLE_NAME);
+		
+	DBG("%s %s %s", PLUGIN_NAME, "CLEAR table", table_name);
+	if(!connman_iptables_clear(table_name)) return OK;
 	return INVALID_REQUEST;
 }
 
@@ -999,20 +990,7 @@ DBusMessage* process_request(DBusMessage *message,
 	return reply;
 }
 
-
-DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
-			DBusMessage *message, void *user_data)
-{
-	return process_request(message, &save_firewall, ARGS_SAVE);
-}
-					
-DBusMessage* sailfish_iptables_load_firewall(DBusConnection *connection,
-			DBusMessage *message, void *user_data)
-{
-	return process_request(message, &load_firewall, ARGS_LOAD);
-}
-
-DBusMessage* sailfish_iptables_clear_firewall(DBusConnection *connection,
+DBusMessage* sailfish_iptables_clear_iptables(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
 	return process_request(message, &clear_firewall, ARGS_CLEAR);
@@ -1221,14 +1199,18 @@ DBusMessage* sailfish_iptables_deny_outgoing_service(
 
 static int sailfish_iptables_init(void)
 {
-	DBG("%s %s", PLUGIN_NAME, "INITIALIZE IPTABLES API");
+	DBG("%s %s", PLUGIN_NAME, "initialize");
 	
 	int err = sailfish_iptables_dbus_register();
 	
-	if(err < 0)
-		DBG("%s %s", PLUGIN_NAME, "CANNOT REGISTER TO DBUS");
-	else
-		DBG("%s %s", PLUGIN_NAME, "REGISTER TO DBUS SUCCESS!");
+	if(err != 0)
+		DBG("%s %s", PLUGIN_NAME, "Cannot register to D-Bus");
+		
+	err = connman_iptables_restore(SAILFISH_IPTABLES_TABLE_NAME, NULL);
+	
+	if(err != 0)
+		DBG("%s %s %s", PLUGIN_NAME, "Cannot load default firewall",
+			connman_iptables_default_save_path(IPV4));
 	
 	return 0;
 }
@@ -1238,9 +1220,21 @@ static void sailfish_iptables_exit(void)
 	DBG("%s %s", PLUGIN_NAME, "EXIT IPTABLES API");
 	
 	sailfish_iptables_dbus_unregister();
+	
+	int err = connman_iptables_save(SAILFISH_IPTABLES_TABLE_NAME, NULL);
+	
+	if(err != 0)
+		DBG("%s %s %s", PLUGIN_NAME, "Cannot save firewall to",
+			connman_iptables_default_save_path(IPV4));
+			
+	err = connman_iptables_clear(SAILFISH_IPTABLES_TABLE_NAME);
+	
+	if(err != 0)
+		DBG("%s %s %s", PLUGIN_NAME, "Cannot clear firewall table",
+			SAILFISH_IPTABLES_TABLE_NAME);
 }
 
-CONNMAN_PLUGIN_DEFINE(sailfish_ipt_api, "Sailfish iptables API", CONNMAN_VERSION,
+CONNMAN_PLUGIN_DEFINE(sailfish_ipt_api, PLUGIN_NAME, CONNMAN_VERSION,
 	CONNMAN_PLUGIN_PRIORITY_DEFAULT, sailfish_iptables_init,
 	sailfish_iptables_exit)
 

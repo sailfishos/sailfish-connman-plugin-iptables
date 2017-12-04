@@ -83,13 +83,7 @@ void sailfish_iptables_dbus_send_signal(DBusMessage *signal);
 
 /* These prototypes are connected to dbus */
 
-DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
-					
-DBusMessage* sailfish_iptables_load_firewall(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_clear_firewall(DBusConnection *connection,
+DBusMessage* sailfish_iptables_clear_iptables(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
 
 DBusMessage* sailfish_iptables_version(DBusConnection *connection,
