@@ -26,6 +26,9 @@ This package contains the Sailfish Connman plugin for iptables management.
 %build
 make %{?_smp_mflags} release
 
+%check
+make -C unit test
+
 %install
 rm -rf %{buildroot}
 %make_install
