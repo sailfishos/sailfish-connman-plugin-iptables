@@ -36,6 +36,7 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#define CONNMAN_API_SUBJECT_TO_CHANGE
 
 #ifndef _SAILFISH_IPTABLES_DBUS_H_
 #define _SAILFISH_IPTABLES_DBUS_H_
@@ -50,6 +51,8 @@
 #include <connman/dbus.h>
 #include <connman/iptables_extension.h>
 #include <connman/gdbus.h>
+
+#include "sailfish-iptables.h"
 
 #define SAILFISH_IPTABLES_DBUS_INTERFACE	"org.sailfishos.connman.mdm.iptables"
 #define SAILFISH_IPTABLES_DBUS_PATH			"/org/sailfishos/connman/mdm/iptables"
@@ -79,6 +82,10 @@ DBusMessage* sailfish_iptables_dbus_method_return(DBusMessage* message,
 	gint first_arg_type, ...);
 
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal);
+
+DBusMessage* signal_from_rule_params(rule_params* params);
+
+rule_params* get_parameters_from_message(DBusMessage* message, rule_args args);
 
 
 /* These prototypes are connected to dbus */

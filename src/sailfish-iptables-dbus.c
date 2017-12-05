@@ -45,6 +45,9 @@
 
 #include <errno.h>
 #include "sailfish-iptables-dbus.h"
+#include "sailfish-iptables-parameters.h"
+#include "sailfish-iptables-utils.h"
+#include "sailfish-iptables.h"
 
 //#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
@@ -122,6 +125,9 @@
 
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		{"chain", "s"}
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		SAILFISH_IPTABLES_INPUT_POLICY
+
+const gchar const * OP_STR[] = {"Add", "Remove", "Undefined"};
+const gchar * EMPTY_STR = "";
 
 // Signal names are defined in sailfish_iptables_dbus.h
 static const GDBusSignalTable signals[] = {
@@ -585,6 +591,266 @@ DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal_name,
 		va_end(params);
 	}
 	return signal;
+}
+
+DBusMessage* signal_from_rule_params(rule_params* params)
+{
+	DBusMessage* signal = NULL;
+	gchar *port_str = port_to_str(params);
+	const gchar *empty = EMPTY_STR;
+	const gchar *op = OP_STR[params->operation];
+
+	switch(params->args)
+	{
+		case ARGS_IP:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_RULE,
+				DBUS_TYPE_STRING,	&(params->ip),
+				DBUS_TYPE_STRING,	&empty,
+				DBUS_TYPE_STRING,	&op,
+				DBUS_TYPE_INVALID);
+			break;
+		case ARGS_IP_PORT:
+		case ARGS_IP_PORT_RANGE:
+		case ARGS_IP_SERVICE:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_RULE,
+				DBUS_TYPE_STRING,	&(params->ip),
+				DBUS_TYPE_STRING,	&port_str,
+				DBUS_TYPE_STRING,	&op,
+				DBUS_TYPE_INVALID);
+			break;
+		case ARGS_PORT:
+		case ARGS_PORT_RANGE:
+		case ARGS_SERVICE:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_RULE,
+				DBUS_TYPE_STRING,	&empty,
+				DBUS_TYPE_STRING,	&port_str,
+				DBUS_TYPE_STRING,	&op,
+				DBUS_TYPE_INVALID);
+			break;
+		case ARGS_SAVE:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_SAVE,
+				DBUS_TYPE_INVALID);
+			break;
+		case ARGS_LOAD:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_LOAD,
+				DBUS_TYPE_INVALID);
+		case ARGS_CLEAR:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_CLEAR,
+				DBUS_TYPE_INVALID);
+			break;
+		case ARGS_POLICY_IN:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_POLICY,
+				DBUS_TYPE_STRING,	IPTABLES_CHAIN_INPUT,
+				DBUS_TYPE_STRING,	&(params->policy),
+				DBUS_TYPE_INVALID);
+			break;
+		case ARGS_POLICY_OUT:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_POLICY,
+				DBUS_TYPE_STRING,	IPTABLES_CHAIN_OUTPUT,
+				DBUS_TYPE_STRING,	&(params->policy),
+				DBUS_TYPE_INVALID);
+			break;
+	}
+	g_free(port_str);
+	return signal;
+}
+
+rule_params* get_parameters_from_message(DBusMessage* message, rule_args args)
+{
+	rule_params *params = rule_params_new(args);
+	DBusError* error = NULL;
+	
+	gchar *ip = NULL, *service = NULL, *protocol = NULL, *port_str = NULL;
+	gchar *path = NULL, *table = NULL, *policy = NULL, *operation = NULL;
+	dbus_uint16_t port[2] = {0};
+	rule_operation op = UNDEFINED;
+	gint index = 0;
+	
+	gboolean rval = false;
+	
+	switch(params->args)
+	{
+		case ARGS_IP:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &ip,
+						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_IP_PORT:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &ip,
+						DBUS_TYPE_UINT16, &port,
+						DBUS_TYPE_STRING, &protocol,
+						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_IP_PORT_RANGE:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &ip,
+						DBUS_TYPE_STRING, &port_str,
+						DBUS_TYPE_STRING, &protocol,
+						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_IP_SERVICE:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &ip,
+						DBUS_TYPE_STRING, &service,
+						DBUS_TYPE_STRING, &protocol,
+						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_PORT:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_UINT16, &port,
+						DBUS_TYPE_STRING, &protocol,			
+						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_PORT_RANGE:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &port_str,
+						DBUS_TYPE_STRING, &protocol,
+						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_SERVICE:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &service,
+						DBUS_TYPE_STRING, &protocol,
+						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_SAVE:
+		case ARGS_LOAD:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &path,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_CLEAR:
+			break;
+		case ARGS_POLICY_IN:
+		case ARGS_POLICY_OUT:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &policy,
+						DBUS_TYPE_INVALID);
+			
+			break;
+	}
+	
+	if(error)
+	{
+		DBG("Error, %s %s",
+			!rval ? "Could not get args from dbus message" : "", error->message);
+		rule_params_free(params);
+		dbus_error_free(error);
+		return NULL;
+	}
+	
+	if(ip && g_utf8_validate(ip,-1,NULL) && validate_ip_address(IPV4,ip))
+	{
+		if(negated_ip_address(ip))
+		{
+			params->ip = format_ip(IPV4,&(ip[1]));
+			params->ip_negate = true;
+		}
+		else
+			params->ip = format_ip(IPV4,ip);
+	}
+	
+	// Protocol defined
+	if(protocol && g_utf8_validate(protocol, -1, NULL))
+	{
+		gchar* protocol_lowercase = g_utf8_strdown(protocol, -1);
+
+		if(validate_protocol(protocol_lowercase))
+			params->protocol = protocol_lowercase;
+	}
+	
+	// Service defined
+	if(service && g_utf8_validate(service,-1,NULL))
+	{
+		gchar* service_lowercase = g_utf8_strdown(service,-1);
+		
+		// Check if the service with given name can be found, port and
+		// protocol can be retrieved then also
+		if((params->port[0] = validate_service_name(service_lowercase)))
+		{
+			params->service	= service_lowercase;
+			
+			if(!params->protocol)
+				params->protocol = get_protocol_for_service(params->service);
+		}
+	}
+	
+	// Port in string format
+	if(port_str && *port_str)
+	{
+		gchar **tokens = get_port_range_tokens(port_str);
+		
+		if(tokens)
+		{
+			for(index = 0; index < 2 && tokens[index] ; index++)
+				port[index] = (guint16)g_ascii_strtoull(tokens[index],NULL,10);
+		
+			// No second port was found, treat as ARGS_PORT/ARGS_IP_PORT
+			if(!port[1])
+			{
+				if(params->args == ARGS_IP_PORT_RANGE)
+					params->args = ARGS_IP_PORT;
+				else if(params->args == ARGS_PORT_RANGE)
+					params->args = ARGS_PORT;
+			}
+		}
+		
+		g_strfreev(tokens);
+	}
+	
+	// Check both ports
+	for(index = 0; index < 2 ; index++)
+	{
+		if(port[index] && validate_port(port[index]))
+		{
+			params->port[index] = port[index];
+
+			if(!params->protocol)
+				params->protocol = get_protocol_for_port(params->port[index]);
+		}
+	}
+	
+	// Operation defined
+	if(operation && *operation)
+	{
+		if((op = validate_operation(operation)) != UNDEFINED)
+			params->operation = op;
+	}
+	// No operation defined, defaults to ADD
+	else
+		params->operation = ADD;
+	
+	//
+	if(path && g_utf8_validate(path,-1,NULL) && validate_path(path))
+		params->path = g_strdup(path);
+	
+	if(table && *table && g_utf8_validate(table,-1,NULL))
+		params->table = g_utf8_strdown(table,-1);
+	
+	if(policy && g_utf8_validate(policy,-1,NULL))
+	{
+		gchar *policy_uppercase = g_utf8_strup(policy,-1);
+		if(validate_policy(policy_uppercase))
+			params->policy = policy_uppercase;
+	}
+		
+	return params;
 }
 
 gint sailfish_iptables_dbus_register() {
