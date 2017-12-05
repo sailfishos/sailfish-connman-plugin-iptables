@@ -20,8 +20,11 @@ LIB = $(LIB_SONAME)
 # Sources
 #
 SRC = \
- sailfish-iptables.c \
- sailfish-iptables-dbus.c
+ sailfish-iptables-dbus.c \
+ sailfish-iptables-validate.c \
+ sailfish-iptables-parameters.c \
+ sailfish-iptables-utils.c \
+ sailfish-iptables.c
 
 #
 # Directories
