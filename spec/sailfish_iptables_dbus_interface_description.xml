@@ -26,33 +26,12 @@ The returned result codes and string pairs are:
 9	"Cannot perform operation",
 -->
 
-<!--
-Saves the content of iptables (all tables) to disk in the same format as 
-iptables-save.  Takes in the absolute path of the file. Currently saving is
-allowed only to /var/lib/connman
-Sends signal FirewallSaved
--->
-<method name="SaveFirewallToDisk">
-<arg name="absolute_path" type="s" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Loads iptables configuration from disk. NOT IMPLEMENTED YET.
-Sends signal FirewallLoaded
--->
-<method name="LoadFirewallFromDisk">
-<arg name="absolute_path" type="s" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
 <!-- 
-Clears the iptables filter table.
+Clears given table from iptables. Defaults to filter table.
 Sends signal FirewallCleared
 -->
-<method name="ClearFirewall">
+<method name="ClearIptablesTable">
+<arg name="table" type="s" direction="in"/>
 <arg name="result" type="q" direction="out"/>
 <arg name="string" type="s" direction="out"/>
 </method>
