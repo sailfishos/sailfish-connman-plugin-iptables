@@ -6,9 +6,9 @@ all: test
 
 SRC = \
 	test-sailfish-connman-plugin-iptables.c \
- 	../src/sailfish-iptables-validate.c \
- 	../src/sailfish-iptables-parameters.c \
- 	../src/sailfish-iptables-utils.c
+	../src/sailfish-iptables-validate.c \
+	../src/sailfish-iptables-parameters.c \
+	../src/sailfish-iptables-utils.c
 
 NAME = plugin_unit_test
 

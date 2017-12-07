@@ -40,6 +40,8 @@
 #ifndef _SAILFISH_IPTABLES_H_
 #define _SAILFISH_IPTABLES_H_
 
+#include <dbus/dbus.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -124,6 +126,18 @@ typedef struct sailfish_iptables_rule_params {
 	gchar *policy;
 	rule_args args;
 } rule_params;
+
+api_result clear_firewall(rule_params* params);
+api_result set_policy(rule_params* params);
+
+api_result allow_incoming(rule_params* params);
+api_result allow_outgoing(rule_params* params);
+api_result deny_incoming(rule_params* params);
+api_result deny_outgoing(rule_params* params);
+
+DBusMessage* process_request(DBusMessage *message,
+	api_result (*func)(rule_params* params), rule_args args);
+	
 
 #ifdef __cplusplus
 }

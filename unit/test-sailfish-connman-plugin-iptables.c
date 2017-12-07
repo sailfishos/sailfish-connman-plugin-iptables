@@ -4,13 +4,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#include <string.h>
 
 #include "../src/sailfish-iptables-validate.h"
 #include "../src/sailfish-iptables-parameters.h"
 #include "../src/sailfish-iptables-utils.h"
-#include "../src/sailfish-iptables-dbus.h"
-#include "../src/sailfish-iptables.h"
 
 #define CONNMAN_API_SUBJECT_TO_CHANGE
 
@@ -470,10 +468,11 @@ static void test_iptables_plugin_validate_policy()
 	g_assert(!validate_policy("QUEUE"));
 }
 
-#define PREFIX "/sailfish_connman_plugin_iptables_"
-#define PREFIX_VALIDATE PREFIX"validate/"
-#define PREFIX_PARAMETERS PREFIX"parameters/"
-#define PREFIX_UTILS PREFIX"utils/"
+#define PREFIX				"/sailfish_connman_plugin_iptables_"
+#define PREFIX_VALIDATE			PREFIX"validate/"
+#define PREFIX_PARAMETERS		PREFIX"parameters/"
+#define PREFIX_UTILS			PREFIX"utils/"
+#define PREFIX_DBUS			PREFIX"dbus/"
 
 int main(int argc, char *argv[])
 {	
