@@ -47,10 +47,27 @@
 #include <string.h>
 
 #include "sailfish-iptables-validate.h"
+#include "sailfish-iptables-utils.h"
 
 gboolean negated_ip_address(const gchar* ip)
 {
 	return ip && ip[0] == '!';
+}
+
+gint get_ip_delimeters(gint type, const gchar* address)
+{
+	gint tokens = 0, i = 0;
+	gchar delim = (type == IPV4 ? IPV4_DELIM[0] : IPV6_DELIM[0]);
+	
+	if(address && *address)
+	{	
+		for(i = 0; address[i] ; i++)
+		{
+			if(address[i] == delim)
+				tokens++;
+		}
+	}
+	return tokens;
 }
 
 gboolean validate_address(gint type, const gchar* address)
@@ -58,18 +75,26 @@ gboolean validate_address(gint type, const gchar* address)
 	struct addrinfo hints;
 	struct addrinfo *result = NULL;
 	
-	memset(&hints, 0, sizeof(struct addrinfo));
-	
-	hints.ai_family = (type == IPV6 ? AF_INET6 : AF_INET);
-	hints.ai_flags = AI_NUMERICHOST;
-	
-	// Success
-	if(!getaddrinfo(address,NULL,&hints,&result))
+	// Address must be at least 1.1.1.1, or IPv4 mapped (::ffff:0.0.0.0)
+	if(address && *address && 
+		strlen(address) > (type == IPV4 ? IPV4_ADDR_MIN : IPV6_ADDR_MIN) &&
+		get_ip_delimeters(type, address) == (
+			type == IPV4 ? IPV4_DELIM_COUNT : IPV6_DELIM_COUNT))
 	{
-		if(result)
+		
+		memset(&hints, 0, sizeof(struct addrinfo));
+
+		hints.ai_family = (type == IPV6 ? AF_INET6 : AF_INET);
+		hints.ai_flags = AI_NUMERICHOST;
+
+		// Success
+		if(!getaddrinfo(address,NULL,&hints,&result))
 		{
-			freeaddrinfo(result);
-			return true;
+			if(result)
+			{
+				freeaddrinfo(result);
+				return true;
+			}
 		}
 	}
 	return false;
@@ -77,17 +102,19 @@ gboolean validate_address(gint type, const gchar* address)
 
 gboolean validate_ip_mask(gint type, const gchar* mask)
 {
-	if(type == IPV4 && mask)
+	guint32 int_mask = 0;
+	
+	if(type == IPV4 && mask && *mask)
 	{
 		// Dot notation mask
 		if(strchr(mask,'.'))
-			return validate_address(type, mask);
+			int_mask = mask_to_cidr(type, mask);
+		else
+			int_mask = g_ascii_strtoull(mask,NULL,10);
 
-		guint32 int_mask = g_ascii_strtoull(mask,NULL,10);
-
-		if(!int_mask || // 0, acceptable
-			(int_mask & (~int_mask >> 1)) || // Proper mask
-			int_mask == G_MAXUINT32) // max
+		if((!int_mask || // 0, acceptable
+			(int_mask & (~int_mask >> 1))) && // Proper mask
+			int_mask != G_MAXUINT32)
 			return true;
 	}
 	
