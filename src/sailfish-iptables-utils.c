@@ -103,7 +103,7 @@ guint32 mask_to_cidr(gint type, const gchar* mask_address)
 	if(!mask_address)
 		return G_MAXUINT32;
 	
-	ip_tokens = g_strsplit(mask_address,IP_DELIM,4);
+	ip_tokens = g_strsplit(mask_address,IPV4_DELIM,IPV4_TOKENS);
 	
 	if(ip_tokens)
 	{
@@ -150,7 +150,7 @@ gchar* format_ip(gint type, const gchar* ip)
 	gchar **ip_and_mask = NULL;
 	gint mask_max = 0;
 	
-	if(!ip)
+	if(!ip || !*ip)
 		return NULL;
 		
 	mask_max = (type == IPV6 ? IPV6_MASK_MAX : IPV4_MASK_MAX);
@@ -205,11 +205,22 @@ gchar *port_to_str(rule_params *params)
 	
 	if(params)
 	{
-		if(params->args == ARGS_PORT_RANGE || 
-			params->args == ARGS_IP_PORT_RANGE)
-			port_str = g_strdup_printf("%u:%u",params->port[0],params->port[1]);
-		else
-			port_str = g_strdup_printf("%u",params->port[0]);
+		switch(params->args)
+		{
+			case ARGS_IP_PORT_RANGE:
+			case ARGS_PORT_RANGE:
+				port_str = g_strdup_printf("%u:%u",
+					params->port[0],params->port[1]);
+				break;
+			case ARGS_IP_PORT:
+			case ARGS_IP_SERVICE:
+			case ARGS_PORT:
+			case ARGS_SERVICE:
+				port_str = g_strdup_printf("%u",params->port[0]);
+				break;
+			default:
+				break;
+		}
 	}
 	return port_str;
 }

@@ -46,26 +46,36 @@ extern "C" {
 
 #define SAILFISH_IPTABLES_INTERFACE_VERSION		1
 #define SAILFISH_IPTABLES_TABLE_NAME			"filter"
-#define IPTABLES_CHAIN_INPUT					"INPUT"
-#define IPTABLES_CHAIN_OUTPUT					"OUTPUT"
-#define IPTABLES_ACCEPT							"ACCEPT"
-#define IPTABLES_DROP							"DROP"
-#define IPTABLES_RULE_ACCEPT					" -j "IPTABLES_ACCEPT
-#define IPTABLES_RULE_DROP						" -j "IPTABLES_DROP
+#define IPTABLES_CHAIN_INPUT				"INPUT"
+#define IPTABLES_CHAIN_OUTPUT				"OUTPUT"
+#define IPTABLES_ACCEPT					"ACCEPT"
+#define IPTABLES_DROP					"DROP"
+#define IPTABLES_RULE_ACCEPT				" -j "IPTABLES_ACCEPT
+#define IPTABLES_RULE_DROP				" -j "IPTABLES_DROP
 
-#define	OPERATION_IN 							0x0001
-#define	OPERATION_OUT 							0x0002
-#define	OPERATION_ACCEPT 						0x0004
-#define	OPERATION_DENY 							0x0008
+#define OPERATION_IN 					0x0001
+#define OPERATION_OUT 					0x0002
+#define OPERATION_ACCEPT 				0x0004
+#define OPERATION_DENY 					0x0008
 
-#define IP_MASK_DELIM							"/"
-#define PORT_RANGE_DELIM						":"
-#define IP_DELIM								"."
+#define IP_MASK_DELIM					"/"
+#define PORT_RANGE_DELIM				":"
 
-#define IPV4									4
-#define IPV6									6
-#define IPV4_MASK_MAX							32
-#define IPV6_MASK_MAX							128
+#define IPV4_DELIM					"."
+#define IPV4_DELIM_COUNT				3
+#define IPV4_TOKENS					4
+
+#define IPV6_DELIM					":"
+// Eight 16bit groups, do not count for loopback here (::1)
+#define IPV6_DELIM_COUNT				7
+#define IPV6_TOKENS					8
+
+#define IPV4						4
+#define IPV6						6
+#define IPV4_MASK_MAX					32
+#define IPV6_MASK_MAX					128
+#define IPV4_ADDR_MIN					6
+#define IPV6_ADDR_MIN					13
 
 typedef enum sailfish_iptables_result {
 	OK = 0,
