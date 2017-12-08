@@ -1,0 +1,13 @@
+#!/bin/bash
+
+TESTS="plugin_unit_test"
+
+WORKDIR=$PWD
+
+cd "$(dirname "$0")"
+
+for TEST in $TESTS ; do
+	gtester "$TEST"
+done
+
+cd $WORKDIR
