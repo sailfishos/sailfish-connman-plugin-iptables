@@ -808,6 +808,7 @@ DBusMessage* signal_from_rule_params(rule_params* params)
 	gchar *port_str = port_to_str(params);
 	const gchar *empty = EMPTY_STR;
 	const gchar *op = OP_STR[params->operation];
+	const gchar *chain = NULL;
 
 	switch(params->args)
 	{
@@ -854,16 +855,18 @@ DBusMessage* signal_from_rule_params(rule_params* params)
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_POLICY_IN:
+			chain = IPTABLES_CHAIN_INPUT;
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_POLICY,
-				DBUS_TYPE_STRING,	IPTABLES_CHAIN_INPUT,
+				DBUS_TYPE_STRING,	&chain,
 				DBUS_TYPE_STRING,	&(params->policy),
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_POLICY_OUT:
+			chain = IPTABLES_CHAIN_OUTPUT;
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_POLICY,
-				DBUS_TYPE_STRING,	IPTABLES_CHAIN_OUTPUT,
+				DBUS_TYPE_STRING,	&chain,
 				DBUS_TYPE_STRING,	&(params->policy),
 				DBUS_TYPE_INVALID);
 			break;
