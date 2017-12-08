@@ -45,6 +45,7 @@ This package contains the end-to-end testing script for Sailfish Connman iptable
 
 %build
 make %{?_smp_mflags} release
+make -C unit build
 
 %check
 make -C unit test
