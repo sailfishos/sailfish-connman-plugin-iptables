@@ -46,6 +46,7 @@ ChangeInputPolicy
 ChangeOutputPolicy
 ClearIptablesTable"
 
+# Inputs for the methods
 METHOD_INPUTS[0]='string:192.168.10.1'
 METHOD_INPUTS[1]='string:192.168.10.1 uint16:22 string:tcp'
 METHOD_INPUTS[2]='string:192.168.10.1 string:80:90 string:tcp'
@@ -90,151 +91,53 @@ function send_message()
 		return 1
 	fi
 }
+
 TESTCOUNT=1
-INDEX=0
 
-for METHOD in $METHODS_INPUT_ACCEPT ; do
+# $1=chain $2=target $3...methods
+function run_test()
+{
+	INDEX=0
 
-	echo -n "Running test $TESTCOUNT "
-	PROCESSED=$(send_message $METHOD "ADD" ${METHOD_INPUTS[$INDEX]})
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
-	fi
-	
-	echo -n "."
-	
-	CHANGE=$(check_change "INPUT" "ACCEPT" ${METHOD_VERIFY[$INDEX]})
-	
-	if [[ "$CHANGE" != "0" ]] ; then
-		echo " FAILURE: $CHANGE"
-		exit 1
-	fi
-	
-	echo -n "."
-	
-	PROCESSED=$(send_message $METHOD "REMOVE" ${METHOD_INPUTS[$INDEX]})
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
-	fi
-	
-	echo ". PASS"
-	
-	TESTCOUNT=$((TESTCOUNT+1))
-	INDEX=$((INDEX+1))
-done
+	for METHOD in ${@:3} ; do
 
-INDEX=0
+		echo -n "Running test $TESTCOUNT "
+		PROCESSED=$(send_message $METHOD "ADD" ${METHOD_INPUTS[$INDEX]})
+	
+		if [[ "$PROCESSED" != "0" ]] ; then
+			echo " FAILURE: $PROCESSED"
+			exit 1
+		fi
+	
+		echo -n "."
+	
+		CHANGE=$(check_change "$1" "$2" ${METHOD_VERIFY[$INDEX]})
+	
+		if [[ "$CHANGE" != "0" ]] ; then
+			echo " FAILURE: $CHANGE"
+			exit 1
+		fi
+	
+		echo -n "."
+	
+		PROCESSED=$(send_message $METHOD "REMOVE" ${METHOD_INPUTS[$INDEX]})
+	
+		if [[ "$PROCESSED" != "0" ]] ; then
+			echo " FAILURE: $PROCESSED"
+			exit 1
+		fi
+	
+		echo ". PASS"
+	
+		TESTCOUNT=$((TESTCOUNT+1))
+		INDEX=$((INDEX+1))
+	done
+}
 
-for METHOD in $METHODS_OUTPUT_ACCEPT ; do
-
-	echo -n "Running test $TESTCOUNT "
-	
-	PROCESSED=$(send_message $METHOD "ADD" ${METHOD_INPUTS[$INDEX]})
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
-	fi
-	
-	echo -n "."
-	
-	CHANGE=$(check_change "OUTPUT" "ACCEPT" ${METHOD_VERIFY[$INDEX]})
-	
-	if [[ "$CHANGE" != "0" ]] ; then
-		echo " FAILURE: $CHANGE"
-		exit 1
-	fi
-	
-	echo -n "."
-	
-	PROCESSED=$(send_message $METHOD "REMOVE" ${METHOD_INPUTS[$INDEX]})
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
-	fi
-	
-	echo ". PASS"
-	
-	TESTCOUNT=$((TESTCOUNT+1))
-	INDEX=$((INDEX+1))
-done
-
-INDEX=0
-
-for METHOD in $METHODS_INPUT_DROP ; do
-
-	echo -n "Running test $TESTCOUNT "
-	
-	PROCESSED=$(send_message $METHOD "ADD" ${METHOD_INPUTS[$INDEX]})
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
-	fi
-	
-	echo -n "."
-	
-	CHANGE=$(check_change "INPUT" "DROP" ${METHOD_VERIFY[$INDEX]})
-	
-	if [[ "$CHANGE" != "0" ]] ; then
-		echo " FAILURE: $CHANGE"
-		exit 1
-	fi
-	
-	echo -n "."
-	
-	PROCESSED=$(send_message $METHOD "REMOVE" ${METHOD_INPUTS[$INDEX]})
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
-	fi
-	
-	echo ". PASS"
-	
-	TESTCOUNT=$((TESTCOUNT+1))
-	INDEX=$((INDEX+1))
-done
-
-INDEX=0
-
-for METHOD in $METHODS_OUTPUT_DROP ; do
-
-	echo -n "Running test $TESTCOUNT "
-
-	PROCESSED=$(send_message $METHOD "ADD" ${METHOD_INPUTS[$INDEX]})
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
-	fi
-	
-	echo -n "."
-	
-	if [[ "$CHANGE" != "0" ]] ; then
-		echo " FAILURE: $CHANGE"
-		exit 1
-	fi
-	
-	echo -n "."
-	
-	PROCESSED=$(send_message $METHOD "REMOVE" ${METHOD_INPUTS[$INDEX]})
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
-	fi
-	
-	echo ". PASS"
-	
-	TESTCOUNT=$((TESTCOUNT+1))
-	INDEX=$((INDEX+1))
-done
+run_test "INPUT" "ACCEPT" $METHODS_INPUT_ACCEPT
+run_test "OUTPUT" "ACCEPT" $METHODS_OUTPUT_ACCEPT
+run_test "INPUT" "DROP" $METHODS_INPUT_DROP
+run_test "OUTPUT" "DROP" $METHODS_OUTPUT_DROP
 
 echo "All tests success."
 exit 0
