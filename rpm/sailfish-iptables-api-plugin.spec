@@ -20,6 +20,26 @@ Requires(postun): /sbin/ldconfig
 %description
 This package contains the Sailfish Connman plugin for iptables management.
 
+%package unit
+Summary:    Unit tests for Sailfish Connman iptables management plugin.
+Group:      Development/Tools
+Requires:   %{name} = %{version}
+Requires:   connman >= 1.31+git50.4
+Requires:   libglib2.0-dev
+
+%description unit
+This package contains the unit tests for Sailfish Connman iptables management plugin. 
+
+%package test
+Summary:    Test Script for Sailfish Connman iptables management plugin.
+Group:      Development/Tools
+Requires:   %{name} = %{version}
+Requires:   connman >= 1.31+git50.4
+Requires:   bash
+
+%description test
+This package contains the end-to-end testing script for Sailfish Connman iptables management plugin. 
+
 %prep
 %setup -q -n %{name}-%{version}
 
@@ -34,8 +54,17 @@ rm -rf %{buildroot}
 %make_install
 
 mkdir -p %{buildroot}/%{_libdir}/connman/plugins
+
+mkdir -p %{buildroot}/%{_libdir}/connman/unit
+install -m 744 unit/run_unit_tests %{buildroot}%{_libdir}/connman/unit/
+install -m 744 unit/plugin_unit_test %{buildroot}%{_libdir}/connman/unit/
+
+mkdir -p %{buildroot}/%{_libdir}/connman/test
+install -m 744 test/test_script %{buildroot}%{_libdir}/connman/test/test_script
+
 mkdir -p %{buildroot}/usr/share/dbus-1/system.d/
 install -m 644 src/sailfish-iptables.conf %{buildroot}/usr/share/dbus-1/system.d/
+
 %preun
 
 %post -p /sbin/ldconfig
@@ -47,3 +76,10 @@ install -m 644 src/sailfish-iptables.conf %{buildroot}/usr/share/dbus-1/system.d
 %{_libdir}/connman/plugins/sailfish-connman-iptables-plugin.so
 %config /usr/share/dbus-1/system.d/sailfish-iptables.conf
 
+%files unit
+%defattr(-,root,root,-)
+%{_libdir}/connman/unit/*
+
+%files test
+%defattr(-,root,root,-)
+%{_libdir}/connman/test/*
