@@ -48,7 +48,7 @@ ADD_CFLAGS=`pkg-config --cflags glib-2.0 dbus-1`
 ADD_LDFLAGS=`pkg-config --libs glib-2.0 dbus-1`
 
 FULL_CFLAGS = $(BASE_FLAGS) $(CFLAGS) $(ADD_CFLAGS) $(DEFINES) $(WARNINGS) -MMD -MP
-FULL_LDFLAGS = $(BASE_FLAGS) $(LDFLAGS) $(ADD_LDFLAGS) -shared -Wl,-soname -Wl,$(LIB_SONAME)
+FULL_LDFLAGS = $(BASE_FLAGS) $(LDFLAGS) $(ADD_LDFLAGS) -shared
 DEBUG_FLAGS = -g
 RELEASE_FLAGS = -g
 
