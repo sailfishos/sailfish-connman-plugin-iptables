@@ -1,6 +1,7 @@
 #!/bin/bash
 
 IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
+TEST_LOG_FILE="/tmp/sailfish_iptables.test.log"
 REQUIRED_COMMANDS="dbus-send iptables iptables-save iptables-restore"
 
 # -t filter -L INPUT |grep ACCEPT
@@ -66,14 +67,28 @@ DESTINATION="net.connman"
 DBUS_PATH="/org/sailfishos/connman/mdm/iptables"
 METHOD_PREFIX="org.sailfishos.connman.mdm.iptables"
 
+TESTCOUNT=1
+TESTFAILED=0
+
+function prepare_log()
+{
+	if [ -f $TEST_LOG_FILE ] ; then
+		rm $TEST_LOG_FILE
+	fi
+}
+
+function log()
+{
+	echo "Test $TESTCOUNT: $@" >> $TEST_LOG_FILE
+}
+
 # $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
 function check_change()
 {	
 	if [[ $(iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
 		echo 0
 	else
-		echo "failure :: iptables -t filter -L $1 -n|grep -e "$6" "$2.*$3.*--.*$4.*$5" ::"
-		return 1
+		echo "failure :: iptables -t filter -L $1 -n|grep -e $6 $2.*$3.*--.*$4.*$5 ::"
 	fi
 }
 
@@ -84,24 +99,29 @@ function check_removed()
 		echo 0
 	else
 		echo "failure :: ! iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5" ::"
-		return 1
+	fi
+}
+
+function check_policy_change()
+{
+	if [[ $(iptables -t filter -L $1 -n|grep -e "Chain $1 (policy $2)") ]] ; then
+		echo 0
+	else
+		echo "failure :: iptables -t filter -L $1 -n|grep -e Chain $1 (policy $2) ::"
 	fi
 }
 
 # Send dbus message with dbus-send, input: $1=Methodname $2=Whole content
 function send_message()
 {
-	RETURN=$(dbus-send --system --type=method_call --print-reply --dest="$DESTINATION" "$DBUS_PATH" "$METHOD_PREFIX.$1" ${@:3} string:$2)
+	RETURN=$(dbus-send --system --type=method_call --print-reply --dest="$DESTINATION" "$DBUS_PATH" "$METHOD_PREFIX.$1" ${@:3} string:$2 2>&1)
 	
 	if [[ $RETURN && $(echo $RETURN|grep -e "uint16 0") ]] ; then
 		echo 0
 	else
-		echo "failure processing rule "$METHOD_PREFIX.$1" ${@:3} string:$2"
-		return 1
+		echo "failure processing rule $METHOD_PREFIX.$1 ${@:3} string:$2 - method returned: $RETURN"
 	fi
 }
-
-TESTCOUNT=1
 
 # $1=chain $2=target $3...methods
 function run_method_test()
@@ -109,13 +129,15 @@ function run_method_test()
 	INDEX=0
 
 	for METHOD in ${@:3} ; do
-
+	
+		FAILED=0
+		
 		echo -n "Running test $TESTCOUNT "
 		PROCESSED=$(send_message $METHOD "ADD" ${METHOD_INPUTS[$INDEX]})
 	
 		if [[ "$PROCESSED" != "0" ]] ; then
-			echo " FAILURE: $PROCESSED"
-			exit 1
+			log "$PROCESSED"
+			FAILED=1
 		fi
 	
 		echo -n "."
@@ -123,8 +145,8 @@ function run_method_test()
 		CHANGE=$(check_change "$1" "$2" ${METHOD_VERIFY[$INDEX]})
 	
 		if [[ "$CHANGE" != "0" ]] ; then
-			echo " FAILURE: $CHANGE"
-			exit 1
+			log "$CHANGE"
+			FAILED=1
 		fi
 	
 		echo -n "."
@@ -132,8 +154,8 @@ function run_method_test()
 		PROCESSED=$(send_message $METHOD "REMOVE" ${METHOD_INPUTS[$INDEX]})
 	
 		if [[ "$PROCESSED" != "0" ]] ; then
-			echo " FAILURE: $PROCESSED"
-			exit 1
+			log "$PROCESSED"
+			FAILED=1
 		fi
 		
 		echo -n "."
@@ -141,11 +163,18 @@ function run_method_test()
 		CHANGE=$(check_removed "$1" "$2" ${METHOD_VERIFY[$INDEX]})
 	
 		if [[ "$CHANGE" != "0" ]] ; then
-			echo " FAILURE REMOVE: $CHANGE"
-			exit 1
+			log "$CHANGE"
+			FAILED=1
 		fi
 	
-		echo ". PASS"
+		echo -n "."
+		
+		if [ $FAILED -eq 0 ] ; then
+			echo " PASS"
+		else
+			TESTFAILED=$((TESTFAILED+1))
+			echo " FAILED"
+		fi
 	
 		TESTCOUNT=$((TESTCOUNT+1))
 		INDEX=$((INDEX+1))
@@ -154,18 +183,36 @@ function run_method_test()
 
 function run_policy_test()
 {
+	FAILED=0
+	
 	echo -n "Running test $TESTCOUNT ."
 	
-	PROCESSED=$(send_message $1 $2)
+	PROCESSED=$(send_message $1 $3)
 	
 	echo -n "."
 	
 	if [[ "$PROCESSED" != "0" ]] ; then
-		echo " FAILURE: $PROCESSED"
-		exit 1
+		log "$PROCESSED"
+		FAILED=1
 	fi
 	
-	echo -n ".. PASS"
+	echo -n "."
+	
+	CHANGE=$(check_policy_change $2 $3)
+	
+	if [[ "$CHANGE" != "0" ]] ; then
+		log "$CHANGE"
+		FAILED=1
+	fi
+	
+	echo -n "."
+	
+	if [ $FAILED -eq 0 ] ; then
+		echo " PASS"
+	else
+		TESTFAILED=$((TESTFAILED+1))
+		echo " FAILED"
+	fi
 		
 	TESTCOUNT=$((TESTCOUNT+1))
 }
@@ -177,13 +224,11 @@ function run_tests()
 	run_method_test "INPUT" "DROP" $METHODS_INPUT_DROP
 	run_method_test "OUTPUT" "DROP" $METHODS_OUTPUT_DROP
 	
-	run_policy_test "ChangeInputPolicy" "DROP"
-	run_policy_test "ChangeInputPolicy" "ACCEPT"
+	run_policy_test "ChangeInputPolicy" "INPUT" "DROP" 
+	run_policy_test "ChangeInputPolicy" "INPUT" "ACCEPT"
 	
-	run_policy_test "ChangeOutputPolicy" "DROP"
-	run_policy_test "ChangeOutputPolicy" "ACCEPT"
-
-	echo "All tests success."
+	run_policy_test "ChangeOutputPolicy" "OUTPUT" "DROP" 
+	run_policy_test "ChangeOutputPolicy" "OUTPUT" "ACCEPT" 
 }
 
 function run_command_checks()
@@ -210,7 +255,6 @@ function run_pre_test_operations()
 	else
 		echo "This test script is not run as root."
 		echo "Current status of iptables cannot be saved or restored."
-		
 	
 		echo -n "Clear iptables with D-Bus API method call? [yes/no/quit] "
 	
@@ -255,12 +299,20 @@ function run_post_test_operations()
 
 function main()
 {
+	
 	run_command_checks
 	run_pre_test_operations
 	run_tests
 	run_post_test_operations
 
-	exit 0
+	if [ $TESTFAILED -eq 0 ] ; then
+		echo "All tests complete."
+		exit 0
+	else
+		echo "$TESTFAILED/$TESTCOUNT tests failed."
+		echo "Error logs can be found at $TEST_LOG_FILE"
+		exit 1
+	fi
 }
 
 main
