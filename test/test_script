@@ -1,5 +1,8 @@
 #!/bin/bash
 
+IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
+REQUIRED_COMMANDS="dbus-send iptables iptables-save iptables-restore"
+
 # -t filter -L INPUT |grep ACCEPT
 METHODS_INPUT_ACCEPT="
 AllowIncomingIp
@@ -40,11 +43,6 @@ DenyOutgoingPort
 DenyOutgoingPortRange
 DenyOutgoingIpWithService
 DenyOutgoingService"
-
-METHODS_MISC="
-ChangeInputPolicy
-ChangeOutputPolicy
-ClearIptablesTable"
 
 # Inputs for the methods
 METHOD_INPUTS[0]='string:192.168.10.1'
@@ -154,17 +152,115 @@ function run_method_test()
 	done
 }
 
-# 1. Save iptables filter table to temp file
-# 2. Clear filter table
-# 3. run tests
-# 4. clear filter table
-# 5. restore filter table from file
+function run_policy_test()
+{
+	echo -n "Running test $TESTCOUNT ."
+	
+	PROCESSED=$(send_message $1 $2)
+	
+	echo -n "."
+	
+	if [[ "$PROCESSED" != "0" ]] ; then
+		echo " FAILURE: $PROCESSED"
+		exit 1
+	fi
+	
+	echo -n ".. PASS"
+		
+	TESTCOUNT=$((TESTCOUNT+1))
+}
 
-run_method_test "INPUT" "ACCEPT" $METHODS_INPUT_ACCEPT
-run_method_test "OUTPUT" "ACCEPT" $METHODS_OUTPUT_ACCEPT
-run_method_test "INPUT" "DROP" $METHODS_INPUT_DROP
-run_method_test "OUTPUT" "DROP" $METHODS_OUTPUT_DROP
+function run_tests()
+{
+	run_method_test "INPUT" "ACCEPT" $METHODS_INPUT_ACCEPT
+	run_method_test "OUTPUT" "ACCEPT" $METHODS_OUTPUT_ACCEPT
+	run_method_test "INPUT" "DROP" $METHODS_INPUT_DROP
+	run_method_test "OUTPUT" "DROP" $METHODS_OUTPUT_DROP
+	
+	run_policy_test "ChangeInputPolicy" "DROP"
+	run_policy_test "ChangeInputPolicy" "ACCEPT"
+	
+	run_policy_test "ChangeOutputPolicy" "DROP"
+	run_policy_test "ChangeOutputPolicy" "ACCEPT"
 
-echo "All tests success."
-exit 0
+	echo "All tests success."
+}
 
+function run_command_checks()
+{
+	for command in $REQUIRED_COMMANDS ; do
+		if [[ ! $(which $command) ]] ; then
+			echo "Command \"$command\" is not found. Tests cannot be run."
+			exit 1
+		fi
+	done
+}
+
+function run_pre_test_operations()
+{
+	if [ "$(id -u)" == "0" ] ; then
+		echo "Saving current iptables filter table to $IPTABLES_SAVE_FILE"
+		iptables-save --table=filter > $IPTABLES_SAVE_FILE
+	
+		CLEARED=$(send_message "ClearIptablesTable" "filter")
+	
+		if [[ "$CLEARED" != "0" ]] ; then
+			echo "Cannot clear iptables filter table. Test may report invalid results."
+		fi
+	else
+		echo "This test script is not run as root."
+		echo "Current status of iptables cannot be saved or restored."
+		
+	
+		echo -n "Clear iptables with D-Bus API method call? [yes/no/quit] "
+	
+		read response
+	
+		case $response in
+			"yes" | "y")
+				CLEARED=$(send_message "ClearIptablesTable" "filter")
+				if [[ "$CLEARED" != "0" ]] ; then
+					echo "Cannot clear iptables filter table using D-Bus API."
+				fi
+				;;
+			"no" | "n")
+				echo "Test may report invalid values if iptables contains similar rules used in testing."
+				;;
+			"quit" | "q")
+				exit 0
+				;;
+			*)
+				echo "Invalid selection. Quitting"
+				exit 0
+				;;
+		esac
+	fi
+}
+
+function run_post_test_operations() 
+{
+	if [ "$(id -u)" == "0" ] ; then
+		CLEARED=$(send_message "ClearIptablesTable" "filter")
+	
+		if [[ "$CLEARED" != "0" ]] ; then
+			echo "Cannot clear iptables filter table."
+		fi
+		echo "Restoring iptables filter table from $IPTABLES_SAVE_FILE"
+		iptables-restore --table=filter < $IPTABLES_SAVE_FILE
+		rm -v $IPTABLES_SAVE_FILE
+	else
+		echo "Iptables may contain invalid values."
+	fi
+}
+
+function main()
+{
+	run_command_checks
+	run_pre_test_operations
+	run_tests
+	run_post_test_operations
+
+	exit 0
+}
+
+main

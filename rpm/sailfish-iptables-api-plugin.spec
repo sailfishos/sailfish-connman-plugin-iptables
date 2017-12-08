@@ -38,6 +38,7 @@ Group:      Development/Tools
 Requires:   %{name} = %{version}
 Requires:   connman >= 1.31+git50.4
 Requires:   bash
+Requires:   iptables
 
 %description test
 This package contains the end-to-end testing script for Sailfish Connman iptables management plugin. 
