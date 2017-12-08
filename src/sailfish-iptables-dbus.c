@@ -46,6 +46,7 @@
 #include <errno.h>
 #include "sailfish-iptables-dbus.h"
 #include "sailfish-iptables-parameters.h"
+#include "sailfish-iptables-validate.h"
 #include "sailfish-iptables-utils.h"
 #include "sailfish-iptables.h"
 

@@ -1,9 +1,5 @@
 # -*- Mode: makefile-gmake -*-
 
-.PHONY: clean all debug release
-
-all: test
-
 SRC = \
 	test-sailfish-connman-plugin-iptables.c \
 	../src/sailfish-iptables-validate.c \
@@ -49,6 +45,12 @@ ifneq ($(strip $(DEPS)),)
 endif
 endif
 
+.PHONY: clean all debug release
+
+all: test
+
+build: $(NAME)
+
 test: $(NAME) run
 
 run:
@@ -57,6 +59,7 @@ run:
 clean:
 	rm -f *~ $/*~
 	rm *.d *.o
+	rm $(NAME)
 
 %.o : %.c
 	$(CC) -c $(RELEASE_CFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" $< -o $@
