@@ -13,7 +13,7 @@ Requires: dbus >= 1.4
 BuildRequires: iptables-devel
 BuildRequires: connman-devel >= 1.31+git50.4
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
-BuildRequires:  pkgconfig(dbus-1) >= 1.4
+BuildRequires: pkgconfig(dbus-1) >= 1.4
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
@@ -24,8 +24,10 @@ This package contains the Sailfish Connman plugin for iptables management.
 Summary:    Unit tests for Sailfish Connman iptables management plugin.
 Group:      Development/Tools
 Requires:   %{name} = %{version}
-Requires:   connman >= 1.31+git50.4
-Requires:   libglib2.0-dev
+Requires:   glib2-devel >= 2.28
+Requires:   bash
+BuildRequires: pkgconfig(glib-2.0) >= 2.28
+BuildRequires: pkgconfig(dbus-1) >= 1.4
 
 %description unit
 This package contains the unit tests for Sailfish Connman iptables management plugin. 
