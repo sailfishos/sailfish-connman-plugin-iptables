@@ -74,7 +74,18 @@ function check_change()
 	if [[ $(iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
 		echo 0
 	else
-		echo "failure :: iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5" ::"
+		echo "failure :: iptables -t filter -L $1 -n|grep -e "$6" "$2.*$3.*--.*$4.*$5" ::"
+		return 1
+	fi
+}
+
+# $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
+function check_removed()
+{	
+	if [[ ! $(iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
+		echo 0
+	else
+		echo "failure :: ! iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5" ::"
 		return 1
 	fi
 }
@@ -95,7 +106,7 @@ function send_message()
 TESTCOUNT=1
 
 # $1=chain $2=target $3...methods
-function run_test()
+function run_method_test()
 {
 	INDEX=0
 
@@ -126,6 +137,15 @@ function run_test()
 			echo " FAILURE: $PROCESSED"
 			exit 1
 		fi
+		
+		echo -n "."
+	
+		CHANGE=$(check_removed "$1" "$2" ${METHOD_VERIFY[$INDEX]})
+	
+		if [[ "$CHANGE" != "0" ]] ; then
+			echo " FAILURE REMOVE: $CHANGE"
+			exit 1
+		fi
 	
 		echo ". PASS"
 	
@@ -134,10 +154,16 @@ function run_test()
 	done
 }
 
-run_test "INPUT" "ACCEPT" $METHODS_INPUT_ACCEPT
-run_test "OUTPUT" "ACCEPT" $METHODS_OUTPUT_ACCEPT
-run_test "INPUT" "DROP" $METHODS_INPUT_DROP
-run_test "OUTPUT" "DROP" $METHODS_OUTPUT_DROP
+# 1. Save iptables filter table to temp file
+# 2. Clear filter table
+# 3. run tests
+# 4. clear filter table
+# 5. restore filter table from file
+
+run_method_test "INPUT" "ACCEPT" $METHODS_INPUT_ACCEPT
+run_method_test "OUTPUT" "ACCEPT" $METHODS_OUTPUT_ACCEPT
+run_method_test "INPUT" "DROP" $METHODS_INPUT_DROP
+run_method_test "OUTPUT" "DROP" $METHODS_OUTPUT_DROP
 
 echo "All tests success."
 exit 0
