@@ -766,11 +766,13 @@ DBusMessage* sailfish_iptables_deny_outgoing_service(
 
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal)
 {
-	DBusConnection* connman_dbus = dbus_connection_ref(
-			connman_dbus_get_connection());
-			
-	g_dbus_send_message(connman_dbus,signal);
-	dbus_connection_unref(connman_dbus);
+	DBusConnection* connman_dbus = 	connman_dbus_get_connection();
+
+	if(connman_dbus)
+	{
+		g_dbus_send_message(connman_dbus,signal);
+		dbus_connection_unref(connman_dbus);
+	}
 }
 
 DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal_name,
