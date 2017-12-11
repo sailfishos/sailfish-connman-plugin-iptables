@@ -61,9 +61,7 @@
 
 #define SAILFISH_IPTABLES_SIGNAL_INIT		"Initialize"
 #define SAILFISH_IPTABLES_SIGNAL_STOP		"Shutdown"
-#define SAILFISH_IPTABLES_SIGNAL_LOAD		"FirewallLoaded"
-#define SAILFISH_IPTABLES_SIGNAL_SAVE		"FirewallSaved"
-#define SAILFISH_IPTABLES_SIGNAL_CLEAR		"FirewallCleared"
+#define SAILFISH_IPTABLES_SIGNAL_CLEAR		"IptablesTableCleared"
 #define SAILFISH_IPTABLES_SIGNAL_POLICY		"PolicyChanged"
 #define SAILFISH_IPTABLES_SIGNAL_RULE		"RuleChanged"
 

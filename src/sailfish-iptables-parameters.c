@@ -58,7 +58,6 @@ void rule_params_free(rule_params *params)
 		g_free(params->ip);
 		g_free(params->service);
 		g_free(params->protocol);
-		g_free(params->path);
 		g_free(params->table);
 		g_free(params->policy);
 		g_free(params);
@@ -74,7 +73,6 @@ rule_params* rule_params_new(rule_args args)
 	params->port[0] = params->port[1] = 0;
 	params->protocol = NULL;
 	params->operation = UNDEFINED;
-	params->path = NULL;
 	params->table = NULL;
 	params->policy = NULL;
 	params->args = args;
@@ -125,9 +123,6 @@ api_result check_parameters(rule_params* params)
 			if(!params->service) return INVALID_SERVICE;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			return OK;
-		case ARGS_SAVE:
-		case ARGS_LOAD:
-			return params->path ? OK : INVALID_FILE_PATH;
 		case ARGS_CLEAR:
 			return OK;
 		case ARGS_POLICY_IN:

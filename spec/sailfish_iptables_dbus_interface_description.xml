@@ -1,4 +1,4 @@
-"<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
 "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 <node>
 
@@ -439,13 +439,7 @@ Sent when plugin is removed from Connection Manager.
 -->
 <signal name="Shutdown"></signal>
 
-<!-- Sent when LoadFirewallFromDisk succeeds -->
-<signal name="FirewallLoaded"></signal>
-
-<!-- Sent when SaveFirewallToDisk succeeds -->
-<signal name="FirewallSaved"></signal>
-
-<!-- Sent when ClearFirewall succeeds -->
+<!-- Sent when ClearIptablesTable succeeds -->
 <signal name="FirewallCleared"></signal>
 
 <!-- Sent when policy is changed for a chain -->
@@ -461,4 +455,4 @@ Sent when plugin is removed from Connection Manager.
 <arg name="operation" type="s"/>
 </signal>
 
-</interface></node>"
+</interface></node>

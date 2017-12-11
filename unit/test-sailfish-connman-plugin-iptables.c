@@ -324,6 +324,27 @@ static void test_iptables_plugin_validate_address()
 	g_assert(validate_address(IPV4,"192.168.0.1"));
 	g_assert(validate_address(IPV4,"10.0.0.1"));
 	g_assert(validate_address(IPV4,"8.8.8.8"));
+	g_assert(validate_address(IPV4,"0.0.0.0"));
+	
+	// IPv6
+	g_assert(validate_address(IPV6,"fe80::200:5aee:feaa:20a2"));
+	g_assert(validate_address(IPV6,"2001:db8:3333:4444:5555:6666:7777:8888"));
+	g_assert(validate_address(IPV6,"2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF"));
+	g_assert(validate_address(IPV6,"::"));
+	g_assert(validate_address(IPV6,"fdf8:f53b:82e4::"));
+	g_assert(validate_address(IPV6,"2001:db8::"));
+	g_assert(validate_address(IPV6,"::1234:5678"));
+	g_assert(validate_address(IPV6,"2001:db8::1234:5678"));
+	g_assert(validate_address(IPV6,"2001:0db8:0001:0000:0000:0ab9:C0A8:0102"));
+	
+	g_assert(validate_address(IPV6,"::FFFF:8.8.8.8"));
+	g_assert(validate_address(IPV6,"2001:db8:3333:4444:5555:6666:1.2.3.4"));
+	g_assert(validate_address(IPV6,"::11.22.33.44"));
+	g_assert(validate_address(IPV6,"2001:db8::123.123.123.123"));
+	g_assert(validate_address(IPV6,"::1234:5678:91.123.4.56"));
+	g_assert(validate_address(IPV6,"::1234:5678:1.2.3.4"));
+	g_assert(validate_address(IPV6,"2001:db8::1234:5678:5.6.7.8"));
+	
 	
 	g_assert(!validate_address(IPV4,""));
 	g_assert(!validate_address(IPV4,NULL));
@@ -339,6 +360,8 @@ static void test_iptables_plugin_validate_address()
 	g_assert(!validate_address(IPV4,"192..."));
 	
 	g_assert(!validate_address(IPV4,"jolla.com"));
+	
+	g_assert(!validate_address(IPV4,"015.014.013.012"));
 }
 
 static void test_iptables_plugin_validate_mask()
@@ -443,14 +466,6 @@ static void test_iptables_plugin_validate_operation()
 	g_assert(validate_operation(NULL) == UNDEFINED);
 }
 
-static void test_iptables_plugin_validate_path()
-{
-	g_assert(validate_path("/path/to/file"));
-	
-	g_assert(!validate_path(""));
-	g_assert(!validate_path(NULL));
-}
-
 static void test_iptables_plugin_validate_policy()
 {
 
@@ -480,7 +495,6 @@ int main(int argc, char *argv[])
 	
 	g_test_add_func(PREFIX_VALIDATE "policy", test_iptables_plugin_validate_policy);
 	g_test_add_func(PREFIX_VALIDATE "port", test_iptables_plugin_validate_port);
-	g_test_add_func(PREFIX_VALIDATE "path", test_iptables_plugin_validate_path);
 	g_test_add_func(PREFIX_VALIDATE "operation", test_iptables_plugin_validate_operation);
 	g_test_add_func(PREFIX_VALIDATE "protocol", test_iptables_plugin_validate_protocol);
 	g_test_add_func(PREFIX_VALIDATE "service_name", test_iptables_plugin_validate_service_name);

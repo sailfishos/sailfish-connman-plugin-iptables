@@ -842,15 +842,6 @@ DBusMessage* signal_from_rule_params(rule_params* params)
 				DBUS_TYPE_STRING,	&op,
 				DBUS_TYPE_INVALID);
 			break;
-		case ARGS_SAVE:
-			signal = sailfish_iptables_dbus_signal(
-				SAILFISH_IPTABLES_SIGNAL_SAVE,
-				DBUS_TYPE_INVALID);
-			break;
-		case ARGS_LOAD:
-			signal = sailfish_iptables_dbus_signal(
-				SAILFISH_IPTABLES_SIGNAL_LOAD,
-				DBUS_TYPE_INVALID);
 		case ARGS_CLEAR:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_CLEAR,
@@ -941,12 +932,6 @@ rule_params* get_parameters_from_message(DBusMessage* message, rule_args args)
 						DBUS_TYPE_STRING, &service,
 						DBUS_TYPE_STRING, &protocol,
 						DBUS_TYPE_STRING, &operation,
-						DBUS_TYPE_INVALID);
-			break;
-		case ARGS_SAVE:
-		case ARGS_LOAD:
-			rval = dbus_message_get_args(message, error,
-						DBUS_TYPE_STRING, &path,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CLEAR:
@@ -1049,10 +1034,6 @@ rule_params* get_parameters_from_message(DBusMessage* message, rule_args args)
 	// No operation defined, defaults to ADD
 	else
 		params->operation = ADD;
-	
-	//
-	if(path && g_utf8_validate(path,-1,NULL) && validate_path(path))
-		params->path = g_strdup(path);
 	
 	if(table && *table && g_utf8_validate(table,-1,NULL))
 		params->table = g_utf8_strdown(table,-1);
