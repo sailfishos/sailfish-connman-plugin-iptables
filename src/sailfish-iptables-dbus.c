@@ -766,12 +766,12 @@ DBusMessage* sailfish_iptables_deny_outgoing_service(
 
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal)
 {
-	DBusConnection* connman_dbus = 	connman_dbus_get_connection();
+	DBusConnection* conn = 	connman_dbus_get_connection();
 
-	if(connman_dbus)
+	if(conn)
 	{
-		g_dbus_send_message(connman_dbus,signal);
-		dbus_connection_unref(connman_dbus);
+		g_dbus_send_message(conn,signal);
+		dbus_connection_unref(conn);
 	}
 }
 
@@ -1052,7 +1052,7 @@ gint sailfish_iptables_dbus_register() {
 	
 	gint rval = 0;
 	
-	DBusConnection* conn = dbus_connection_ref(connman_dbus_get_connection());
+	DBusConnection* conn = connman_dbus_get_connection();
 	if(conn)
 	{
 		if(g_dbus_register_interface(conn,
@@ -1096,7 +1096,7 @@ gint sailfish_iptables_dbus_unregister()
 {
 	gint rval = 0;
 
-	DBusConnection* conn = dbus_connection_ref(connman_dbus_get_connection());
+	DBusConnection* conn = connman_dbus_get_connection();
 	if(conn)
 	{
 		if(g_dbus_unregister_interface(conn,
@@ -1115,6 +1115,7 @@ gint sailfish_iptables_dbus_unregister()
 				"unregsiter failed");
 			rval = 1;
 		}
+		dbus_connection_unref(conn);
 	}
 	else 
 	{
