@@ -54,20 +54,51 @@ gboolean negated_ip_address(const gchar* ip)
 	return ip && ip[0] == '!';
 }
 
-gint get_ip_delimeters(gint type, const gchar* address)
+gboolean check_ip_address_length(gint type, const gchar* address)
 {
-	gint tokens = 0, i = 0;
-	gchar delim = (type == IPV4 ? IPV4_DELIM[0] : IPV6_DELIM[0]);
+	return strlen(address) > (type == IPV4 ? IPV4_ADDR_MIN : IPV6_ADDR_MIN);
+}
+
+gboolean check_ip_address_delimeters(gint type, const gchar* address)
+{
+	gchar** tokens = NULL;
+	gboolean rval = true;
+	gint length = 0, i = 0;
 	
-	if(address && *address)
+	if(!address && !*address)
+		return false;
+		
+	tokens = g_strsplit_set(address, (type == IPV6 ? IPV6_DELIM : IPV4_DELIM), -1);
+	length = g_strv_length(tokens);
+		
+	if(type == IPV6)
 	{	
-		for(i = 0; address[i] ; i++)
-		{
-			if(address[i] == delim)
-				tokens++;
-		}
+		// IPv6 can be just "::"
+		if(!tokens || length < 1 || length > IPV6_TOKENS)
+			rval = false;
 	}
-	return tokens;
+	// IPv4 as default
+	else
+	{
+		if(tokens && length == IPV4_TOKENS)
+		{
+			// Check for leading zeroes
+			for(i = 0; i < length; i++)
+			{
+				if(strlen(tokens[i]) > 1 && tokens[i][0] == '0')
+				{
+					rval = false;
+					goto out;
+				}
+			}
+		}
+		else
+			rval = false;
+	}
+out:
+	g_strfreev(tokens);
+
+	return rval;
 }
 
 gboolean validate_address(gint type, const gchar* address)
@@ -77,11 +108,9 @@ gboolean validate_address(gint type, const gchar* address)
 	
 	// Address must be at least 1.1.1.1, or IPv4 mapped (::ffff:0.0.0.0)
 	if(address && *address && 
-		strlen(address) > (type == IPV4 ? IPV4_ADDR_MIN : IPV6_ADDR_MIN) &&
-		get_ip_delimeters(type, address) == (
-			type == IPV4 ? IPV4_DELIM_COUNT : IPV6_DELIM_COUNT))
-	{
-		
+		check_ip_address_length(type, address) &&
+		check_ip_address_delimeters(type, address))
+	{		
 		memset(&hints, 0, sizeof(struct addrinfo));
 
 		hints.ai_family = (type == IPV6 ? AF_INET6 : AF_INET);
@@ -192,16 +221,6 @@ rule_operation validate_operation(const gchar *operation)
 	}
 	
 	return op;
-}
-
-gboolean validate_path(const gchar *path)
-{
-	if(path && *path)
-	{
-		// Do proper validation in connman, or add our own validation rules here
-		return true;
-	}
-	return false;
 }
 
 gboolean validate_policy(const gchar* policy)

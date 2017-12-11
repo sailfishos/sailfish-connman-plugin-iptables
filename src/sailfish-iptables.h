@@ -64,20 +64,18 @@ extern "C" {
 #define PORT_RANGE_DELIM				":"
 
 #define IPV4_DELIM					"."
-#define IPV4_DELIM_COUNT				3
 #define IPV4_TOKENS					4
 
-#define IPV6_DELIM					":"
-// Eight 16bit groups, do not count for loopback here (::1)
-#define IPV6_DELIM_COUNT				7
-#define IPV6_TOKENS					8
+#define IPV6_DELIM					".:"
+// Eight 16bit groups, but can be anything between 2 and 9 (IPv4 mapped IPv6)
+#define IPV6_TOKENS					10
 
 #define IPV4						4
 #define IPV6						6
 #define IPV4_MASK_MAX					32
 #define IPV6_MASK_MAX					128
 #define IPV4_ADDR_MIN					6
-#define IPV6_ADDR_MIN					13
+#define IPV6_ADDR_MIN					1 // "::" -> all zeroes
 
 typedef enum sailfish_iptables_result {
 	OK = 0,
@@ -107,8 +105,6 @@ typedef enum sailfish_iptables_dbus_rule_args {
 	ARGS_PORT,
 	ARGS_PORT_RANGE,
 	ARGS_SERVICE,
-	ARGS_SAVE,
-	ARGS_LOAD,
 	ARGS_CLEAR,
 	ARGS_POLICY_IN,
 	ARGS_POLICY_OUT
@@ -121,7 +117,6 @@ typedef struct sailfish_iptables_rule_params {
 	guint16 port[2];
 	gchar *protocol;
 	rule_operation operation;
-	gchar *path;
 	gchar *table;
 	gchar *policy;
 	rule_args args;
