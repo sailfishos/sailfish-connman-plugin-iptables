@@ -17,8 +17,8 @@ LD = $(CC)
 WARNINGS = -Wall
 BASE_FLAGS = -fPIC
 
-ADD_CFLAGS=`pkg-config --cflags glib-2.0 dbus-1`
-ADD_LDFLAGS=`pkg-config --libs glib-2.0 dbus-1`
+ADD_CFLAGS=`pkg-config --cflags glib-2.0 dbus-1 libdbusaccess libglibutil`
+ADD_LDFLAGS=`pkg-config --libs glib-2.0 dbus-1 libdbusaccess libglibutil`
 
 FULL_CFLAGS = $(BASE_FLAGS) $(CFLAGS) $(ADD_CFLAGS) $(DEFINES) $(WARNINGS) -MMD -MP
 FULL_LDFLAGS = $(BASE_FLAGS) $(LDFLAGS) $(ADD_LDFLAGS)

@@ -39,8 +39,6 @@
 
 
 #define CONNMAN_API_SUBJECT_TO_CHANGE
-#define PLUGIN_NAME "Sailfish iptables API"
-
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -224,7 +222,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 	else if(op & OPERATION_DENY)
 		g_string_append(rule,IPTABLES_RULE_DROP);
 	else
-		rval = INVALID;
+		rval = INVALID_REQUEST;
 
 	str_rule = g_string_free(rule,FALSE);
 
@@ -310,18 +308,20 @@ api_result deny_outgoing(rule_params* params)
 }
 
 DBusMessage* process_request(DBusMessage *message,
-	api_result (*func)(rule_params* params), rule_args args)
+	api_result (*func)(rule_params* params), rule_args args, api_data *data)
 {
 	api_result result = INVALID;
 	rule_params *params = NULL;
 	
-	if((params =  get_parameters_from_message(message,args)))
+	if(!sailfish_iptables_policy_check_args(message, data, args))
+		result = ACCESS_DENIED;
+	else if((params = get_parameters_from_message(message,args)))
 	{	
 		if((result = func(params)) == OK)
 		{
 			DBusMessage *signal = signal_from_rule_params(params);
 			if(signal)
-				sailfish_iptables_dbus_send_signal(signal);
+				sailfish_iptables_dbus_send_signal(signal, data);
 		}
 		else
 			ERR("%s %s %d",
@@ -330,20 +330,8 @@ DBusMessage* process_request(DBusMessage *message,
 	}
 	
 	rule_params_free(params);
-	
-	dbus_uint16_t res = (dbus_uint16_t)result;
-	const gchar* msg = api_result_message(result);
 
-	DBusMessage* reply = g_dbus_create_reply(message,
-			DBUS_TYPE_UINT16,	&res,
-			DBUS_TYPE_STRING, 	&msg,
-			DBUS_TYPE_INVALID);
-
-	if(!reply)
-		reply = g_dbus_create_error(message,DBUS_ERROR_NO_MEMORY,
-			"failed to add parameters to reply.");
-
-	return reply;
+	return reply_from_api_result(message, result);
 }
 
 static int sailfish_iptables_init(void)
