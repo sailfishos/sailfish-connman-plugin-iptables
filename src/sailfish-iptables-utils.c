@@ -57,14 +57,17 @@ const gchar const * RESULT_STR[] = {
 	"Invalid service name",
 	"Invalid protocol",
 	"Invalid policy",
-	"Invalid file path",
-	"Cannot process rule",
+	"Rule does not exist",
+	"Cannot process request",
 	"Cannot perform operation",
+	"Unauthorized, please try again",
+	"Unregister failed",
+	"Access denied",
 };
 
 const char* api_result_message(api_result result)
 {
-	if(result >= OK && result <= INVALID)
+	if(result >= OK && result <= ACCESS_DENIED)
 		return RESULT_STR[result];
 		
 	return "";

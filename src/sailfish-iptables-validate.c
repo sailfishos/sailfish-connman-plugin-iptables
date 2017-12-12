@@ -59,7 +59,7 @@ gboolean check_ip_address_length(gint type, const gchar* address)
 	return strlen(address) > (type == IPV4 ? IPV4_ADDR_MIN : IPV6_ADDR_MIN);
 }
 
-gboolean check_ip_address_delimeters(gint type, const gchar* address)
+gboolean check_ip_address_format(gint type, const gchar* address)
 {
 	gchar** tokens = NULL;
 	gboolean rval = true;
@@ -109,7 +109,7 @@ gboolean validate_address(gint type, const gchar* address)
 	// Address must be at least 1.1.1.1, or IPv4 mapped (::ffff:0.0.0.0)
 	if(address && *address && 
 		check_ip_address_length(type, address) &&
-		check_ip_address_delimeters(type, address))
+		check_ip_address_format(type, address))
 	{		
 		memset(&hints, 0, sizeof(struct addrinfo));
 

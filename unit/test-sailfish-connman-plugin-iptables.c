@@ -12,6 +12,11 @@
 
 #define CONNMAN_API_SUBJECT_TO_CHANGE
 
+// To be able to build the tests without connman
+DBusConnection* connman_dbus_get_connection() { return NULL; }
+void connman_log(const char *fmt, ...) { return; }
+gboolean g_dbus_remove_watch(DBusConnection *connection, guint id) { return TRUE; }
+
 static void test_iptables_plugin_utils_api_result_message()
 {
 	g_assert(g_ascii_strcasecmp(api_result_message(OK),"Ok") == 0);

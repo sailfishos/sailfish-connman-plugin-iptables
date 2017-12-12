@@ -41,12 +41,16 @@
 #define _SAILFISH_IPTABLES_H_
 
 #include <dbus/dbus.h>
+#include <dbusaccess/dbusaccess_peer.h>
+#include <dbusaccess/dbusaccess_policy.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SAILFISH_IPTABLES_INTERFACE_VERSION		1
+#define PLUGIN_NAME "Sailfish iptables API"
+
+#define SAILFISH_IPTABLES_INTERFACE_VERSION		2
 #define SAILFISH_IPTABLES_TABLE_NAME			"filter"
 #define IPTABLES_CHAIN_INPUT				"INPUT"
 #define IPTABLES_CHAIN_OUTPUT				"OUTPUT"
@@ -77,18 +81,36 @@ extern "C" {
 #define IPV4_ADDR_MIN					6
 #define IPV6_ADDR_MIN					1 // "::" -> all zeroes
 
+typedef struct sailfish_iptables_dbus_client {
+	DAPeer *peer;
+	guint watch_id;
+} dbus_client; 
+
+typedef struct sailfish_iptables_api_data {
+	GHashTable* clients;
+	DA_BUS da_bus;
+    DAPolicy* policy;
+} api_data;
+
+typedef struct sailfish_iptables_client_disconnect_data {
+	api_data* main_data;
+	gchar* client_name;
+} client_disconnect_data;
+
 typedef enum sailfish_iptables_result {
 	OK = 0,
-	INVALID_IP,
-	INVALID_PORT,
-	INVALID_PORT_RANGE,
-	INVALID_SERVICE,
-	INVALID_PROTOCOL,
-	INVALID_POLICY,
-	INVALID_FILE_PATH,
-	RULE_DOES_NOT_EXIST,
-	INVALID_REQUEST,
-	INVALID
+	INVALID_IP,// 1
+	INVALID_PORT, // 2
+	INVALID_PORT_RANGE, // 3
+	INVALID_SERVICE, // 4
+	INVALID_PROTOCOL, // 5
+	INVALID_POLICY, // 6
+	RULE_DOES_NOT_EXIST, // 7
+	INVALID_REQUEST, // 8
+	INVALID, // 9
+	UNAUTHORIZED, // 10
+	REMOVE_FAILED, // 11
+	ACCESS_DENIED // 12
 } api_result;
 
 typedef enum sailfish_iptables_rule_operation {
@@ -122,6 +144,15 @@ typedef struct sailfish_iptables_rule_params {
 	rule_args args;
 } rule_params;
 
+typedef enum sailfish_iptables_dbus_access {
+	// No clearing of iptables, TODO: only own rules can be removed
+	SAILFISH_DBUS_ACCESS_MANAGE = 1, 
+	// Full access
+	SAILFISH_DBUS_ACCESS_FULL,
+	// Listen only
+	SAILFISH_DBUS_ACCESS_LISTEN
+} dbus_access;
+
 api_result clear_firewall(rule_params* params);
 api_result set_policy(rule_params* params);
 
@@ -131,7 +162,7 @@ api_result deny_incoming(rule_params* params);
 api_result deny_outgoing(rule_params* params);
 
 DBusMessage* process_request(DBusMessage *message,
-	api_result (*func)(rule_params* params), rule_args args);
+	api_result (*func)(rule_params* params), rule_args args, api_data* data);
 	
 
 #ifdef __cplusplus

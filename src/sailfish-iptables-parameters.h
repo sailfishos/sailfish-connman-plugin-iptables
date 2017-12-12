@@ -47,7 +47,24 @@ extern "C" {
 #include <glib.h>
 #include <dbus/dbus.h>
 
+#include <dbusaccess/dbusaccess_peer.h>
+
 #include "sailfish-iptables.h"
+
+void dbus_client_free(dbus_client *client);
+void dbus_client_free1(void *data);
+dbus_client* dbus_client_new();
+
+void api_data_free(api_data *data);
+api_data* api_data_new();
+
+dbus_client* api_data_get_peer(api_data *data, const gchar *peer_name);
+gboolean api_data_add_peer(api_data *data, dbus_client *client);
+gboolean api_data_remove_peer(api_data *data, const gchar *peer_name);
+
+client_disconnect_data* client_disconnect_data_new(api_data* data,
+	dbus_client* client);
+void client_disconnect_data_free(client_disconnect_data* data);
 
 void rule_params_free(rule_params *params);
 rule_params* rule_params_new(rule_args args);
