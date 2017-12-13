@@ -79,19 +79,13 @@ DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal,
 DBusMessage* sailfish_iptables_dbus_method_return(DBusMessage* message,
 	gint first_arg_type, ...);
 	
-DBusMessage* reply_from_api_result(DBusMessage *message, api_result result);
+DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message, api_result result);
 
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal, api_data *data);
 
-DBusMessage* signal_from_rule_params(rule_params* params);
+DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params);
 
-rule_params* get_parameters_from_message(DBusMessage* message, rule_args args);
-
-gboolean sailfish_iptables_policy_check(DBusMessage *message, api_data* data, 
-	dbus_access policy);
-	
-gboolean sailfish_iptables_policy_check_args(DBusMessage *message,
-	api_data* data, rule_args args);
+rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message, rule_args args);
 
 /* These prototypes are connected to dbus */
 

@@ -48,6 +48,7 @@
 #include "sailfish-iptables-parameters.h"
 #include "sailfish-iptables-validate.h"
 #include "sailfish-iptables-utils.h"
+#include "sailfish-iptables-policy.h"
 #include "sailfish-iptables.h"
 
 #define DBG(fmt,arg...) connman_debug(fmt, ## arg)
@@ -97,12 +98,6 @@
 #define SAILFISH_IPTABLES_REGISTER_CLIENT		"Register"
 #define SAILFISH_IPTABLES_UNREGISTER_CLIENT		"Unregister"
 
-#define SAILFISH_IPTABLES_DBUS_ACCESS_POLICY DA_POLICY_VERSION ";* = deny;" \
-    "group(privileged) & manage() = allow;" \
-    "group(privileged) & listen() = allow;" \
-    "group(privileged) & full() = deny;" \
-    "user(root) = allow;"
-
 /*
 	Result codes (enum sailfish_iptables_result):
 	
@@ -140,13 +135,6 @@
 
 const gchar const * OP_STR[] = {"Add", "Remove", "Undefined"};
 const gchar * EMPTY_STR = "";
-
-static const DA_ACTION sailfish_iptables_plugin_dbus_actions[] = {
-	{ "manage", SAILFISH_DBUS_ACCESS_MANAGE, 0 },
-	{ "full", SAILFISH_DBUS_ACCESS_FULL, 0 },
-	{ "listen", SAILFISH_DBUS_ACCESS_LISTEN, 0 },
-	{}
-};
 
 // Signal names are defined in sailfish_iptables_dbus.h
 static const GDBusSignalTable signals[] = {
@@ -592,19 +580,6 @@ static const GDBusMethodTable methods[] = {
 	Chain name: str
 */
 
-static DAPeer* get_peer(DBusMessage *message, api_data *data)
-{
-	if(message && data)
-	{
-		const gchar* sender = dbus_message_get_sender(message);
-		dbus_client* client = api_data_get_peer(data, sender);
-		
-		return client && client->peer ? client->peer :
-			da_peer_get(data->da_bus, sender);
-	}
-	return NULL;
-}
-
 static void dbus_client_destroy(void *user_data)
 {
 	if(user_data)
@@ -622,66 +597,16 @@ static void dbus_client_disconnected(DBusConnection *connection, void *user_data
 	dbus_client_destroy(user_data);
 }
 
-gboolean check_peer_policy(api_data* data, DAPeer *peer, 
-	dbus_access policy)
-{
-	if(peer && data)
-	{
-		switch(policy)
-		{
-			case SAILFISH_DBUS_ACCESS_FULL:
-			case SAILFISH_DBUS_ACCESS_MANAGE:
-			case SAILFISH_DBUS_ACCESS_LISTEN:
-				return da_policy_check(data->policy, &peer->cred, policy,
-						NULL, DA_ACCESS_DENY);
-			default:
-				return false;
-		}
-	}
-	return false;
-}
-
-gboolean sailfish_iptables_policy_check(DBusMessage *message, api_data* data, 
-	dbus_access policy)
-{
-	DAPeer *peer = get_peer(message, data);
-	
-	return check_peer_policy(data, peer, policy);
-}
-
-gboolean sailfish_iptables_policy_check_args(DBusMessage *message,
-	api_data* data, rule_args args)
-{
-	switch(args)
-	{
-		case ARGS_CLEAR:
-			return sailfish_iptables_policy_check(message, data,
-				SAILFISH_DBUS_ACCESS_FULL);
-		case ARGS_IP:
-		case ARGS_IP_PORT:
-		case ARGS_IP_PORT_RANGE:
-		case ARGS_IP_SERVICE:
-		case ARGS_PORT:
-		case ARGS_PORT_RANGE:
-		case ARGS_SERVICE:
-		case ARGS_POLICY_IN:
-		case ARGS_POLICY_OUT:
-			return sailfish_iptables_policy_check(message, data,
-				SAILFISH_DBUS_ACCESS_MANAGE);
-		default:
-			return false;
-	}
-}
-
 DBusMessage* sailfish_iptables_register_client(DBusConnection* connection,
 			DBusMessage* message, void *user_data)
 {
 	api_data *data = (api_data*)user_data;
 	api_result result = OK;
 	
-	DAPeer* peer = get_peer(message, data);
+	DAPeer* peer = sailfish_iptables_policy_get_peer(message, data);
 	
-	if(check_peer_policy(data, peer, SAILFISH_DBUS_ACCESS_LISTEN))
+	if(peer && sailfish_iptables_policy_check_peer(data, peer,
+		SAILFISH_DBUS_ACCESS_LISTEN))
 	{
 		dbus_client *client = dbus_client_new();
 
@@ -707,7 +632,7 @@ DBusMessage* sailfish_iptables_register_client(DBusConnection* connection,
 	else
 		result = ACCESS_DENIED;
 	
-	return reply_from_api_result(message, result);
+	return sailfish_iptables_dbus_reply_result(message, result);
 }
 			
 DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
@@ -721,7 +646,7 @@ DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
 	if(!api_data_remove_peer(data,sender))
 		result = REMOVE_FAILED;
 	
-	return reply_from_api_result(message, result);
+	return sailfish_iptables_dbus_reply_result(message, result);
 }
 
 DBusMessage* sailfish_iptables_clear_iptables(DBusConnection *connection,
@@ -991,7 +916,7 @@ DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal_name,
 	return signal;
 }
 
-DBusMessage* reply_from_api_result(DBusMessage *message, api_result result)
+DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message, api_result result)
 {
 	dbus_uint16_t res = (dbus_uint16_t)result;
 	const gchar* msg = api_result_message(result);
@@ -1007,7 +932,7 @@ DBusMessage* reply_from_api_result(DBusMessage *message, api_result result)
 	return reply;
 }
 
-DBusMessage* signal_from_rule_params(rule_params* params)
+DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 {
 	DBusMessage* signal = NULL;
 	gchar *port_str = port_to_str(params);
@@ -1071,7 +996,7 @@ DBusMessage* signal_from_rule_params(rule_params* params)
 	return signal;
 }
 
-rule_params* get_parameters_from_message(DBusMessage* message, rule_args args)
+rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message, rule_args args)
 {
 	rule_params *params = rule_params_new(args);
 	DBusError* error = NULL;
@@ -1255,9 +1180,6 @@ gint sailfish_iptables_dbus_register() {
 	
 	gint rval = 0;
 	api_data *data = api_data_new();
-	data->da_bus = DA_BUS_SYSTEM;
-	data->policy = da_policy_new_full(SAILFISH_IPTABLES_DBUS_ACCESS_POLICY, 
-		sailfish_iptables_plugin_dbus_actions);
 	
 	DBusConnection* conn = connman_dbus_get_connection();
 	if(conn)

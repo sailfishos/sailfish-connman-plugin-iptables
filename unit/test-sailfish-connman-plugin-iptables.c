@@ -9,6 +9,7 @@
 #include "../src/sailfish-iptables-validate.h"
 #include "../src/sailfish-iptables-parameters.h"
 #include "../src/sailfish-iptables-utils.h"
+#include "../src/sailfish-iptables-policy.h"
 
 #define CONNMAN_API_SUBJECT_TO_CHANGE
 
@@ -17,9 +18,187 @@ DBusConnection* connman_dbus_get_connection() { return NULL; }
 void connman_log(const char *fmt, ...) { return; }
 gboolean g_dbus_remove_watch(DBusConnection *connection, guint id) { return TRUE; }
 
+void da_peer_unref(DAPeer* peer)
+{
+	if(peer)
+	{
+		if(peer->name)
+			g_free((gchar*)peer->name);
+		g_free(peer);
+	}
+}
+
+int da_system_uid(const char* user)
+{
+	if (!g_strcmp0(user, "sailfish-mdm") || !g_strcmp0(user,"nemo"))
+		return 1;
+	else
+		return -1;
+}
+
+int da_system_gid(const char* group)
+{
+	if (!g_strcmp0(group, "privileged"))
+		return 1;
+	else
+		return -1;
+}
+
+static void test_iptables_plugin_policy_check_user()
+{
+	gint i = 0;
+	api_data* data = api_data_new();
+	DAPeer* peer = g_new0(DAPeer, 1);
+	
+	g_assert(data);
+	
+	static const gid_t groups[] = {
+		39, 100, 993, 996, 997, 999, 1000, 1002, 1003, 1004,
+		1005, 1006, 1024, 100000
+	};
+	
+	DACred cred = {
+		100000, 100000,
+		groups, G_N_ELEMENTS(groups),
+		0,
+		DBUSACCESS_CRED_CAPS | DBUSACCESS_CRED_GROUPS
+	};
+	
+	peer->cred = cred;
+	
+	gchar *peer_name = g_strdup(":1.1234");
+	peer->name = g_strdup(peer_name);
+	
+	g_assert(!sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_MANAGE));
+	g_assert(!sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_FULL));
+	g_assert(!sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_LISTEN));
+	
+	g_assert(!sailfish_iptables_policy_check_peer(data, peer, 0));
+	g_assert(!sailfish_iptables_policy_check_peer(data, peer, 100));
+	
+	DBusMessage* msg = dbus_message_new_method_call("net.connman",
+		"/org/sailfishos/connman/mdm/iptables",
+		"org.sailfishos.connman.mdm.iptables",
+		"GetVersion");
+		
+	dbus_message_set_sender(msg, peer_name);
+	
+	dbus_client* client = dbus_client_new();
+	g_assert(client);
+	
+	client->peer = peer;
+	g_assert(api_data_add_peer(data, client));
+	
+	for(i = 0; i <= ARGS_POLICY_OUT ; i++)
+		g_assert(!sailfish_iptables_policy_check_args(msg, data, i));
+	
+	g_assert(!sailfish_iptables_policy_check_args(msg, data, ARGS_POLICY_OUT+1));
+	
+	g_assert(api_data_remove_peer(data, peer_name));
+	
+	dbus_message_unref(msg);
+	api_data_free(data);
+	g_free(peer_name);
+}
+
+static void test_iptables_plugin_policy_check_root()
+{
+	gint i = 0;
+	api_data* data = api_data_new();
+	DAPeer* peer = g_new0(DAPeer,1);
+	
+	g_assert(data);
+	
+	DACred cred = {
+		0, 0,
+		NULL, 0,
+		G_GUINT64_CONSTANT(0xfffffff008003420),
+		DBUSACCESS_CRED_CAPS | DBUSACCESS_CRED_GROUPS
+	};
+	
+	peer->cred = cred;
+	
+	gchar *peer_name = g_strdup(":1.1234");
+	peer->name = g_strdup(peer_name);
+		
+	g_assert(sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_MANAGE));
+	g_assert(sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_FULL));
+	g_assert(sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_LISTEN));
+	
+	g_assert(!sailfish_iptables_policy_check_peer(data, peer, 0));
+	g_assert(!sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_LISTEN+1));
+	
+	DBusMessage* msg = dbus_message_new_method_call("net.connman",
+		"/org/sailfishos/connman/mdm/iptables",
+		"org.sailfishos.connman.mdm.iptables",
+		"GetVersion");
+		
+	dbus_message_set_sender(msg, peer_name);
+	
+	dbus_client* client = dbus_client_new();
+	g_assert(client);
+	
+	client->peer = peer;
+	g_assert(api_data_add_peer(data, client));
+	
+	for(i = 0; i <= ARGS_POLICY_OUT ; i++)
+		g_assert(sailfish_iptables_policy_check_args(msg, data, i));
+	
+	g_assert(!sailfish_iptables_policy_check_args(msg, data, ARGS_POLICY_OUT+1));
+	
+	g_assert(api_data_remove_peer(data, peer_name));
+	
+	dbus_message_unref(msg);
+	api_data_free(data);
+	g_free(peer_name);
+}
+
+static void test_iptables_plugin_policy_check_basic()
+{
+	gint i = 0;
+	api_data* data = api_data_new();
+	
+	g_assert(data);
+	
+	for(i = 0; i <= SAILFISH_DBUS_ACCESS_LISTEN ; i++)
+		g_assert(!sailfish_iptables_policy_check_peer(NULL, NULL,i));
+	
+	for(i = 0; i <= SAILFISH_DBUS_ACCESS_LISTEN ; i++)
+		g_assert(!sailfish_iptables_policy_check_peer(data, NULL,i));
+	
+	g_assert(!sailfish_iptables_policy_get_peer(NULL, NULL));
+	g_assert(!sailfish_iptables_policy_check(NULL, NULL, SAILFISH_DBUS_ACCESS_MANAGE));
+	g_assert(!sailfish_iptables_policy_check_args(NULL, NULL, ARGS_CLEAR));
+	
+	DBusMessage* msg = dbus_message_new_method_call("net.connman",
+		"/org/sailfishos/connman/mdm/iptables",
+		"org.sailfishos.connman.mdm.iptables",
+		"GetVersion");
+		
+	dbus_message_set_sender(msg,":1.1234");
+	
+	g_assert(!sailfish_iptables_policy_get_peer(msg, data));
+	g_assert(!sailfish_iptables_policy_check(msg, data, SAILFISH_DBUS_ACCESS_MANAGE));
+	
+	dbus_message_unref(msg);
+	api_data_free(data);
+}
+
 static void test_iptables_plugin_utils_api_result_message()
 {
 	g_assert(g_ascii_strcasecmp(api_result_message(OK),"Ok") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_IP),"Invalid IP") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PORT),"Invalid port") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PORT_RANGE),"Invalid port range") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_SERVICE),"Invalid service name") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PROTOCOL),"Invalid protocol") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_POLICY),"Invalid policy") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(RULE_DOES_NOT_EXIST),"Rule does not exist") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_REQUEST),"Cannot process request") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID),"Cannot perform operation") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(UNAUTHORIZED),"Unauthorized, please try again") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(REMOVE_FAILED),"Unregister failed") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(ACCESS_DENIED),"Access denied") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(999),"") == 0);
 }
 
@@ -315,6 +494,110 @@ static void test_iptables_plugin_parameters_service()
 	rule_params_free(params);
 }
 
+static void test_iptables_plugin_parameters_dbus_client()
+{
+	dbus_client* client = dbus_client_new();
+	
+	g_assert(client);
+	g_assert(!client->peer);
+	g_assert(!client->watch_id);
+	
+	dbus_client_free(client);
+	
+	client = dbus_client_new();
+	
+	dbus_client_free1(client);	
+}
+
+static void test_iptables_plugin_parameters_api_data()
+{
+	gint i = 0, max = 5;
+	const gchar const * NAMES[] = {"name1", "name2", "name3", "name4", "name5"};
+	api_data *data = api_data_new();
+	
+	g_assert(data);
+	g_assert(data->clients);
+	g_assert(data->policy);
+	
+	dbus_client* tmp = dbus_client_new();
+	DAPeer* peer_tmp = g_new0(DAPeer,1);
+
+	g_assert(!api_data_add_peer(NULL,NULL));
+	g_assert(!api_data_add_peer(data,NULL));
+	g_assert(!api_data_add_peer(data, tmp));
+
+	tmp->peer = peer_tmp;
+	g_assert(!api_data_add_peer(data, tmp));
+
+	dbus_client_free(tmp);
+	
+	g_assert(!api_data_get_peer(NULL,NULL));
+	g_assert(!api_data_get_peer(data,NULL));
+	g_assert(!api_data_get_peer(data,""));
+	g_assert(!api_data_get_peer(data,NAMES[0]));
+	
+	g_assert(!api_data_remove_peer(NULL,NULL));
+	g_assert(!api_data_remove_peer(data,NULL));
+	g_assert(!api_data_remove_peer(data,""));
+	g_assert(!api_data_remove_peer(data,NAMES[0]));
+	
+	for(i = 0; i < max; i++)
+	{
+		dbus_client* client = dbus_client_new();
+		
+		DAPeer* peer = g_new0(DAPeer,1);
+		peer->name = g_strdup(NAMES[i]);
+
+		DACred cred = {
+			0, 0,
+			NULL, 0,
+			G_GUINT64_CONSTANT(0xfffffff008003420),
+			DBUSACCESS_CRED_CAPS | DBUSACCESS_CRED_GROUPS
+		};
+	
+		peer->cred = cred;
+		peer->bus = DA_BUS_SYSTEM;
+		
+		client->peer = peer;
+	
+		g_assert(api_data_add_peer(data,client));
+		g_assert(g_hash_table_size(data->clients) == i+1);
+		g_assert(api_data_get_peer(data,NAMES[i]));
+	}
+	
+	g_assert(api_data_remove_peer(data,NAMES[0]));
+	g_assert(g_hash_table_size(data->clients) == max-1);
+	
+	api_data_free(data);
+}
+
+static void test_iptables_plugin_parameters_disconnect_data()
+{	
+	api_data* a_data = api_data_new();
+	dbus_client* client = dbus_client_new();
+	client_disconnect_data *cd_data = NULL;
+	
+	g_assert(!client_disconnect_data_new(NULL,NULL));
+	g_assert(!client_disconnect_data_new(a_data, NULL));
+	g_assert(!client_disconnect_data_new(a_data, client));
+	
+	DAPeer* peer = g_new0(DAPeer,1);
+	gchar *peer_name = g_strdup("peer");
+	peer->name = peer_name;
+		
+	client->peer = peer;
+	
+	cd_data = client_disconnect_data_new(a_data, client);
+	g_assert(cd_data);
+	g_assert(cd_data->main_data);
+	g_assert(cd_data->client_name);
+	client_disconnect_data_free(cd_data);
+	
+	g_free(peer_name);
+	g_free(peer);
+}
+
+
 static void test_iptables_plugin_negated_ip_address()
 {
 	g_assert(negated_ip_address("!192.168.10.1"));
@@ -493,6 +776,8 @@ static void test_iptables_plugin_validate_policy()
 #define PREFIX_PARAMETERS		PREFIX"parameters/"
 #define PREFIX_UTILS			PREFIX"utils/"
 #define PREFIX_DBUS			PREFIX"dbus/"
+#define PREFIX_POLICY		PREFIX"policycheck/"
+
 
 int main(int argc, char *argv[])
 {	
@@ -514,6 +799,9 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_PARAMETERS "ip_and_port_range", test_iptables_plugin_parameters_ip_and_port_range);
 	g_test_add_func(PREFIX_PARAMETERS "port_range", test_iptables_plugin_parameters_port_range);
 	g_test_add_func(PREFIX_PARAMETERS "service", test_iptables_plugin_parameters_service);
+	g_test_add_func(PREFIX_PARAMETERS "dbus_client", test_iptables_plugin_parameters_dbus_client);
+	g_test_add_func(PREFIX_PARAMETERS "api_data", test_iptables_plugin_parameters_api_data);
+	g_test_add_func(PREFIX_PARAMETERS "disconnect_data", test_iptables_plugin_parameters_disconnect_data);
 	
 	g_test_add_func(PREFIX_UTILS "api_result_message", test_iptables_plugin_utils_api_result_message);
 	g_test_add_func(PREFIX_UTILS "protocol_for_service", test_iptables_plugin_utils_protocol_for_service);
@@ -522,6 +810,10 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_UTILS "format_ip", test_iptables_plugin_utils_format_ip);
 	g_test_add_func(PREFIX_UTILS "get_port_range_tokens", test_iptables_plugin_utils_get_port_range_tokens);
 	g_test_add_func(PREFIX_UTILS "port_to_str", test_iptables_plugin_utils_port_to_str);
+	
+	g_test_add_func(PREFIX_POLICY "basic", test_iptables_plugin_policy_check_basic);
+	g_test_add_func(PREFIX_POLICY "root", test_iptables_plugin_policy_check_root);
+	g_test_add_func(PREFIX_POLICY "user", test_iptables_plugin_policy_check_user);
 
 	return g_test_run();
 }

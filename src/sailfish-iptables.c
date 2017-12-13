@@ -52,6 +52,7 @@
 #include "sailfish-iptables-validate.h"
 #include "sailfish-iptables-parameters.h"
 #include "sailfish-iptables-utils.h"
+#include "sailfish-iptables-policy.h"
 
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
 #define DBG(fmt,arg...) connman_debug(fmt, ## arg)
@@ -315,11 +316,12 @@ DBusMessage* process_request(DBusMessage *message,
 	
 	if(!sailfish_iptables_policy_check_args(message, data, args))
 		result = ACCESS_DENIED;
-	else if((params = get_parameters_from_message(message,args)))
+	else if((params = sailfish_iptables_dbus_get_parameters_from_msg(message,
+		args)))
 	{	
 		if((result = func(params)) == OK)
 		{
-			DBusMessage *signal = signal_from_rule_params(params);
+			DBusMessage *signal = sailfish_iptables_dbus_signal_from_rule_params(params);
 			if(signal)
 				sailfish_iptables_dbus_send_signal(signal, data);
 		}
@@ -331,7 +333,7 @@ DBusMessage* process_request(DBusMessage *message,
 	
 	rule_params_free(params);
 
-	return reply_from_api_result(message, result);
+	return sailfish_iptables_dbus_reply_result(message, result);
 }
 
 static int sailfish_iptables_init(void)
