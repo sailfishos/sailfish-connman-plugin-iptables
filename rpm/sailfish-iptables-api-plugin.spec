@@ -28,8 +28,11 @@ This package contains the Sailfish Connman plugin for iptables management.
 Summary:    Unit tests for Sailfish Connman iptables management plugin
 Group:      Development/Tools
 Requires:   %{name} = %{version}
-Requires:   glib2-devel >= 2.28
 Requires:   bash
+Requires:   glib2-devel >= 2.28
+Requires:   dbus >= 1.4
+Requires:   libdbusaccess >= 1.0.2
+Requires:   libglibutil >= 1.0.21
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
 BuildRequires: pkgconfig(dbus-1) >= 1.4
 BuildRequires: pkgconfig(libdbusaccess) >= 1.0.2

@@ -50,6 +50,7 @@
 #include "sailfish-iptables-validate.h"
 #include "sailfish-iptables-utils.h"
 #include "sailfish-iptables-dbus.h"
+#include "sailfish-iptables-policy.h"
 
 void dbus_client_free(dbus_client *client)
 {
@@ -58,17 +59,18 @@ void dbus_client_free(dbus_client *client)
 		DBusConnection *conn = connman_dbus_get_connection();
 		
 		if(client->watch_id && conn)
+		{
 			g_dbus_remove_watch(conn, client->watch_id);
+			dbus_connection_unref(conn);
+		}
 		
-		dbus_connection_unref(conn);
-		
-		da_peer_unref(client->peer);
-		
-		client->peer = NULL;
+		if(client->peer)
+		{
+			da_peer_unref(client->peer);
+			client->peer = NULL;
+		}
 	
 		g_free(client);
-		
-		client = NULL;
 	}
 }
 
@@ -91,18 +93,23 @@ void api_data_free(api_data *data)
 {
 	if(data)
 	{
+		sailfish_iptables_policy_uninitialize(data);
 		g_hash_table_destroy(data->clients);
 		data->clients = NULL;
 		g_free(data);
-		data = NULL;
 	}
 }
+
 api_data* api_data_new()
 {
 	api_data *data = g_new0(api_data,1);
 	
 	data->clients = g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
 		dbus_client_free1);
+		
+	data->policy = NULL;
+	
+	sailfish_iptables_policy_initialize(data);
 	
 	return data;
 }
@@ -119,13 +126,13 @@ dbus_client* api_data_get_peer(api_data* data, const gchar* peer_name)
 
 gboolean api_data_add_peer(api_data *data, dbus_client *client)
 {
-	if(data && client)
+	if(data && client && client->peer && client->peer->name)
 	{
 		if(!g_hash_table_replace(data->clients, (gpointer)client->peer->name,
 				client))
 		{
 			DBG("%s %s %s",PLUGIN_NAME,"Cannot add client to db, name: ",
-			client->peer->name);
+				client->peer->name);
 			return false;
 		}
 		return true;
@@ -151,9 +158,16 @@ gboolean api_data_remove_peer(api_data *data, const gchar *peer_name)
 client_disconnect_data* client_disconnect_data_new(api_data* data,
 	dbus_client* client)
 {
+	if(!data || !client || !client->peer || !client->peer->name)
+		return NULL;
+		
 	client_disconnect_data* disconnect_data = g_new0(client_disconnect_data,1);
 	disconnect_data->main_data = data;
-	disconnect_data->client_name = g_strdup(client->peer->name);
+	
+	if(client->peer)
+		disconnect_data->client_name = g_strdup(client->peer->name);
+	else
+		disconnect_data->client_name = NULL;
 	
 	return disconnect_data;
 }

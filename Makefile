@@ -24,6 +24,7 @@ SRC = \
  sailfish-iptables-validate.c \
  sailfish-iptables-parameters.c \
  sailfish-iptables-utils.c \
+ sailfish-iptables-policy.c \
  sailfish-iptables.c
 
 #
