@@ -10,12 +10,14 @@ Requires: iptables
 Requires: connman >= 1.31+git50.4
 Requires: glib2 >= 2.28
 Requires: dbus >= 1.4
+Requires: libdbusaccess >= 1.0.2
+Requires: libglibutil >= 1.0.21
 BuildRequires: iptables-devel
 BuildRequires: connman-devel >= 1.31+git50.4
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
 BuildRequires: pkgconfig(dbus-1) >= 1.4
-BuildRequires: pkgconfig(libdbusaccess)
-BuildRequires: pkgconfig(libglibutil)
+BuildRequires: pkgconfig(libdbusaccess) >= 1.0.2
+BuildRequires: pkgconfig(libglibutil) >= 1.0.21
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
@@ -30,6 +32,8 @@ Requires:   glib2-devel >= 2.28
 Requires:   bash
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
 BuildRequires: pkgconfig(dbus-1) >= 1.4
+BuildRequires: pkgconfig(libdbusaccess) >= 1.0.2
+BuildRequires: pkgconfig(libglibutil) >= 1.0.21
 
 %description unit
 This package contains the unit tests and unit test runner script for Sailfish Connman iptables management plugin. 
@@ -69,9 +73,6 @@ install -m 744 unit/plugin_unit_test %{buildroot}%{_libdir}/connman/unit/
 mkdir -p %{buildroot}/%{_libdir}/connman/test
 install -m 744 test/test_script %{buildroot}%{_libdir}/connman/test/test_script
 
-mkdir -p %{buildroot}/usr/share/dbus-1/system.d/
-install -m 644 src/sailfish-iptables.conf %{buildroot}/usr/share/dbus-1/system.d/
-
 %preun
 
 %post -p /sbin/ldconfig
@@ -81,7 +82,6 @@ install -m 644 src/sailfish-iptables.conf %{buildroot}/usr/share/dbus-1/system.d
 %files
 %defattr(-,root,root,-)
 %{_libdir}/connman/plugins/sailfish-connman-iptables-plugin.so
-%config /usr/share/dbus-1/system.d/sailfish-iptables.conf
 
 %files unit
 %defattr(-,root,root,-)

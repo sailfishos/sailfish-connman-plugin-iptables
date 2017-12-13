@@ -94,13 +94,13 @@
 
 #define SAILFISH_IPTABLES_CLEAR_IPTABLES_TABLE		"ClearIptablesTable"
 
-#define SAILFISH_IPTABLES_REGISTER_CLIENT			"Register"
-#define SAILFISH_IPTABLES_UNREGISTER_CLIENT			"Unregister"
+#define SAILFISH_IPTABLES_REGISTER_CLIENT		"Register"
+#define SAILFISH_IPTABLES_UNREGISTER_CLIENT		"Unregister"
 
 #define SAILFISH_IPTABLES_DBUS_ACCESS_POLICY DA_POLICY_VERSION ";* = deny;" \
-	"user(nemo) & listen() = allow;" \
-    "group(privileged) & manage() = allow; " \
-    "group(privileged) & full() = deny; " \
+    "group(privileged) & manage() = allow;" \
+    "group(privileged) & listen() = allow;" \
+    "group(privileged) & full() = deny;" \
     "user(root) = allow;"
 
 /*
@@ -1267,9 +1267,9 @@ gint sailfish_iptables_dbus_register() {
 			SAILFISH_IPTABLES_DBUS_INTERFACE,
 			methods,
 			signals,
-			NULL,// Propertytable
-			data,// user data
-			(GDBusDestroyFunction)api_data_free))// destroy func
+			NULL,
+			data,
+			(GDBusDestroyFunction)api_data_free))
 		{
 			
 			DBusMessage *signal = sailfish_iptables_dbus_signal(
