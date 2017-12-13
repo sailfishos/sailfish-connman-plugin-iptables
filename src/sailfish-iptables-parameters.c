@@ -154,7 +154,10 @@ client_disconnect_data* client_disconnect_data_new(api_data* data,
 	client_disconnect_data* disconnect_data = g_new0(client_disconnect_data,1);
 	disconnect_data->main_data = data;
 	disconnect_data->client_name = g_strdup(client->peer->name);
+	
+	return disconnect_data;
 }
+
 void client_disconnect_data_free(client_disconnect_data* data)
 {
 	if(data)
