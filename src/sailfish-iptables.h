@@ -83,6 +83,8 @@ extern "C" {
 
 typedef struct sailfish_iptables_dbus_client {
 	DAPeer *peer;
+	// TODO: own list for added rules, identify with id -> users/groups
+	// with manage() access can access only these
 	guint watch_id;
 } dbus_client; 
 
