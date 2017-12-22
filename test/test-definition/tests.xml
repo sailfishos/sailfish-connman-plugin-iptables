@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testdefinition version="1.0">
+	<suite name="sailfish-connman-iptables-plugin-tests" domain="connectivity">
+		<description>Sailfish Connman iptables plugin automatic tests</description>
+		<set name="ete-tests" feature="Sailfish Connman iptables plugin">
+			<description>Sailfish Connman iptables plugin end-to-end tests</description>
+			<case manual="false" name="End-to-end test as root">
+				<step>PATH=/sbin:\$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
+				</step>
+			</case>
+			<case manual="false" name="End-to-end test as regular user">
+				<step>/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
+				</step>
+			</case>
+		</set>
+   </suite>
+</testdefinition>
