@@ -133,7 +133,7 @@
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		{"chain", "s"}
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		SAILFISH_IPTABLES_INPUT_POLICY
 
-const gchar const * OP_STR[] = {"Add", "Remove", "Undefined"};
+const gchar const * OP_STR[] = {"Add", "Remove", "Undefined", NULL};
 const gchar * EMPTY_STR = "";
 
 // Signal names are defined in sailfish_iptables_dbus.h

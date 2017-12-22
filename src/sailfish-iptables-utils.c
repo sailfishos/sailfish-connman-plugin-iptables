@@ -63,6 +63,7 @@ const gchar const * RESULT_STR[] = {
 	"Unauthorized, please try again",
 	"Unregister failed",
 	"Access denied",
+	NULL
 };
 
 const char* api_result_message(api_result result)

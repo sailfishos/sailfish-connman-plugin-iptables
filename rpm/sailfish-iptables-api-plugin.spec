@@ -1,13 +1,13 @@
 Name: sailfish-connman-iptables-plugin
 Version: 0.0.2
-Release: 1
+Release: 2
 Summary: Sailfish Connman iptables management plugin
 Group: Development/Libraries
 License: GPLv2
 URL: https://github.com/sailfishos/sailfish-connman-plugin-iptables
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
-Requires: connman >= 1.31+git50.4
+Requires: connman >= 1.31+git50.6
 Requires: glib2 >= 2.28
 Requires: dbus >= 1.4
 Requires: libdbusaccess >= 1.0.2
