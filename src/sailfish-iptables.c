@@ -149,9 +149,9 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 	else if(params->args == ARGS_IP_PORT)
 	{
 		if(params->protocol)
-			g_string_append_printf(rule,"-%c%s%s -p %s --dport %u",
+			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %u",
 				ip_direction, params->ip_negate ? " ! " : " ",
-				params->ip, params->protocol, params->port[0]);
+				params->ip, params->protocol, params->protocol, params->port[0]);
 		else
 		{
 			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
@@ -161,9 +161,9 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 	else if(params->args == ARGS_IP_PORT_RANGE)
 	{
 		if(params->protocol)
-			g_string_append_printf(rule,"-%c%s%s -p %s --dport %u:%u",
+			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %u:%u",
 				ip_direction, params->ip_negate ? " ! " : " ",
-				params->ip, params->protocol,
+				params->ip, params->protocol, params->protocol,
 				params->port[0], params->port[1]);
 		else
 		{
@@ -174,9 +174,9 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 	else if(params->args == ARGS_IP_SERVICE)
 	{
 		if(params->protocol)
-			g_string_append_printf(rule,"-%c%s%s -p %s --dport %d",
+			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %d",
 				ip_direction, params->ip_negate ? " ! " : " ",
-				params->ip, params->protocol, 
+				params->ip, params->protocol, params->protocol,
 				params->port[0]);
 		else
 		{
@@ -187,8 +187,8 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 	else if(params->args == ARGS_PORT)
 	{
 		if(params->protocol)
-			g_string_append_printf(rule,"-p %s --dport %u", 
-				params->protocol, params->port[0]);
+			g_string_append_printf(rule,"-p %s -m %s --dport %u", 
+				params->protocol, params->protocol, params->port[0]);
 		else
 		{
 			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
@@ -198,8 +198,9 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 	else if(params->args == ARGS_PORT_RANGE)
 	{
 		if(params->protocol)
-			g_string_append_printf(rule,"-p %s --dport %u:%u",
-				params->protocol, params->port[0], params->port[1]);
+			g_string_append_printf(rule,"-p %s -m %s --dport %u:%u",
+				params->protocol, params->protocol, 
+				params->port[0], params->port[1]);
 		else
 		{
 			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
@@ -209,8 +210,8 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 	else if(params->args == ARGS_SERVICE)
 	{
 		if(params->protocol)
-			g_string_append_printf(rule,"-p %s --dport %d",
-				params->protocol, params->port[0]);
+			g_string_append_printf(rule,"-p %s -m %s --dport %d",
+				params->protocol, params->protocol, params->port[0]);
 		else
 		{
 			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
