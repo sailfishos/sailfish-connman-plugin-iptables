@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <dbus/dbus.h>
 #include <glib.h>
+#include <connman/log.h>
 
 #include "sailfish-iptables.h"
 #include "sailfish-iptables-dbus.h"
@@ -55,7 +56,7 @@
 #include "sailfish-iptables-policy.h"
 
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
-#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
+//#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
 
 
 api_result clear_firewall(rule_params* params)
@@ -99,7 +100,7 @@ api_result set_policy(rule_params* params)
 			{
 				rval = OK;
 				
-				DBG("%s %s %s", "set_policy(): changed policy", 
+				DBG("%s %s %s %s", PLUGIN_NAME, "set_policy(): changed policy", 
 					ipt_operation, params->policy);
 			}
 		}
@@ -137,6 +138,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 		
 	rule = g_string_new("");
 	
+	// Generate rule
 	if(params->args == ARGS_IP)
 	{	
 		if(params->ip)
@@ -145,7 +147,6 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 		else
 			rval = INVALID_IP;
 	}
-			
 	else if(params->args == ARGS_IP_PORT)
 	{
 		if(params->protocol)
@@ -153,10 +154,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 				ip_direction, params->ip_negate ? " ! " : " ",
 				params->ip, params->protocol, params->protocol, params->port[0]);
 		else
-		{
-			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
-			rval = INVALID_SERVICE;
-		}
+			rval = INVALID_PROTOCOL;
 	}
 	else if(params->args == ARGS_IP_PORT_RANGE)
 	{
@@ -166,10 +164,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 				params->ip, params->protocol, params->protocol,
 				params->port[0], params->port[1]);
 		else
-		{
-			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
-			rval = INVALID_PORT;
-		}
+			rval = INVALID_PROTOCOL;
 	}
 	else if(params->args == ARGS_IP_SERVICE)
 	{
@@ -179,10 +174,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 				params->ip, params->protocol, params->protocol,
 				params->port[0]);
 		else
-		{
-			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
 			rval = INVALID_SERVICE;
-		}
 	}
 	else if(params->args == ARGS_PORT)
 	{
@@ -190,10 +182,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 			g_string_append_printf(rule,"-p %s -m %s --dport %u", 
 				params->protocol, params->protocol, params->port[0]);
 		else
-		{
-			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
-			rval = INVALID_SERVICE;
-		}
+			rval = INVALID_PROTOCOL;
 	}
 	else if(params->args == ARGS_PORT_RANGE)
 	{
@@ -202,10 +191,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 				params->protocol, params->protocol, 
 				params->port[0], params->port[1]);
 		else
-		{
-			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
-			rval = INVALID_SERVICE;
-		}
+			rval = INVALID_PROTOCOL;
 	}
 	else if(params->args == ARGS_SERVICE)
 	{
@@ -213,22 +199,23 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 			g_string_append_printf(rule,"-p %s -m %s --dport %d",
 				params->protocol, params->protocol, params->port[0]);
 		else
-		{
-			DBG("NO PROTOCOL DEFINED RULE IS NOT ADDED");
 			rval = INVALID_SERVICE;
-		}
 	}
 	
+	// Add target to rule
 	if(op & OPERATION_ACCEPT)
 		g_string_append(rule,IPTABLES_RULE_ACCEPT);
 	else if(op & OPERATION_DENY)
 		g_string_append(rule,IPTABLES_RULE_DROP);
 	else
 		rval = INVALID_REQUEST;
+		
+	if(rval != OK)
+		goto param_error;
 
 	str_rule = g_string_free(rule,FALSE);
-
-	if(rval == OK && str_rule && params->operation != UNDEFINED)
+	
+	if(str_rule && params->operation != UNDEFINED)
 	{
 		if(params->operation == ADD)
 		{	
@@ -237,7 +224,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 				DBG("%s %s %s %s", PLUGIN_NAME, "connman_iptables_append",
 					ipt_operation, str_rule);
 			else
-				DBG("%s %s %s %s  %d", PLUGIN_NAME,
+				ERR("%s %s %s %s  %d", PLUGIN_NAME,
 					"connman_iptables_append failure", ipt_operation, str_rule,
 					error);
 		}
@@ -248,7 +235,7 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 				DBG("%s %s %s %s", PLUGIN_NAME,
 					"connman_iptables_delete success", ipt_operation, str_rule);
 			else
-				DBG("%s %s %s %s %d", PLUGIN_NAME,
+				ERR("%s %s %s %s %d", PLUGIN_NAME,
 					"connman_iptables_delete failure", ipt_operation, str_rule,
 					error);
 		}
@@ -259,17 +246,20 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 				DBG("%s %s %d", PLUGIN_NAME, "connman_iptables_commit", error);
 			else
 			{
-				DBG("%s %s %d", PLUGIN_NAME,
-					"connman_iptables_commit failed:", error);
-					
+				ERR("%s %s %d", PLUGIN_NAME, "connman_iptables_commit failed:",
+					error);
+				
+				// If commit had errors, try to remove added rule
 				if(params->operation == ADD)
 				{
-					if(connman_iptables_delete(SAILFISH_IPTABLES_TABLE_NAME, 
+					if(!connman_iptables_delete(SAILFISH_IPTABLES_TABLE_NAME, 
 						ipt_operation, str_rule))
-						ERR("Cannot revert rule (%s) - clear/restart connman",
-							str_rule);
+						DBG("%s %s %s", PLUGIN_NAME, 
+							"connman_iptables_delete reverted", str_rule);
 					else
-						DBG("connman_iptables_delete reverted %s", str_rule);
+						ERR("%s %s %s", PLUGIN_NAME, 
+							"Cannot revert rule, restart connman. Rule:",
+							str_rule);
 				}
 				
 				rval = INVALID;
@@ -287,6 +277,12 @@ api_result add_rule_to_iptables(rule_params *params, guint16 op)
 	g_free(str_rule);
 	
 	return params->operation == UNDEFINED ? INVALID_REQUEST : rval;
+
+param_error:
+	g_string_free(rule,true);
+	DBG("%s %s %s %d", PLUGIN_NAME, "add_rule_to_iptables()", 
+		"invalid parameters given, rule is not added, error code", rval);
+	return rval;
 }
 
 api_result allow_incoming(rule_params* params)
@@ -327,7 +323,7 @@ DBusMessage* process_request(DBusMessage *message,
 				sailfish_iptables_dbus_send_signal(signal, data);
 		}
 		else
-			ERR("%s %s %d",
+			ERR("%s %s %s %d", PLUGIN_NAME, 
 				"process_request():", "request was not successful",
 				result);
 	}
