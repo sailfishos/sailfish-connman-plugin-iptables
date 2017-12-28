@@ -79,6 +79,7 @@ mkdir -p %{buildroot}/opt/tests/%{name}/test-definition
 install -m 755 test/test-definition/tests.xml %{buildroot}/opt/tests/%{name}/test-definition
 mkdir -p %{buildroot}/opt/tests/%{name}/ete-test
 install -m 755 test/ete-test/%{name}-test %{buildroot}/opt/tests/%{name}/ete-test/%{name}-test
+install -m 755 test/save-restore-test/save-restore-test %{buildroot}/opt/tests/%{name}/ete-test/%{name}-save-restore-test
 
 %preun
 

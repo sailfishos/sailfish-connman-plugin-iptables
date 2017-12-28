@@ -12,6 +12,11 @@
 				<step>/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
 				</step>
 			</case>
+			<description>Sailfish Connman iptables plugin save and restore tests</description>
+			<case manual="false" name="Save and restore iptables test as root">
+				<step>PATH=/sbin:\$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/save-restore-test/sailfish-connman-iptables-plugin-save-restore-test
+				</step>
+			</case>
 		</set>
    </suite>
 </testdefinition>

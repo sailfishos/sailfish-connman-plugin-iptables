@@ -1,7 +1,7 @@
 #!/bin/bash
 
 IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
-TEST_LOG_FILE="/tmp/sailfish_iptables.test.$(whoami).log"
+TEST_LOG_FILE="/tmp/sailfish_iptables.ete-test.$(whoami).log"
 
 REQUIRED_COMMANDS_BASE="dbus-send grep id"
 REQUIRED_COMMANDS_PRIV="$REQUIRED_COMMANDS_BASE"
