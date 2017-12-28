@@ -14,18 +14,19 @@
 
 <!-- Each function returns a code and descriptive string.
 The returned result codes and string pairs are:
-0	"Ok",
-1	"Invalid IP",
-2	"Invalid port",
-3	"Invalid port range",
-4	"Invalid service name",
-5	"Invalid protocol",
-6	"Invalid policy",
-7	"Rule does not exist"
-8	"Cannot process request",
-9	"Cannot perform operation",
-10	"Unauthorized, please try again"
-11	"Access denied"
+0 = "Ok"
+1 = "Invalid IP"
+2 = "Invalid port"
+3 = "Invalid port range"
+4 = "Invalid service name"
+5 = "Invalid protocol"
+6 = "Invalid policy"
+7 = "Rule does not exist"
+8 = "Cannot process request"
+9 = "Cannot perform operation"
+10 = "Unauthorized, please try again"
+11 = "Unregister failed"
+12 = "Access denied"
 -->
 
 <!-- 

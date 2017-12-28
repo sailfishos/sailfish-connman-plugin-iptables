@@ -47,7 +47,6 @@
 #include <string.h>
 
 #include "sailfish-iptables-utils.h"
-#include "sailfish-iptables-validate.h"
 
 const gchar const * RESULT_STR[] = {
 	"Ok",
@@ -228,3 +227,11 @@ gchar *port_to_str(rule_params *params)
 	}
 	return port_str;
 }
+
+/*
+ * Local Variables:
+ * mode: C
+ * c-basic-offset: 8
+ * indent-tabs-mode: t
+ * End:
+ */

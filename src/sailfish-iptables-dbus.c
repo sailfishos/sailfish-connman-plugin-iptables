@@ -44,6 +44,8 @@
 #define CONNMAN_API_SUBJECT_TO_CHANGE
 
 #include <errno.h>
+#include <connman/log.h>
+
 #include "sailfish-iptables-dbus.h"
 #include "sailfish-iptables-parameters.h"
 #include "sailfish-iptables-validate.h"
@@ -51,7 +53,7 @@
 #include "sailfish-iptables-policy.h"
 #include "sailfish-iptables.h"
 
-#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
+//#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
 
 // Method names
@@ -101,18 +103,19 @@
 /*
 	Result codes (enum sailfish_iptables_result):
 	
-	0 = ok
-	1 = invalid IP
-	2 = invalid port
-	3 = invalid port range
-	4 = invalid service name
-	5 = invalid protocol
-	6 = invalid policy
-	7 = rule does not exist
-	8 = cannot process rule
-	9 = cannot perform operation
-	10 = unauthorized
-	11 = denied
+	0 = "Ok",
+	1 = "Invalid IP",
+	2 = "Invalid port",
+	3 = "Invalid port range",
+	4 = "Invalid service name",
+	5 = "Invalid protocol",
+	6 = "Invalid policy",
+	7 = "Rule does not exist",
+	8 = "Cannot process request",
+	9 = "Cannot perform operation",
+	10 = "Unauthorized, please try again",
+	11 = "Unregister failed",
+	12 = "Access denied",
 */
 
 #define SAILFISH_IPTABLES_RESULT_TYPE			{"result", "q"}
@@ -626,7 +629,8 @@ DBusMessage* sailfish_iptables_register_client(DBusConnection* connection,
 			dbus_client_free(client);
 			client_disconnect_data_free(disconnect_data);
 			result = UNAUTHORIZED; // Couldn't add -> not authorized, try again
-			DBG("Register of %s failed", peer->name);
+			DBG("%s %s %s", PLUGIN_NAME,
+				"sailfish_iptables_register_client failed for", peer->name);
 		}
 	}
 	else
@@ -877,7 +881,8 @@ void sailfish_iptables_dbus_send_signal(DBusMessage *signal, api_data* data)
 				DBusMessage *copy = dbus_message_copy(signal);
 				dbus_message_set_destination(copy, (const gchar*)key);
 				g_dbus_send_message(conn, copy);
-				DBG("Sent signal to %s /(%d)", (const gchar*)key, g_hash_table_size(data->clients));
+				DBG("%s %s %s", PLUGIN_NAME, 
+					"sailfish_iptables_dbus_send_signal to", (const gchar*)key);
 			}
 			
 			dbus_message_unref(signal);
@@ -905,7 +910,7 @@ DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal_name,
 		
 		if(!dbus_message_append_args_valist(signal, first_arg_type, params))
 		{
-			ERR("%s %s", "saifish_iptables_dbus_signal():",
+			ERR("%s %s %s", PLUGIN_NAME, "saifish_iptables_dbus_signal():",
 				"failed to add parameters to signal");
 			dbus_message_unref(signal);
 			signal = NULL;
@@ -1075,8 +1080,9 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	
 	if(error)
 	{
-		DBG("Error, %s %s",
-			!rval ? "Could not get args from dbus message" : "", error->message);
+		DBG("%s %s %s %s", PLUGIN_NAME, "Error,",
+			!rval ? "Could not get args from dbus message" : "",
+			error->message);
 		rule_params_free(params);
 		dbus_error_free(error);
 		return NULL;
@@ -1203,7 +1209,7 @@ gint sailfish_iptables_dbus_register() {
 		}
 		else
 		{
-			DBG("%s %s", "sailfish_iptables_dbus_register():",
+			DBG("%s %s %s", PLUGIN_NAME, "sailfish_iptables_dbus_register():",
 				"register failed");
 			rval = 1;
 		}
@@ -1211,11 +1217,11 @@ gint sailfish_iptables_dbus_register() {
 	}
 	else
 	{
-		DBG("%s %s","silfish_iptables_dbus_register():",
+		DBG("%s %s %s", PLUGIN_NAME, "sailfish_iptables_dbus_register():",
 			"no dbus connection");
 		rval = 1;
 	}
-	DBG("%s %s %s", "sailfish_iptables_dbus_register():",
+	DBG("%s %s %s %s", PLUGIN_NAME, "sailfish_iptables_dbus_register():",
 			SAILFISH_IPTABLES_DBUS_PATH,
 			SAILFISH_IPTABLES_DBUS_INTERFACE);
 	return rval;
@@ -1240,7 +1246,7 @@ gint sailfish_iptables_dbus_unregister()
 		}
 		else
 		{
-			DBG("%s %s", "sailfish_iptables_dbus_unregister():",
+			DBG("%s %s %s", PLUGIN_NAME, "sailfish_iptables_dbus_unregister():",
 				"unregsiter failed");
 			rval = 1;
 		}

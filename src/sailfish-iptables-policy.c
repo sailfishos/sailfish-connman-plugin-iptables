@@ -143,3 +143,10 @@ void sailfish_iptables_policy_uninitialize(api_data* data)
 	}
 }
 
+/*
+ * Local Variables:
+ * mode: C
+ * c-basic-offset: 8
+ * indent-tabs-mode: t
+ * End:
+ */

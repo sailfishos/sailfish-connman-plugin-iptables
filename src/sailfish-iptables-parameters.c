@@ -45,11 +45,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <connman/log.h>
+#include <connman/dbus.h>
+#include <connman/gdbus.h>
 
 #include "sailfish-iptables-parameters.h"
-#include "sailfish-iptables-validate.h"
-#include "sailfish-iptables-utils.h"
-#include "sailfish-iptables-dbus.h"
 #include "sailfish-iptables-policy.h"
 
 void dbus_client_free(dbus_client *client)
@@ -262,3 +262,10 @@ api_result check_parameters(rule_params* params)
 	}
 }
 
+/*
+ * Local Variables:
+ * mode: C
+ * c-basic-offset: 8
+ * indent-tabs-mode: t
+ * End:
+ */
