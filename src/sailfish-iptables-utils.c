@@ -61,6 +61,7 @@ const gchar const * RESULT_STR[] = {
 	"Cannot perform operation",
 	"Unauthorized, please try again",
 	"Unregister failed",
+	"Invalid chain name given. Chain name is reserved (add) or does not exist (remove).",
 	"Access denied",
 	NULL
 };

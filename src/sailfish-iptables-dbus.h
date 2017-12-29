@@ -64,6 +64,7 @@
 #define SAILFISH_IPTABLES_SIGNAL_CLEAR		"IptablesTableCleared"
 #define SAILFISH_IPTABLES_SIGNAL_POLICY		"PolicyChanged"
 #define SAILFISH_IPTABLES_SIGNAL_RULE		"RuleChanged"
+#define SAILFISH_IPTABLES_SIGNAL_CHAIN		"ChainChanged"
 
 #ifdef __cplusplus
 extern "C" {
@@ -196,6 +197,10 @@ DBusMessage* sailfish_iptables_deny_outgoing_ip_service(
 DBusMessage* sailfish_iptables_deny_outgoing_service(
 			DBusConnection *connection, DBusMessage *message, void *user_data);
 
+// Chain management
+DBusMessage* sailfish_iptables_manage_chain(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+			
 #ifdef __cplusplus
 }
 #endif

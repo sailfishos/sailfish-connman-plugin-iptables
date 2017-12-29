@@ -79,6 +79,19 @@ Sends signal PolicyChanged
 </method>
 
 <!--
+Manage chains in filter table. Custom chains can be added (ADD), removed
+(REMOVE) and flushed (FLUSH). Builtin chains or duplicates are not allowed 
+(returns error).
+Sends signal ChainChanged
+-->
+<method name="ManageChain">
+<arg name="chain" type="s" direction="in"/>
+<arg name="operation" type="s" direction="in"/>
+<arg name="result" type="q" direction="out"/>
+<arg name="string" type="s" direction="out"/>
+</method>
+
+<!--
 Following methods take following parameters as input:
  NAME		TYPE	DESCRIPTION
  ip		s		IP address or network with CIDR or dot notation (1.2.3.4/24

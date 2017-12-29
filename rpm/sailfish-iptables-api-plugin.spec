@@ -1,19 +1,19 @@
 Name: sailfish-connman-iptables-plugin
 Version: 0.0.2
-Release: 2
+Release: 3
 Summary: Sailfish Connman iptables management plugin
 Group: Development/Libraries
 License: GPLv2
 URL: https://github.com/sailfishos/sailfish-connman-plugin-iptables
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
-Requires: connman >= 1.31+git50.6
+Requires: connman >= 1.31+git50.9
 Requires: glib2 >= 2.28
 Requires: dbus >= 1.4
 Requires: libdbusaccess >= 1.0.2
 Requires: libglibutil >= 1.0.21
 BuildRequires: iptables-devel
-BuildRequires: connman-devel >= 1.31+git50.4
+BuildRequires: connman-devel >= 1.31+git50.9
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
 BuildRequires: pkgconfig(dbus-1) >= 1.4
 BuildRequires: pkgconfig(libdbusaccess) >= 1.0.2
@@ -39,13 +39,13 @@ BuildRequires: pkgconfig(libdbusaccess) >= 1.0.2
 BuildRequires: pkgconfig(libglibutil) >= 1.0.21
 
 %description unit-tests
-This package contains the unit tests and unit test runner script for Sailfish Connman iptables management plugin. 
+This package contains the unit tests and unit test runner script for Sailfish Connman iptables management plugin.
 
 %package tests
 Summary:    Test scripts for Sailfish Connman iptables management plugin
 Group:      Development/Tools
 Requires:   %{name} = %{version}
-Requires:   connman >= 1.31+git50.6
+Requires:   connman >= 1.31+git50.9
 Requires:   bash
 Requires:   dbus >= 1.4
 Requires:   iptables
