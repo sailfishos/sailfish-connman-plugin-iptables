@@ -76,10 +76,15 @@ install -m 755 unit/run_unit_tests %{buildroot}%{_libdir}/connman/unit/
 install -m 755 unit/plugin_unit_test %{buildroot}%{_libdir}/connman/unit/
 
 mkdir -p %{buildroot}/opt/tests/%{name}/test-definition
-install -m 755 test/test-definition/tests.xml %{buildroot}/opt/tests/%{name}/test-definition
+install -m 644 test/test-definition/tests.xml %{buildroot}/opt/tests/%{name}/test-definition
+
 mkdir -p %{buildroot}/opt/tests/%{name}/ete-test
 install -m 755 test/ete-test/%{name}-test %{buildroot}/opt/tests/%{name}/ete-test/%{name}-test
-install -m 755 test/save-restore-test/save-restore-test %{buildroot}/opt/tests/%{name}/ete-test/%{name}-save-restore-test
+
+mkdir -p %{buildroot}/opt/tests/%{name}/save-restore-test
+install -m 755 test/save-restore-test/save-restore-test %{buildroot}/opt/tests/%{name}/save-restore-test/%{name}-save-restore-test
+
+cp -a test/common %{buildroot}/opt/tests/%{name}/
 
 %preun
 
