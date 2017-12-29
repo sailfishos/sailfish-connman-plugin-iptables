@@ -1,0 +1,22 @@
+#!/bin/bash
+
+DESTINATION="net.connman"
+DBUS_PATH="/org/sailfishos/connman/mdm/iptables"
+METHOD_PREFIX="org.sailfishos.connman.mdm.iptables"
+
+# Send dbus message with dbus-send, input: $1=Methodname $2=last parameter
+# $3=expected result $4-> = Whole content
+function send_message()
+{
+	LAST_PARAM=""
+	
+	if [ ! -z "$2" ] ; then LAST_PARAM="string:$2" ; fi
+
+	RETURN=$(dbus-send --system --type=method_call --print-reply --dest="$DESTINATION" "$DBUS_PATH" "$METHOD_PREFIX.$1" "${@:4}" $LAST_PARAM 2>&1)
+	
+	if [[ $RETURN && $(echo "$RETURN"|grep -e "uint16 $3") ]] ; then
+		echo 0
+	else
+		echo "failure processing rule $METHOD_PREFIX.$1 ${@:4} $LAST_PARAM - method returned: $RETURN"
+	fi
+}

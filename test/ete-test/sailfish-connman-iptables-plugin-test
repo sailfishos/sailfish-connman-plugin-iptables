@@ -1,11 +1,11 @@
 #!/bin/bash
 
+SOURCES="../common/test_send ../common/test_output ../common/test_log"
+
 IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
-TEST_LOG_FILE="/tmp/sailfish_iptables.ete-test.$(whoami).log"
 
 REQUIRED_COMMANDS_BASE="dbus-send grep id"
 REQUIRED_COMMANDS_PRIV="$REQUIRED_COMMANDS_BASE"
-REQUIRED_COMMANDS_USER="$REQUIRED_COMMANDS_BASE"
 REQUIRED_COMMANDS_ROOT="$REQUIRED_COMMANDS_BASE iptables iptables-save iptables-restore"
 
 REQUIRED_USERS="root nemo"
@@ -90,68 +90,46 @@ DESTINATION="net.connman"
 DBUS_PATH="/org/sailfishos/connman/mdm/iptables"
 METHOD_PREFIX="org.sailfishos.connman.mdm.iptables"
 
-TESTCOUNT=0
-TESTFAILED=0
-
-function prepare_log()
+function include_sources()
 {
-	if [ -f $TEST_LOG_FILE ] ; then
-		rm $TEST_LOG_FILE
-	fi
-}
+	SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-function log()
-{
-	echo "Test $TESTCOUNT: $@" >> $TEST_LOG_FILE
-}
-
-function test_begin()
-{
-	TESTCOUNT=$((TESTCOUNT+1))
+	for SRC in $SOURCES ; do
+		if [ -f "$SCRIPTDIR/$SRC" ] ; then
+			source "$SCRIPTDIR/$SRC"
+		else
+			echo "Source file \"$SCRIPTDIR/$SRC\" not available. Quitting."
+			exit 1
+		fi
+	done
 }
 
 # $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
 function check_change()
 {	
-	if [[ $(iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
+	if [[ $(iptables -t filter -L "$1" -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
 		echo 0
 	else
-		echo "check_change() failure :: iptables -t filter -L $1 -n|grep -e $6 $2.*$3.*--.*$4.*$5 ::"
+		echo "check_change() failure :: iptables -t filter -L $1 -n|grep -e $2.*$3.*--.*$4.*$5 ::"
 	fi
 }
 
 # $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
 function check_removed()
 {	
-	if [[ ! $(iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
+	if [[ ! $(iptables -t filter -L "$1" -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
 		echo 0
 	else
-		echo "check_removed() failure :: ! iptables -t filter -L $1 -n|grep -e "$2.*$3.*--.*$4.*$5" ::"
+		echo "check_removed() failure :: ! iptables -t filter -L $1 -n|grep -e $2.*$3.*--.*$4.*$5 ::"
 	fi
 }
 
 function check_policy_change()
 {
-	if [[ $(iptables -t filter -L $1 -n|grep -e "Chain $1 (policy $2)") ]] ; then
+	if [[ $(iptables -t filter -L "$1" -n|grep -e "Chain $1 (policy $2)") ]] ; then
 		echo 0
 	else
 		echo "check_policy_change() failure :: iptables -t filter -L $1 -n|grep -e Chain $1 (policy $2) ::"
-	fi
-}
-
-# Send dbus message with dbus-send, input: $1=Methodname $2=Whole content
-function send_message()
-{
-	LAST_PARAM=""
-	
-	if [ ! -z $2 ] ; then LAST_PARAM="string:$2" ; fi
-
-	RETURN=$(dbus-send --system --type=method_call --print-reply --dest="$DESTINATION" "$DBUS_PATH" "$METHOD_PREFIX.$1" ${@:4} $LAST_PARAM 2>&1)
-	
-	if [[ $RETURN && $(echo $RETURN|grep -e "uint16 $3") ]] ; then
-		echo 0
-	else
-		echo "failure processing rule $METHOD_PREFIX.$1 ${@:4} $LAST_PARAM - method returned: $RETURN"
 	fi
 }
 
@@ -160,20 +138,19 @@ function run_method_tests()
 {
 	INDEX=0
 
-	for METHOD in ${@:3} ; do
+	for METHOD in "${@:3}" ; do
 	
 		test_begin
 		FAILED=0
 		
-		echo -n "Running test $TESTCOUNT "
-		PROCESSED=$(send_message $METHOD "ADD" ${METHOD_INPUTS_RESULT[$INDEX]} ${METHOD_INPUTS[$INDEX]})
+		PROCESSED=$(send_message "$METHOD" "ADD" ${METHOD_INPUTS_RESULT[$INDEX]} ${METHOD_INPUTS[$INDEX]})
 	
 		if [[ "$PROCESSED" != "0" ]] ; then
 			log "$PROCESSED"
 			FAILED=1
 		fi
 	
-		echo -n "."
+		test_progress
 	
 		# Checking of change only possible for root, hence iptables command
 		if [ "$(id -u)" == "0" ] ; then
@@ -185,16 +162,16 @@ function run_method_tests()
 			fi
 		fi
 	
-		echo -n "."
+		test_progress
 	
-		PROCESSED=$(send_message $METHOD "REMOVE" ${METHOD_INPUTS_RESULT[$INDEX]} ${METHOD_INPUTS[$INDEX]})
+		PROCESSED=$(send_message "$METHOD" "REMOVE" ${METHOD_INPUTS_RESULT[$INDEX]} ${METHOD_INPUTS[$INDEX]})
 	
 		if [[ "$PROCESSED" != "0" ]] ; then
 			log "$PROCESSED"
 			FAILED=1
 		fi
 		
-		echo -n "."
+		test_progress
 	
 		# Checking of removed only possible for root, hence iptables command
 		if [ "$(id -u)" == "0" ] ; then
@@ -206,13 +183,12 @@ function run_method_tests()
 			fi
 		fi
 	
-		echo -n ". "
+		test_progress
 		
 		if [ $FAILED -eq 0 ] ; then
-			echo "PASS"
+			test_end_pass
 		else
-			TESTFAILED=$((TESTFAILED+1))
-			echo "FAILED"
+			test_end_fail
 		fi
 	
 		INDEX=$((INDEX+1))
@@ -225,22 +201,20 @@ function run_policy_test()
 	
 	test_begin
 	
-	echo -n "Running test $TESTCOUNT ."
+	PROCESSED=$(send_message "$1" "$3" "$POLICY_RESULT")
 	
-	PROCESSED=$(send_message $1 $3 $POLICY_RESULT)
-	
-	echo -n "."
+	test_progress
 	
 	if [[ "$PROCESSED" != "0" ]] ; then
 		log "$PROCESSED"
 		FAILED=1
 	fi
 	
-	echo -n "."
+	test_progress
 	
 	# Checking of policy change only possible for root, hence iptables command
 	if [ "$(id -u)" == "0" ] ; then
-		CHANGE=$(check_policy_change $2 $3)
+		CHANGE=$(check_policy_change "$2" "$3")
 	
 		if [[ "$CHANGE" != "0" ]] ; then
 			log "$CHANGE"
@@ -248,13 +222,12 @@ function run_policy_test()
 		fi
 	fi
 	
-	echo -n ". "
+	test_progress
 	
 	if [ $FAILED -eq 0 ] ; then
-		echo "PASS"
+		test_end_pass
 	else
-		TESTFAILED=$((TESTFAILED+1))
-		echo "FAILED"
+		test_end_fail
 	fi
 }
 
@@ -262,18 +235,15 @@ function run_clear_test()
 {
 	test_begin
 	
-	echo -n "Running test $TESTCOUNT ."
+	CLEARED=$(send_message "ClearIptablesTable" "filter" "$CLEAR_RESULT")
 	
-	CLEARED=$(send_message "ClearIptablesTable" "filter" $CLEAR_RESULT)
+	test_progress
 	
-	echo -n "... "
-	
-	if [[ "$CLEARED" != "0" ]] ; then
-		log "$CLEARED"
-		TESTFAILED=$((TESTFAILED+1))
-		echo "FAILED"
+	if [[ "$CLEARED" == "0" ]] ; then
+		test_end_pass
 	else
-		echo "PASS"
+		log "$CLEARED"
+		test_end_fail
 	fi
 }
 
@@ -288,18 +258,16 @@ function run_register_tests()
 	
 	for MSG in $MESSAGES ; do
 		test_begin
-		echo -n "Running test $TESTCOUNT ."
 	
-		STATUS=$(send_message $MSG "" ${REGISTER_TEST_RESULT[$INDEX]})
+		STATUS=$(send_message "$MSG" "" "${REGISTER_TEST_RESULT[$INDEX]}")
 		
-		echo -n "... "
+		test_progress
 	
-		if [[ "$STATUS" != "0" ]] ; then
-			log "$STATUS"
-			TESTFAILED=$((TESTFAILED+1))
-			echo "FAILED"
+		if [[ "$STATUS" == "0" ]] ; then
+			test_end_pass
 		else
-			echo "PASS"
+			log "$STATUS"
+			test_end_fail
 		fi
 		INDEX=$((INDEX+1))
 	done
@@ -332,14 +300,14 @@ function run_command_checks()
 {
 	if [ "$(id -u)" == "0" ] ; then
 		for command in $REQUIRED_COMMANDS_ROOT ; do
-			if [[ ! $(which $command 2>/dev/null) ]] ; then
+			if [[ ! $(which "$command" 2>/dev/null) ]] ; then
 				echo "Command \"$command\" is not found. Tests cannot be run."
 				exit 1
 			fi
 		done
 	else # For now user and privileged has same cmd requirements
 		for command in $REQUIRED_COMMANDS_PRIV ; do
-			if [[ ! $(which $command 2>/dev/null) ]] ; then
+			if [[ ! $(which "$command" 2>/dev/null) ]] ; then
 				echo "Command \"$command\" is not found. Tests cannot be run."
 				exit 1
 			fi
@@ -353,7 +321,7 @@ function run_pre_test_operations()
 		echo "Saving current iptables filter table to $IPTABLES_SAVE_FILE"
 		iptables-save --table=filter > $IPTABLES_SAVE_FILE
 	
-		CLEARED=$(send_message "ClearIptablesTable" "filter" $CLEAR_RESULT)
+		CLEARED=$(send_message "ClearIptablesTable" "filter" "$CLEAR_RESULT")
 	
 		if [[ "$CLEARED" != "0" ]] ; then
 			echo "Cannot clear iptables filter table. Test may report invalid results."
@@ -364,28 +332,28 @@ function run_pre_test_operations()
 function run_post_test_operations() 
 {
 	if [ "$(id -u)" == "0" ] ; then
-		CLEARED=$(send_message "ClearIptablesTable" "filter" $CLEAR_RESULT)
+		CLEARED=$(send_message "ClearIptablesTable" "filter" "$CLEAR_RESULT")
 	
 		if [[ "$CLEARED" != "0" ]] ; then
 			echo "Cannot clear iptables filter table."
 		fi
 		echo "Restoring iptables filter table from $IPTABLES_SAVE_FILE"
-		iptables-restore --table=filter < $IPTABLES_SAVE_FILE
-		rm -v $IPTABLES_SAVE_FILE
+		iptables-restore --table=filter < "$IPTABLES_SAVE_FILE"
+		rm -v "$IPTABLES_SAVE_FILE"
 	fi
 }
 
 function run_user_checks()
 {
 	for USER in $REQUIRED_USERS ; do
-		if [[ ! $(id -u $USER 2>/dev/null) ]] ; then
+		if [[ ! $(id -u "$USER" 2>/dev/null) ]] ; then
 			echo "User \"$USER\" does not exist in the system, test cannot be run."
 			exit 1
 		fi
 	done
 	
 	for GROUP in $REQUIRED_GROUPS ; do
-		if [[ ! $(grep /etc/group -e $GROUP) ]] ; then 
+		if ! grep /etc/group -q -e "$GROUP" ; then 
 			echo "Group \"$GROUP\" does not exist in the system, test cannot be run."
 			exit 1
 		fi
@@ -426,6 +394,10 @@ function set_expected_result()
 
 function main()
 {
+	include_sources
+	
+	prepare_log "ete-test"
+
 	run_user_checks # for all users
 	run_command_checks # for each user
 	
@@ -436,8 +408,6 @@ function main()
 	fi
 	
 	run_pre_test_operations # only with root
-
-	prepare_log # for each user
 	
 	set_expected_result
 
@@ -445,14 +415,7 @@ function main()
 	
 	run_post_test_operations #only with root
 	
-	if [ $TESTFAILED -eq 0 ] ; then
-		echo "All tests complete."
-		exit 0
-	else
-		echo "$TESTFAILED/$TESTCOUNT tests failed for user $(whoami)."
-		echo "Error logs can be found at $TEST_LOG_FILE"
-		exit 1
-	fi
+	test_finalize $TEST_LOG_FILE
 }
 
 main

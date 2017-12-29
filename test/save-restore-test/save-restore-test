@@ -1,7 +1,8 @@
 #!/bin/bash
 
+SOURCES="../common/test_send ../common/test_output ../common/test_log"
+
 IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
-TEST_LOG_FILE="/tmp/sailfish_iptables.save-restore-test.$(whoami).log"
 
 REQUIRED_COMMANDS_BASE="dbus-send grep id"
 REQUIRED_COMMANDS_ROOT="$REQUIRED_COMMANDS_BASE iptables iptables-save iptables-restore systemctl"
@@ -91,60 +92,20 @@ EMPTY_IPTABLES[4]=':OUTPUT ACCEPT.*'
 EMPTY_IPTABLES[5]='COMMIT'
 EMPTY_IPTABLES[6]='# Completed on.*'
 
-DESTINATION="net.connman"
-DBUS_PATH="/org/sailfishos/connman/mdm/iptables"
-METHOD_PREFIX="org.sailfishos.connman.mdm.iptables"
-
 CONNMAN_SAVE_FILE="/var/lib/connman/iptables/rules.v4"
 
-TESTCOUNT=0
-TESTFAILED=0
-TESTPROGRESS=0
-
-function prepare_log()
+function include_sources()
 {
-	if [ -f "$TEST_LOG_FILE" ] ; then
-		rm "$TEST_LOG_FILE"
-	fi
-}
+	SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-function log()
-{
-	echo "Test $TESTCOUNT: $*" >> "$TEST_LOG_FILE"
-}
-
-function test_begin()
-{
-	TESTCOUNT=$((TESTCOUNT+1))
-	echo -n "Running test $TESTCOUNT "
-}
-
-function test_progress()
-{
-	if [[ $TESTPROGRESS -lt 4 ]] ; then
-		echo -n "."
-		TESTPROGRESS=$((TESTPROGRESS+1))
-	fi
-}
-
-function test_end_line()
-{
-	while [[ $TESTPROGRESS -lt 4 ]] ; do
-		test_progress
+	for SRC in $SOURCES ; do
+		if [ -f "$SCRIPTDIR/$SRC" ] ; then
+			source "$SCRIPTDIR/$SRC"
+		else
+			echo "Source file \"$SCRIPTDIR/$SRC\" not available. Quitting."
+			exit 1
+		fi
 	done
-	
-	echo " $1"
-	TESTPROGRESS=0
-}
-
-function test_end_success()
-{
-	test_end_line "PASS"
-}
-
-function test_end_fail()
-{
-	test_end_line "FAILED"
 }
 
 function restart_connman()
@@ -161,7 +122,7 @@ function check_save_file_rule()
 	if [[ $(grep -e "-A $1 ${@:3} -j $2" $CONNMAN_SAVE_FILE) ]] ; then
 		echo 0
 	else
-		echo "check_change() failure :: grep -e -A $1 ${@:3} -j $2 ::"
+		echo "check_save_file_rule() failure :: grep -e -A $1 ${@:3} -j $2 ::"
 	fi
 }
 
@@ -171,23 +132,7 @@ function check_save_file_policy()
 	if [[ $(grep -e ":$1 $2" $CONNMAN_SAVE_FILE) ]] ; then
 		echo 0
 	else
-		echo "check_policy_change() failure :: grep -e :$1 $2 ::"
-	fi
-}
-
-# Send dbus message with dbus-send, input: $1=Methodname $2=Whole content
-function send_message()
-{
-	LAST_PARAM=""
-	
-	if [ ! -z "$2" ] ; then LAST_PARAM="string:$2" ; fi
-
-	RETURN=$(dbus-send --system --type=method_call --print-reply --dest="$DESTINATION" "$DBUS_PATH" "$METHOD_PREFIX.$1" ${@:4} "$LAST_PARAM" 2>&1)
-	
-	if [[ $RETURN && $(echo "$RETURN"|grep -e "uint16 $3") ]] ; then
-		echo 0
-	else
-		echo "failure processing rule $METHOD_PREFIX.$1 ${@:4} $LAST_PARAM - method returned: $RETURN"
+		echo "check_save_file_policy() failure :: grep -e :$1 $2 ::"
 	fi
 }
 
@@ -199,9 +144,9 @@ function run_add_rules_test()
 	
 	test_begin
 	
-	for METHOD in ${*:3} ; do
+	for METHOD in "${@:3}" ; do
 	
-		PROCESSED=$(send_message "$METHOD" "ADD" "${METHOD_INPUTS_RESULT[$INDEX]}" "${METHOD_INPUTS[$INDEX]}")
+		PROCESSED=$(send_message "$METHOD" "ADD" ${METHOD_INPUTS_RESULT[$INDEX]} ${METHOD_INPUTS[$INDEX]})
 	
 		if [[ "$PROCESSED" != "0" ]] ; then
 			log "$PROCESSED"
@@ -214,9 +159,8 @@ function run_add_rules_test()
 	done
 	
 	if [ $FAILED -eq 0 ] ; then
-		test_end_success
+		test_end_pass
 	else
-		TESTFAILED=$((TESTFAILED+1))
 		test_end_fail
 	fi
 }
@@ -252,9 +196,8 @@ function run_check_rules_test()
 	done
 	
 	if [ $FAILED -eq 0 ] ; then
-		test_end_success
+		test_end_pass
 	else
-		TESTFAILED=$((TESTFAILED+1))
 		test_end_fail
 	fi
 }
@@ -278,9 +221,8 @@ function run_add_policy_test()
 	test_progress
 	
 	if [ $FAILED -eq 0 ] ; then
-		test_end_success
+		test_end_pass
 	else
-		TESTFAILED=$((TESTFAILED+1))
 		test_end_fail
 	fi
 }
@@ -295,10 +237,9 @@ function run_clear_test()
 	
 	if [[ "$CLEARED" != "0" ]] ; then
 		log "$CLEARED"
-		TESTFAILED=$((TESTFAILED+1))
 		test_end_fail
 	else
-		test_end_success
+		test_end_pass
 	fi
 }
 
@@ -322,19 +263,18 @@ function run_clear_check()
 	done < $CONNMAN_SAVE_FILE
 	
 	if [ $FAILED -eq 0 ] ; then
-		test_end_success
+		test_end_pass
 	else
-		TESTFAILED=$((TESTFAILED+1))
 		test_end_fail
 	fi
 }
 
 function run_add_tests()
 {
-	run_add_rules_test "INPUT" "ACCEPT" "$METHODS_INPUT_ACCEPT"
-	run_add_rules_test "OUTPUT" "ACCEPT" "$METHODS_OUTPUT_ACCEPT"
-	run_add_rules_test "INPUT" "DROP" "$METHODS_INPUT_DROP"
-	run_add_rules_test "OUTPUT" "DROP" "$METHODS_OUTPUT_DROP"
+	run_add_rules_test "INPUT" "ACCEPT" $METHODS_INPUT_ACCEPT
+	run_add_rules_test "OUTPUT" "ACCEPT" $METHODS_OUTPUT_ACCEPT
+	run_add_rules_test "INPUT" "DROP" $METHODS_INPUT_DROP
+	run_add_rules_test "OUTPUT" "DROP" $METHODS_OUTPUT_DROP
 	
 	#run_add_policy_test "ChangeInputPolicy" "INPUT" "DROP" 
 	
@@ -412,12 +352,14 @@ function run_user_checks()
 
 function main()
 {
+	include_sources
+	
+	prepare_log "save-restore-test"
+	
 	run_user_checks 
 	run_command_checks
 	
 	run_pre_test_operations
-
-	prepare_log
 
 	run_clear_test
 	restart_connman 
@@ -429,14 +371,7 @@ function main()
 	
 	run_post_test_operations
 	
-	if [ $TESTFAILED -eq 0 ] ; then
-		echo "All tests complete."
-		exit 0
-	else
-		echo "$TESTFAILED/$TESTCOUNT tests failed for user $(whoami)."
-		echo "Error logs can be found at $TEST_LOG_FILE"
-		exit 1
-	fi
+	test_finalize $TEST_LOG_FILE
 }
 
 main

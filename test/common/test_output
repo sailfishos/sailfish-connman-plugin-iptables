@@ -1,0 +1,52 @@
+#!/bin/bash
+
+TESTCOUNT=0
+TESTFAILED=0
+TESTPROGRESS=0
+
+function test_begin()
+{
+	TESTCOUNT=$((TESTCOUNT+1))
+	echo -n "Running test $TESTCOUNT "
+}
+
+function test_progress()
+{
+	if [[ $TESTPROGRESS -lt 4 ]] ; then
+		echo -n "."
+		TESTPROGRESS=$((TESTPROGRESS+1))
+	fi
+}
+
+function test_end_line()
+{
+	while [[ $TESTPROGRESS -lt 4 ]] ; do
+		test_progress
+	done
+	
+	echo " $1"
+	TESTPROGRESS=0
+}
+
+function test_end_pass()
+{
+	test_end_line "PASS"
+}
+
+function test_end_fail()
+{
+	TESTFAILED=$((TESTFAILED+1))
+	test_end_line "FAILED"
+}
+
+function test_finalize()
+{
+	if [ $TESTFAILED -eq 0 ] ; then
+		echo "All tests complete."
+		exit 0
+	else
+		echo "$TESTFAILED/$TESTCOUNT tests failed for user $(whoami)."
+		echo "Error logs can be found at $1"
+		exit 1
+	fi
+}

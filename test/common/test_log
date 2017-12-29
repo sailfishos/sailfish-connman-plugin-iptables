@@ -1,0 +1,29 @@
+#!/bin/bash
+
+TEST_LOG_FILE_PREFIX="/tmp/sailfish_iptables."
+TEST_LOG_FILE_POSTFIX=".$(whoami).log"
+TEST_LOG_FILE=""
+
+function prepare_log()
+{
+	if [ -z $1 ] ; then
+		TEST_ID="test$RANDOM"
+	else
+		TEST_ID="$1"
+	fi	
+
+	TEST_LOG_FILE="$TEST_LOG_FILE_PREFIX""$TEST_ID""$TEST_LOG_FILE_POSTFIX"
+	
+	if [ -f "$TEST_LOG_FILE" ] ; then
+		rm "$TEST_LOG_FILE"
+	fi
+}
+
+function log()
+{
+	if [ ! -z $TEST_LOG_FILE ] ; then
+		echo "Test $TESTCOUNT: $*" >> "$TEST_LOG_FILE"
+	else
+		echo "Log file not set. Run prepare_log() first."
+	fi
+}
