@@ -305,6 +305,44 @@ api_result deny_outgoing(rule_params* params)
 	return add_rule_to_iptables(params,OPERATION_OUT | OPERATION_DENY);
 }
 
+api_result manage_chain(rule_params* params)
+{
+	gint error = 0;
+	switch(params->operation)
+	{
+		case ADD:
+			DBG("%s Adding chain %s to table %s", PLUGIN_NAME,
+				params->chain_name, params->table);
+			error = connman_iptables_new_chain(params->table, 
+				params->chain_name);
+			break;
+		case REMOVE:
+			DBG("%s Removing chain %s from table %s", PLUGIN_NAME,
+				params->chain_name, params->table);
+			error = connman_iptables_delete_chain(params->table,
+				params->chain_name);
+			break;
+		case FLUSH:
+			DBG("%s Flushing chain %s from table %s", PLUGIN_NAME,
+				params->chain_name, params->table);
+			error = connman_iptables_flush_chain(params->table,
+				params->chain_name);
+			break;
+		default:
+			return INVALID_REQUEST;
+	}
+	
+	if(!error)
+	{
+		if(!(error = connman_iptables_commit(params->table)))
+			return OK;
+	}
+	
+	ERR("%s %s %d %s %d", PLUGIN_NAME, "manage_chain() failed with operation",
+		(gint)params->operation, "Error code: ", error);
+	return INVALID_CHAIN_NAME;
+}
+
 DBusMessage* process_request(DBusMessage *message,
 	api_result (*func)(rule_params* params), rule_args args, api_data *data)
 {

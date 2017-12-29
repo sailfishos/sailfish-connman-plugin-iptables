@@ -213,11 +213,17 @@ rule_operation validate_operation(const gchar *operation)
 	
 	if(operation && *operation)
 	{
-		if(!g_ascii_strcasecmp(operation,"ADD"))
+		gchar* operation_strip = g_strstrip(g_strdup(operation));
+		
+		if(!g_ascii_strcasecmp(operation_strip,"ADD"))
 			op = ADD;
 
-		if(!g_ascii_strcasecmp(operation,"REMOVE"))
+		if(!g_ascii_strcasecmp(operation_strip,"REMOVE"))
 			op = REMOVE;
+			
+		if(!g_ascii_strcasecmp(operation_strip,"FLUSH"))
+			op = FLUSH;
+		g_free(operation_strip);
 	}
 	
 	return op;

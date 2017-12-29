@@ -117,6 +117,7 @@ gboolean sailfish_iptables_policy_check_args(DBusMessage *message,
 		case ARGS_SERVICE:
 		case ARGS_POLICY_IN:
 		case ARGS_POLICY_OUT:
+		case ARGS_CHAIN:
 			return sailfish_iptables_policy_check(message, data,
 				SAILFISH_DBUS_ACCESS_MANAGE);
 		default:

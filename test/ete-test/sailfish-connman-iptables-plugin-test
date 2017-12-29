@@ -72,6 +72,7 @@ METHOD_INPUTS_RESULT[6]='0'
 
 CLEAR_RESULT="0"
 POLICY_RESULT="0"
+CHAIN_RESULT="0"
 
 REGISTER_TEST_RESULT[0]='11'
 REGISTER_TEST_RESULT[1]='0'
@@ -130,6 +131,25 @@ function check_policy_change()
 		echo 0
 	else
 		echo "check_policy_change() failure :: iptables -t filter -L $1 -n|grep -e Chain $1 (policy $2) ::"
+	fi
+}
+
+# $1 = chain
+function check_chain_added()
+{
+	if [[ $(iptables -t filter -L -n|grep -e "Chain $1.*references") ]] ; then
+		echo 0
+	else
+		echo "check_chain_added() failure :: iptables -t filter -L -n|grep -e Chain $1.*references ::"
+	fi
+}
+
+function check_chain_removed()
+{
+	if [[ ! $(iptables -t filter -L -n|grep -e "Chain $1.*references") ]] ; then
+		echo 0
+	else
+		echo "check_chain_removed() failure :: iptables -t filter -L -n|grep -e Chain $1.*references ::"
 	fi
 }
 
@@ -273,6 +293,64 @@ function run_register_tests()
 	done
 }
 
+function run_chain_management_tests()
+{
+	CHAINS_PASS="TESTCHAIN1 TESTCHAIN2"
+	
+	for CHAIN in $CHAINS_PASS ; do
+	
+		FAILED=0
+	
+		test_begin
+		
+		STATUS=$(send_message "ManageChain" "ADD" $CHAIN_RESULT "string:$CHAIN")
+		
+		if [[ "$STATUS" != "0" ]] ; then
+			log "cm $STATUS"
+			FAILED=1
+		fi
+		
+		test_progress
+		
+		if [ "$(id -u)" == "0" ] ; then
+			STATUS=$(check_chain_added "$CHAIN")
+		
+			if [[ "$STATUS" != "0" ]] ; then
+				log "cm $STATUS"
+				FAILED=1
+			fi
+		fi
+		
+		test_progress
+		
+		STATUS=$(send_message "ManageChain" "REMOVE" $CHAIN_RESULT "string:$CHAIN")
+		
+		if [[ "$STATUS" != "0" ]] ; then
+			log "cm $STATUS"
+			FAILED=1
+		fi
+		
+		test_progress
+		
+		if [ "$(id -u)" == "0" ] ; then
+			STATUS=$(check_chain_removed "$CHAIN")
+		
+			if [[ "$STATUS" != "0" ]] ; then
+				log "cm $STATUS"
+				FAILED=1
+			fi
+		fi
+		
+		test_progress
+		
+		if [[ $FAILED -eq 0 ]] ; then
+			test_end_pass
+		else
+			test_end_fail
+		fi
+	done
+}
+
 function run_tests()
 {
 	USER=$(whoami)
@@ -294,6 +372,8 @@ function run_tests()
 	run_policy_test "ChangeOutputPolicy" "OUTPUT" "ACCEPT" 
 	
 	run_register_tests
+	
+	run_chain_management_tests
 }
 
 function run_command_checks()
@@ -371,19 +451,20 @@ function set_expected_result()
 		"root")
 			;;
 		"nemo" | "sailfish-mdm")
-			CLEAR_RESULT="12"
+			CLEAR_RESULT="13"
 			if [[ $PRIVILEGED -eq 0 ]] ; then
-				METHOD_INPUTS_RESULT[0]='12'
-				METHOD_INPUTS_RESULT[1]='12'
-				METHOD_INPUTS_RESULT[2]='12'
-				METHOD_INPUTS_RESULT[3]='12'
-				METHOD_INPUTS_RESULT[4]='12'
-				METHOD_INPUTS_RESULT[5]='12'
-				METHOD_INPUTS_RESULT[6]='12'
-				POLICY_RESULT="12"
+				METHOD_INPUTS_RESULT[0]='13'
+				METHOD_INPUTS_RESULT[1]='13'
+				METHOD_INPUTS_RESULT[2]='13'
+				METHOD_INPUTS_RESULT[3]='13'
+				METHOD_INPUTS_RESULT[4]='13'
+				METHOD_INPUTS_RESULT[5]='13'
+				METHOD_INPUTS_RESULT[6]='13'
+				POLICY_RESULT="13"
 				REGISTER_TEST_RESULT[0]='11'
-				REGISTER_TEST_RESULT[1]='12'
+				REGISTER_TEST_RESULT[1]='13'
 				REGISTER_TEST_RESULT[2]='11'
+				CHAIN_RESULT="13"
 			fi
 			;;
 		*)
@@ -415,7 +496,7 @@ function main()
 	
 	run_post_test_operations #only with root
 	
-	test_finalize $TEST_LOG_FILE
+	test_finalize "$TEST_LOG_FILE"
 }
 
 main

@@ -112,12 +112,14 @@ typedef enum sailfish_iptables_result {
 	INVALID, // 9
 	UNAUTHORIZED, // 10
 	REMOVE_FAILED, // 11
-	ACCESS_DENIED // 12
+	INVALID_CHAIN_NAME, // 12
+	ACCESS_DENIED // 13
 } api_result;
 
 typedef enum sailfish_iptables_rule_operation {
 	ADD = 0,
 	REMOVE,
+	FLUSH,
 	UNDEFINED
 } rule_operation;
 
@@ -131,7 +133,8 @@ typedef enum sailfish_iptables_dbus_rule_args {
 	ARGS_SERVICE,
 	ARGS_CLEAR,
 	ARGS_POLICY_IN,
-	ARGS_POLICY_OUT
+	ARGS_POLICY_OUT,
+	ARGS_CHAIN
 } rule_args;
  
 typedef struct sailfish_iptables_rule_params {
@@ -143,6 +146,7 @@ typedef struct sailfish_iptables_rule_params {
 	rule_operation operation;
 	gchar *table;
 	gchar *policy;
+	gchar *chain_name;
 	rule_args args;
 } rule_params;
 
@@ -162,6 +166,8 @@ api_result allow_incoming(rule_params* params);
 api_result allow_outgoing(rule_params* params);
 api_result deny_incoming(rule_params* params);
 api_result deny_outgoing(rule_params* params);
+
+api_result manage_chain(rule_params* params);
 
 DBusMessage* process_request(DBusMessage *message,
 	api_result (*func)(rule_params* params), rule_args args, api_data* data);

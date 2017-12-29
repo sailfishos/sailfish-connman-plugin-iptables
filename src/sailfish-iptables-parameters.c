@@ -189,6 +189,7 @@ void rule_params_free(rule_params *params)
 		g_free(params->protocol);
 		g_free(params->table);
 		g_free(params->policy);
+		g_free(params->chain_name);
 		g_free(params);
 	}
 }
@@ -204,6 +205,7 @@ rule_params* rule_params_new(rule_args args)
 	params->operation = UNDEFINED;
 	params->table = NULL;
 	params->policy = NULL;
+	params->chain_name = NULL;
 	params->args = args;
 	
 	return params;
@@ -257,6 +259,10 @@ api_result check_parameters(rule_params* params)
 		case ARGS_POLICY_IN:
 		case ARGS_POLICY_OUT:
 			return params->policy ? OK : INVALID_POLICY;
+		case ARGS_CHAIN:
+			if(!params->chain_name) return INVALID_CHAIN_NAME;
+			if(!params->table) return INVALID_REQUEST;
+			return OK;
 		default:
 			return INVALID;
 	}

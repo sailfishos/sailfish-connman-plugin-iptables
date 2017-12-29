@@ -100,6 +100,8 @@
 #define SAILFISH_IPTABLES_REGISTER_CLIENT		"Register"
 #define SAILFISH_IPTABLES_UNREGISTER_CLIENT		"Unregister"
 
+#define SAILFISH_IPTABLES_MANAGE_CHAIN			"ManageChain"
+
 /*
 	Result codes (enum sailfish_iptables_result):
 	
@@ -115,7 +117,8 @@
 	9 = "Cannot perform operation",
 	10 = "Unauthorized, please try again",
 	11 = "Unregister failed",
-	12 = "Access denied",
+	12 = "Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."
+	13 = "Access denied",
 */
 
 #define SAILFISH_IPTABLES_RESULT_TYPE			{"result", "q"}
@@ -132,6 +135,7 @@
 #define SAILFISH_IPTABLES_INPUT_OPERATION		{"operation","s"}
 #define SAILFISH_IPTABLES_INPUT_POLICY			{"policy", "s"}
 #define SAILFISH_IPTABLES_INPUT_TABLE			{"table", "s"}
+#define SAILFISH_IPTABLES_INPUT_CHAIN			{"chain", "s"}
 
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		{"chain", "s"}
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		SAILFISH_IPTABLES_INPUT_POLICY
@@ -158,6 +162,12 @@ static const GDBusSignalTable signals[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN, 
 				SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE))
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_SIGNAL_CHAIN,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN, 
+				SAILFISH_IPTABLES_INPUT_OPERATION))
 		},
 		{ GDBUS_SIGNAL(
 			SAILFISH_IPTABLES_SIGNAL_RULE,
@@ -202,6 +212,16 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_RESULT_STRING
 			),
 			sailfish_iptables_change_input_policy)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_MANAGE_CHAIN, 
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_OPERATION),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_manage_chain)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_CHANGE_OUT_POLICY, 
 			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_POLICY),
@@ -579,9 +599,6 @@ static const GDBusMethodTable methods[] = {
 	
 */
 
-/* New method: sailfish_iptables_new_chain
-	Chain name: str
-*/
 
 static void dbus_client_destroy(void *user_data)
 {
@@ -859,6 +876,12 @@ DBusMessage* sailfish_iptables_deny_outgoing_service(
 	return process_request(message,&deny_outgoing, ARGS_SERVICE, user_data);
 }
 
+DBusMessage* sailfish_iptables_manage_chain(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &manage_chain, ARGS_CHAIN, user_data);
+}
+
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal, api_data* data)
 {
 	DBusConnection* conn = 	connman_dbus_get_connection();
@@ -996,6 +1019,12 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				DBUS_TYPE_STRING,	&(params->policy),
 				DBUS_TYPE_INVALID);
 			break;
+		case ARGS_CHAIN:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_CHAIN,
+				DBUS_TYPE_STRING,	&(params->chain_name),
+				DBUS_TYPE_STRING,	&op,
+				DBUS_TYPE_INVALID);
 	}
 	g_free(port_str);
 	return signal;
@@ -1007,7 +1036,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	DBusError* error = NULL;
 	
 	gchar *ip = NULL, *service = NULL, *protocol = NULL, *port_str = NULL;
-	gchar *table = NULL, *policy = NULL, *operation = NULL;
+	gchar *table = NULL, *policy = NULL, *operation = NULL, *chain_name = NULL;
 	dbus_uint16_t port[2] = {0};
 	rule_operation op = UNDEFINED;
 	gint index = 0;
@@ -1076,6 +1105,11 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_INVALID);
 			
 			break;
+		case ARGS_CHAIN:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_INVALID);
 	}
 	
 	if(error)
@@ -1171,6 +1205,8 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	
 	if(table && *table && g_utf8_validate(table,-1,NULL))
 		params->table = g_utf8_strdown(table,-1);
+	else
+		params->table = g_strdup("filter");
 	
 	if(policy && g_utf8_validate(policy,-1,NULL))
 	{
@@ -1178,6 +1214,9 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 		if(validate_policy(policy_uppercase))
 			params->policy = policy_uppercase;
 	}
+	
+	if(chain_name && *chain_name && g_utf8_validate(chain_name,-1, NULL))
+		params->chain_name = g_strdup(chain_name);
 		
 	return params;
 }

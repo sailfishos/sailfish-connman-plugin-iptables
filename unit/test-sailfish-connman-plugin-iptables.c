@@ -89,10 +89,10 @@ static void test_iptables_plugin_policy_check_user()
 	client->peer = peer;
 	g_assert(api_data_add_peer(data, client));
 	
-	for(i = 0; i <= ARGS_POLICY_OUT ; i++)
+	for(i = 0; i <= ARGS_CHAIN ; i++)
 		g_assert(!sailfish_iptables_policy_check_args(msg, data, i));
 	
-	g_assert(!sailfish_iptables_policy_check_args(msg, data, ARGS_POLICY_OUT+1));
+	g_assert(!sailfish_iptables_policy_check_args(msg, data, ARGS_CHAIN+1));
 	
 	g_assert(api_data_remove_peer(data, peer_name));
 	
@@ -141,10 +141,10 @@ static void test_iptables_plugin_policy_check_root()
 	client->peer = peer;
 	g_assert(api_data_add_peer(data, client));
 	
-	for(i = 0; i <= ARGS_POLICY_OUT ; i++)
+	for(i = 0; i <= ARGS_CHAIN ; i++)
 		g_assert(sailfish_iptables_policy_check_args(msg, data, i));
 	
-	g_assert(!sailfish_iptables_policy_check_args(msg, data, ARGS_POLICY_OUT+1));
+	g_assert(!sailfish_iptables_policy_check_args(msg, data, ARGS_CHAIN+1));
 	
 	g_assert(api_data_remove_peer(data, peer_name));
 	
@@ -743,13 +743,19 @@ static void test_iptables_plugin_validate_operation()
 	g_assert(validate_operation("ADD") == ADD);
 	g_assert(validate_operation("Add") == ADD);
 	g_assert(validate_operation("add") == ADD);
+	g_assert(validate_operation("add ") == ADD);
+	g_assert(validate_operation(" AdD") == ADD);
+	g_assert(validate_operation(" ADD ") == ADD);
 	
 	g_assert(validate_operation("REMOVE") == REMOVE);
 	g_assert(validate_operation("Remove") == REMOVE);
 	g_assert(validate_operation("remove") == REMOVE);
+	g_assert(validate_operation(" Remove") == REMOVE);
+	g_assert(validate_operation("remove ") == REMOVE);
+	g_assert(validate_operation(" REMOVE ") == REMOVE);
 	
 	g_assert(validate_operation("Removed") == UNDEFINED);
-	g_assert(validate_operation(" Remove") == UNDEFINED);
+	
 	g_assert(validate_operation("A D D") == UNDEFINED);
 	g_assert(validate_operation(NULL) == UNDEFINED);
 }
