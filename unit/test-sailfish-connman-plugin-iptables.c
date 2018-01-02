@@ -18,6 +18,18 @@ DBusConnection* connman_dbus_get_connection() { return NULL; }
 void connman_log(const char *fmt, ...) { return; }
 gboolean g_dbus_remove_watch(DBusConnection *connection, guint id) { return TRUE; }
 
+// From connman sailfish_iptables_extension.c
+void connman_iptables_free_content(connman_iptables_content *content)
+{
+	if(!content)
+		return;
+		
+	g_list_free(content->chains);
+	g_list_free(content->rules);
+	g_free(content->table);
+	g_free(content);
+}
+
 void da_peer_unref(DAPeer* peer)
 {
 	if(peer)

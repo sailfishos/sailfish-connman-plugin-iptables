@@ -73,6 +73,20 @@ api_result clear_firewall(rule_params* params)
 	return INVALID_REQUEST;
 }
 
+api_result get_iptables_content(rule_params* params)
+{
+	if(!params)
+		return INVALID;
+	
+	if(!params->table)
+		return INVALID_REQUEST;
+		
+	if((params->iptables_content = connman_iptables_get_content(params->table)))
+		return OK;
+	
+	return INVALID;
+}
+
 api_result set_policy(rule_params* params)
 {
 	gint ret = 0;
@@ -365,10 +379,8 @@ DBusMessage* process_request(DBusMessage *message,
 				"process_request():", "request was not successful",
 				result);
 	}
-	
-	rule_params_free(params);
 
-	return sailfish_iptables_dbus_reply_result(message, result);
+	return sailfish_iptables_dbus_reply_result(message, result, params);
 }
 
 static int sailfish_iptables_init(void)
