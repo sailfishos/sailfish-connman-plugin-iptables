@@ -53,6 +53,7 @@
 #include <connman/gdbus.h>
 
 #include "sailfish-iptables.h"
+#include "sailfish-iptables-parameters.h"
 
 #define SAILFISH_IPTABLES_DBUS_INTERFACE	"org.sailfishos.connman.mdm.iptables"
 #define SAILFISH_IPTABLES_DBUS_PATH			"/org/sailfishos/connman/mdm/iptables"
@@ -80,7 +81,8 @@ DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal,
 DBusMessage* sailfish_iptables_dbus_method_return(DBusMessage* message,
 	gint first_arg_type, ...);
 	
-DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message, api_result result);
+DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message,
+	api_result result, rule_params* params);
 
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal, api_data *data);
 
@@ -97,6 +99,9 @@ DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
 			DBusMessage* message, void *user_data);
 
 DBusMessage* sailfish_iptables_clear_iptables(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+			
+DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
 
 DBusMessage* sailfish_iptables_version(DBusConnection *connection,

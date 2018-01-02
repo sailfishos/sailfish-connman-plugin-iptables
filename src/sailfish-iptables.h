@@ -43,6 +43,7 @@
 #include <dbus/dbus.h>
 #include <dbusaccess/dbusaccess_peer.h>
 #include <dbusaccess/dbusaccess_policy.h>
+#include <connman/iptables_extension.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,6 +135,7 @@ typedef enum sailfish_iptables_dbus_rule_args {
 	ARGS_CLEAR,
 	ARGS_POLICY_IN,
 	ARGS_POLICY_OUT,
+	ARGS_GET_CONTENT,
 	ARGS_CHAIN
 } rule_args;
  
@@ -147,6 +149,7 @@ typedef struct sailfish_iptables_rule_params {
 	gchar *table;
 	gchar *policy;
 	gchar *chain_name;
+	connman_iptables_content *iptables_content;
 	rule_args args;
 } rule_params;
 
@@ -160,6 +163,8 @@ typedef enum sailfish_iptables_dbus_access {
 } dbus_access;
 
 api_result clear_firewall(rule_params* params);
+api_result get_iptables_content(rule_params* params);
+
 api_result set_policy(rule_params* params);
 
 api_result allow_incoming(rule_params* params);

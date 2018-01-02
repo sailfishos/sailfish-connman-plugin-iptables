@@ -102,6 +102,8 @@
 
 #define SAILFISH_IPTABLES_MANAGE_CHAIN			"ManageChain"
 
+#define SAILFISH_IPTABLES_GET_IPTABLES_CONTENT	"GetIptablesContent"
+
 /*
 	Result codes (enum sailfish_iptables_result):
 	
@@ -124,6 +126,8 @@
 #define SAILFISH_IPTABLES_RESULT_TYPE			{"result", "q"}
 #define SAILFISH_IPTABLES_RESULT_STRING			{"string", "s"}
 #define SAILFISH_IPTABLES_RESULT_VERSION		{"version", "i"}
+#define SAILFISH_IPTABLES_RESULT_CHAINS			{"chains", "as"}
+#define SAILFISH_IPTABLES_RESULT_RULES			{"rules", "as"}
 
 
 #define SAILFISH_IPTABLES_INPUT_ABSOLUTE_PATH		{"absolute_path","s"}
@@ -204,6 +208,16 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_RESULT_TYPE,
 				SAILFISH_IPTABLES_RESULT_STRING),
 			sailfish_iptables_clear_iptables)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_GET_IPTABLES_CONTENT, 
+			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_TABLE),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING,
+				SAILFISH_IPTABLES_RESULT_CHAINS,
+				SAILFISH_IPTABLES_RESULT_RULES
+				),
+			sailfish_iptables_get_iptables_content)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_CHANGE_IN_POLICY, 
 			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_POLICY),
@@ -653,7 +667,7 @@ DBusMessage* sailfish_iptables_register_client(DBusConnection* connection,
 	else
 		result = ACCESS_DENIED;
 	
-	return sailfish_iptables_dbus_reply_result(message, result);
+	return sailfish_iptables_dbus_reply_result(message, result, NULL);
 }
 			
 DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
@@ -667,13 +681,19 @@ DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
 	if(!api_data_remove_peer(data,sender))
 		result = REMOVE_FAILED;
 	
-	return sailfish_iptables_dbus_reply_result(message, result);
+	return sailfish_iptables_dbus_reply_result(message, result, NULL);
 }
 
 DBusMessage* sailfish_iptables_clear_iptables(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
 	return process_request(message, &clear_firewall, ARGS_CLEAR, user_data);
+}
+
+DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
+			DBusMessage *message, void *user_data)
+{
+	return process_request(message, &get_iptables_content, ARGS_GET_CONTENT, user_data);
 }
 
 DBusMessage* sailfish_iptables_version(DBusConnection *connection,
@@ -944,19 +964,65 @@ DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal_name,
 	return signal;
 }
 
-DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message, api_result result)
+DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message,
+	api_result result, rule_params *params)
 {
 	dbus_uint16_t res = (dbus_uint16_t)result;
 	const gchar* msg = api_result_message(result);
+	DBusMessage* reply = NULL;
 
-	DBusMessage* reply = g_dbus_create_reply(message,
+	if(!params || !params->iptables_content)
+		reply = g_dbus_create_reply(message,
 			DBUS_TYPE_UINT16,	&res,
 			DBUS_TYPE_STRING, 	&msg,
 			DBUS_TYPE_INVALID);
+	
+	else if(params->iptables_content)
+	{
+		DBusMessageIter iter, array;
+		GList *list_iter = NULL;
+		
+		reply = dbus_message_new_method_return(message);
+			
+		dbus_message_iter_init_append(reply, &iter);
+		
+		dbus_message_iter_append_basic(&iter, DBUS_TYPE_UINT16, &res);
+		dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &msg);
+		
+		// Chains
+		dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
+			DBUS_TYPE_STRING_AS_STRING, &array);
+			
+		for(list_iter = params->iptables_content->chains ; list_iter ; list_iter = list_iter->next)
+		{
+			gchar* content = (gchar*)list_iter->data;
+			dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &content);
+		}
+		
+		dbus_message_iter_close_container(&iter, &array);
+		
+		// Rules
+		dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
+			DBUS_TYPE_STRING_AS_STRING, &array);
+			
+		for(list_iter = params->iptables_content->rules ; list_iter ; list_iter = list_iter->next)
+		{
+			gchar* content = (gchar*)list_iter->data;
+			dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &content);
+		}
+		
+		dbus_message_iter_close_container(&iter, &array);
+		
+		// Last
+		dbus_message_append_args(reply, DBUS_TYPE_INVALID);
+	}
 
 	if(!reply)
 		reply = g_dbus_create_error(message,DBUS_ERROR_NO_MEMORY,
 			"failed to add parameters to reply.");
+	
+	rule_params_free(params);
+	
 	return reply;
 }
 
@@ -1025,6 +1091,8 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				DBUS_TYPE_STRING,	&(params->chain_name),
 				DBUS_TYPE_STRING,	&op,
 				DBUS_TYPE_INVALID);
+		default:
+			break;
 	}
 	g_free(port_str);
 	return signal;
@@ -1110,6 +1178,12 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_STRING, &chain_name,
 						DBUS_TYPE_STRING, &operation,
 						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_GET_CONTENT:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_INVALID);
+			break;
 	}
 	
 	if(error)
