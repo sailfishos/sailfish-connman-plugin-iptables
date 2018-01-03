@@ -5,7 +5,7 @@
 		<set name="ete-tests" feature="Sailfish Connman iptables plugin">
 			<description>Sailfish Connman iptables plugin end-to-end tests</description>
 			<case manual="false" name="End-to-end test as root">
-				<step>PATH=/sbin:\$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
+				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
 				</step>
 			</case>
 			<case manual="false" name="End-to-end test as regular user">
@@ -14,7 +14,7 @@
 			</case>
 			<description>Sailfish Connman iptables plugin save and restore tests</description>
 			<case manual="false" name="Save and restore iptables test as root">
-				<step>PATH=/sbin:\$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/save-restore-test/sailfish-connman-iptables-plugin-save-restore-test
+				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/save-restore-test/sailfish-connman-iptables-plugin-save-restore-test
 				</step>
 			</case>
 		</set>
