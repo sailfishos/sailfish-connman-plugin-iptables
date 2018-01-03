@@ -1165,6 +1165,10 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CLEAR:
+			// TODO enable this when other than "filter" table is supported
+			/*rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_INVALID);*/
 			break;
 		case ARGS_POLICY_IN:
 		case ARGS_POLICY_OUT:
@@ -1180,9 +1184,10 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_GET_CONTENT:
-			rval = dbus_message_get_args(message, error,
+			// TODO enable this when other than "filter" table is supported
+			/*rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
-						DBUS_TYPE_INVALID);
+						DBUS_TYPE_INVALID);*/
 			break;
 	}
 	
