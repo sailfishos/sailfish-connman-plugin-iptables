@@ -4,7 +4,7 @@ SOURCES="../common/test_send ../common/test_output ../common/test_log"
 
 IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
 
-REQUIRED_COMMANDS_BASE="dbus-send grep id"
+REQUIRED_COMMANDS_BASE="dbus-send grep id dirname"
 REQUIRED_COMMANDS_ROOT="$REQUIRED_COMMANDS_BASE iptables iptables-save iptables-restore systemctl"
 
 # -t filter -L INPUT |grep ACCEPT
@@ -319,6 +319,12 @@ function run_pre_test_operations()
 		if [[ "$CLEARED" != "0" ]] ; then
 			echo "Cannot clear iptables filter table. Test may report invalid results."
 		fi
+		
+		CLEARED=$(send_message "ClearIptablesChains" "filter" "$CLEAR_RESULT")
+	
+		if [[ "$CLEARED" != "0" ]] ; then
+			echo "Cannot clear chains from iptables filter table. Test may report invalid results."
+		fi
 	fi
 }
 
@@ -360,6 +366,8 @@ function main()
 	run_command_checks
 	
 	run_pre_test_operations
+	
+	sleep 2
 
 	run_clear_test
 	restart_connman 

@@ -20,6 +20,14 @@ gboolean g_dbus_remove_watch(DBusConnection *connection, guint id) { return TRUE
 int connman_iptables_delete_chain(const char *table_name, const char *chain) { return 0; }
 int connman_iptables_commit(const char *table_name) { return 0; }
 
+GList *api_data_get_custom_chain_table(api_data *data, const gchar* table_name);
+custom_chain_item* custom_chain_item_new(const gchar* table);
+void custom_chain_item_free(custom_chain_item *item);
+gboolean custom_chain_item_add_to_chains(custom_chain_item* item,
+	const gchar* chain);
+gboolean custom_chain_item_remove_from_chains(custom_chain_item *item,
+	const gchar* chain);
+
 // From connman sailfish_iptables_extension.c
 void connman_iptables_free_content(connman_iptables_content *content)
 {
@@ -526,12 +534,14 @@ static void test_iptables_plugin_parameters_dbus_client()
 static void test_iptables_plugin_parameters_api_data()
 {
 	gint i = 0, max = 5;
-	const gchar const * NAMES[] = {"name1", "name2", "name3", "name4", "name5"};
+	const gchar const * NAMES[] = {"name1", "name2", "name3", "name4", "name5", 
+		NULL};
 	api_data *data = api_data_new();
 	
 	g_assert(data);
 	g_assert(data->clients);
 	g_assert(data->policy);
+	g_assert(!data->custom_chains);
 	
 	dbus_client* tmp = dbus_client_new();
 	DAPeer* peer_tmp = g_new0(DAPeer,1);
@@ -585,6 +595,104 @@ static void test_iptables_plugin_parameters_api_data()
 	api_data_free(data);
 }
 
+static void test_iptables_plugin_parameters_custom_chains()
+{
+	custom_chain_item *item = NULL;
+	gint i = 0;
+	const gchar const * chains[] = {"chain1", "chain2", "chain3", NULL};
+	
+	g_assert(!custom_chain_item_new(NULL));
+	item = custom_chain_item_new("test");
+	g_assert(item);
+	g_assert(!g_ascii_strcasecmp(item->table,"test"));
+	g_assert(!item->chains);
+	
+	g_assert(!custom_chain_item_add_to_chains(NULL, NULL));
+	g_assert(!custom_chain_item_add_to_chains(item, NULL));
+	g_assert(!custom_chain_item_add_to_chains(NULL, "chain"));
+	
+	for(i = 0; chains[i] ; i++)
+		g_assert(custom_chain_item_add_to_chains(item,chains[i]));
+	
+	g_assert(g_list_length(item->chains) == i);
+	
+	g_assert(!custom_chain_item_remove_from_chains(item,NULL));
+	g_assert(!custom_chain_item_remove_from_chains(item,""));
+	g_assert(!custom_chain_item_remove_from_chains(item,"chain"));
+	
+	g_assert(custom_chain_item_remove_from_chains(item,chains[2]));
+	g_assert(g_list_length(item->chains) == i - 1);
+	
+	g_assert(custom_chain_item_remove_from_chains(item,chains[0]));
+	g_assert(!custom_chain_item_remove_from_chains(item,chains[0]));
+	
+	g_assert(custom_chain_item_remove_from_chains(item,chains[1]));
+	
+	g_assert(!g_list_length(item->chains));
+	
+	custom_chain_item_free(item);
+
+}
+
+static void test_iptables_plugin_parameters_api_data_chains()
+{
+	gint i = 0;
+	const gchar const * NAMES[] = {"chain1", "chain2", "chain3", "chain4", NULL};
+	GList *chains = NULL;
+	custom_chain_item *item = NULL;
+	
+	api_data *data = api_data_new();
+	
+	g_assert(!data->custom_chains);
+	
+	g_assert(!api_data_get_custom_chain_table(NULL, NULL));
+	g_assert(!api_data_get_custom_chain_table(data, NULL));
+	g_assert(!api_data_get_custom_chain_table(NULL, "filter"));
+	g_assert(!api_data_get_custom_chain_table(data, "filter"));
+	
+	g_assert(!api_data_remove_custom_chains(NULL, NULL));
+	g_assert(!api_data_remove_custom_chains(data, NULL));
+	g_assert(!api_data_remove_custom_chains(NULL, "filter"));
+	
+	// List null, nothing done = true
+	g_assert(api_data_remove_custom_chains(data, "filter"));
+	
+	g_assert(!api_data_add_custom_chain(NULL, NULL, NULL));
+	g_assert(!api_data_add_custom_chain(data, NULL, NULL));
+	g_assert(!api_data_add_custom_chain(data, "filter", NULL));
+	g_assert(!api_data_add_custom_chain(NULL, "filter", "chain"));
+	g_assert(!api_data_add_custom_chain(NULL, NULL, "chain"));
+	
+	for(i = 0 ; NAMES[i] ; i++)
+		g_assert(api_data_add_custom_chain(data, "filter", NAMES[i]));
+	
+	chains = api_data_get_custom_chain_table(data, "filter");
+	g_assert(chains);
+	item = (custom_chain_item*)chains->data;
+	g_assert(g_list_length(item->chains) == i);
+	
+	// Try to remove nonexisting
+	g_assert(!api_data_delete_custom_chain(data,"filter","test2"));
+	
+	chains = api_data_get_custom_chain_table(data, "filter");
+	g_assert(chains);
+	item = (custom_chain_item*)chains->data;
+	g_assert(g_list_length(item->chains) == i);
+	
+	// Remove existing
+	g_assert(api_data_delete_custom_chain(data,"filter", NAMES[0]));
+	
+	chains = api_data_get_custom_chain_table(data, "filter");
+	g_assert(chains);
+	item = (custom_chain_item*)chains->data;
+	g_assert(g_list_length(item->chains) == i-1);
+	
+	g_assert(!api_data_remove_custom_chains(data,"filter1"));
+	g_assert(api_data_remove_custom_chains(data,"filter"));
+	
+	api_data_free(data);
+}
+
 static void test_iptables_plugin_parameters_disconnect_data()
 {	
 	api_data* a_data = api_data_new();
@@ -609,6 +717,10 @@ static void test_iptables_plugin_parameters_disconnect_data()
 	
 	g_free(peer_name);
 	g_free(peer);
+	client->peer = NULL;
+	
+	dbus_client_free(client);
+	api_data_free(a_data);
 }
 
 
@@ -821,6 +933,7 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_PARAMETERS "service", test_iptables_plugin_parameters_service);
 	g_test_add_func(PREFIX_PARAMETERS "dbus_client", test_iptables_plugin_parameters_dbus_client);
 	g_test_add_func(PREFIX_PARAMETERS "api_data", test_iptables_plugin_parameters_api_data);
+	g_test_add_func(PREFIX_PARAMETERS "api_data_chains", test_iptables_plugin_parameters_api_data_chains);
 	g_test_add_func(PREFIX_PARAMETERS "disconnect_data", test_iptables_plugin_parameters_disconnect_data);
 	
 	g_test_add_func(PREFIX_UTILS "api_result_message", test_iptables_plugin_utils_api_result_message);

@@ -26,17 +26,39 @@ The returned result codes and string pairs are:
 9 = "Cannot perform operation"
 10 = "Unauthorized, please try again"
 11 = "Unregister failed"
-12 = "Access denied"
+12 = "Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."
+13 = "Access denied"
 -->
 
 <!-- 
-Clears given table from iptables. Defaults to filter table.
+Clears given table from iptables. Defaults to filter table. Currentlty only filter table is used, table parameter is ignored for now.
 Sends signal FirewallCleared
 -->
 <method name="ClearIptablesTable">
 <arg name="table" type="s" direction="in"/>
 <arg name="result" type="q" direction="out"/>
 <arg name="string" type="s" direction="out"/>
+</method>
+
+<!-- 
+Clears all custom chains from given iptables table. Defaults to filter table, table parameter is ignored now.
+TODO: add signal for this.
+-->
+<method name="ClearIptablesChains">
+<arg name="table" type="s" direction="in"/>
+<arg name="result" type="q" direction="out"/>
+<arg name="string" type="s" direction="out"/>
+</method>
+
+<!--
+Get iptables content from given table. Defaults to filter table, table parameter is ignored now.
+-->
+<method name="GetIptablesContent">
+<arg name="table" type="s" direction="in"/>
+<arg name="result" type="q" direction="out"/>
+<arg name="string" type="s" direction="out"/>
+<arg name="chains" type="as" direction="out"/>
+<arg name="rules" type="as" direction="out"/>
 </method>
 
 <!--

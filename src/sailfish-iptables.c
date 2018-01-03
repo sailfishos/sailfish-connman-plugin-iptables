@@ -58,7 +58,7 @@
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
 //#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
 
-api_result clear_firewall(rule_params* params, api_data *data)
+api_result clear_iptables_rules(rule_params* params, api_data *data)
 {
 	if(!params)
 		return INVALID;
@@ -70,6 +70,18 @@ api_result clear_firewall(rule_params* params, api_data *data)
 	DBG("%s %s %s", PLUGIN_NAME, "CLEAR table", table_name);
 	if(!connman_iptables_clear(table_name)) return OK;
 	return INVALID_REQUEST;
+}
+
+api_result clear_iptables_chains(rule_params* params, api_data *data)
+{
+	if(!params)
+		return INVALID;
+		
+	DBG("%s %s %s", PLUGIN_NAME, "CLEAR table chains", params->table);
+	if(api_data_remove_custom_chains(data, params->table))
+		return OK;
+	else
+		return INVALID_REQUEST;
 }
 
 api_result get_iptables_content(rule_params* params, api_data *data)
@@ -354,10 +366,12 @@ api_result manage_chain(rule_params* params, api_data *data)
 				switch(params->operation)
 				{
 					case ADD:
-						api_data_add_custom_chain(data, params->chain_name);
+						api_data_add_custom_chain(data, params->table, 
+							params->chain_name);
 						break;
 					case REMOVE:
-						api_data_delete_custom_chain(data, params->chain_name);
+						api_data_delete_custom_chain(data, params->table, 
+							params->chain_name);
 						break;
 					default:
 						break;
@@ -410,20 +424,51 @@ DBusMessage* process_request(DBusMessage *message,
 	return sailfish_iptables_dbus_reply_result(message, result, params);
 }
 
+void setup_custom_chains_from_output(api_data *data)
+{
+	GList *iter = NULL;
+
+	connman_iptables_content* content = connman_iptables_get_content(
+		SAILFISH_IPTABLES_TABLE_NAME);
+		
+	if(!content)
+		return;
+		
+	for(iter = g_list_first(content->chains); iter ; iter = iter->next)
+	{
+		gchar *chain = (gchar*)iter->data;
+		
+		if(g_str_has_prefix(chain, SAILFISH_IPTABLES_CHAIN_PREFIX))
+		{
+			DBG("setup_custom_chains_from_output() adding %s", chain);
+			gchar **tokens = g_strsplit(chain," ", 2);
+			if(api_data_add_custom_chain(data, SAILFISH_IPTABLES_TABLE_NAME, tokens[0]))
+				DBG("setup_custom_chains_from_output() added %s", tokens[0]);
+			g_strfreev(tokens);
+		}
+	}
+	
+	connman_iptables_free_content(content);
+}
+
 static int sailfish_iptables_init(void)
 {
 	DBG("%s %s", PLUGIN_NAME, "initialize");
 	
-	int err = sailfish_iptables_dbus_register();
-	
-	if(err != 0)
-		DBG("%s %s", PLUGIN_NAME, "Cannot register to D-Bus");
+	api_data *data = api_data_new();
 		
-	err = connman_iptables_restore(SAILFISH_IPTABLES_TABLE_NAME, NULL);
+	int err = connman_iptables_restore(SAILFISH_IPTABLES_TABLE_NAME, NULL);
 	
 	if(err != 0)
 		DBG("%s %s %s", PLUGIN_NAME, "Cannot load default firewall",
 			connman_iptables_default_save_path(IPV4));
+	else
+		setup_custom_chains_from_output(data);
+		
+	err = sailfish_iptables_dbus_register(data);
+	
+	if(err != 0)
+		DBG("%s %s", PLUGIN_NAME, "Cannot register to D-Bus");
 	
 	return 0;
 }
