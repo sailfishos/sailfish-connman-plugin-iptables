@@ -11,8 +11,12 @@ under "net.connman" with path "/org/sailfishos/connman/mdm/iptables". Plugin
 uses Connection Manager D-Bus functions to register itself to D-Bus.
 
 After the plugin is loaded signal "Initialize" is sent over D-Bus indicating
-that the plugin is running. When unloaded (by Connman at exit) signal "Shutdown"
-is sent over D-Bus.
+that the plugin is running. Then iptables filter table content is loaded from
+the default save path of connman iptables module for IPv4 rules.
+
+When unloaded (by Connman at exit) iptables filter table is saved to connman's
+default save path, iptables content is cleared, custom chains are removed from
+the filter table and finally signal "Shutdown" is sent over D-Bus.
 
 ## Plugin iptables operations
 
@@ -20,15 +24,17 @@ This plugin allows to:
  - Add a rule to iptables filter table
  - Remove a rule from iptables filter table
  - Change policy of a filter table chain INPUT and OUTPUT
- - Save firewall (all iptables content) to disk
- - Load firewall (iptables content) to disk (WIP, not implemented)
+ - Add a chain to filter table
+ - Save firewall (iptables filter table) to disk at shutdown
+ - Load firewall (iptables filter table) from disk at startup
  - Clear firewall (filter table of iptables)
+ - Get iptables filter table content
  - Get version of plugin interface
 
 Rules can be added to INPUT or OUTPUT chains of iptables filter table. Each rule
 can be added as ACCEPT or DENY.
 
-Wollowing parameters are supported:
+Following parameters are supported:
  - Ip address or network
  - Ip address or network with port
  - Ip address or network with port range
@@ -106,6 +112,17 @@ textual description as follows:
 |4	|"Invalid service name"|
 |5	|"Invalid protocol"|
 |6	|"Invalid policy"|
-|7	|"Invalid file path"|
-|8	|"Cannot process rule"|
+|7	|"Rule does not exist"|
+|8	|"Cannot process request"|
 |9	|"Cannot perform operation"|
+|10 |"Unauthorized, please try again"|
+|11 |"Unregister failed"|
+|12 |"Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."|
+|13 |"Access denied"|
+
+In addition, GetIptablesContent will return two string arrays:
+
+| Return value | Description |
+|--------------|-------------|
+| array [ string ] | Chains in filter table in format "CHAINNAME CHAINPOLICY" |
+| array [ string ] | Rules in filter table in raw iptables format |
