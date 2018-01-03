@@ -48,6 +48,7 @@
 #include <connman/log.h>
 #include <connman/dbus.h>
 #include <connman/gdbus.h>
+#include <connman/iptables_extension.h>
 
 #include "sailfish-iptables-parameters.h"
 #include "sailfish-iptables-policy.h"
@@ -89,12 +90,31 @@ dbus_client* dbus_client_new()
 	return client;
 }
 
+void custom_chain_remove(void *data)
+{
+	gint error = 0;
+	
+	gchar* chain = (gchar*)data;
+	
+	DBG("%s %s %s", PLUGIN_NAME, "custom_chain_remove() removing", chain);
+	
+	error = connman_iptables_delete_chain("filter", chain);
+	
+	if(!error)
+		error = connman_iptables_commit("filter");
+	else
+		DBG("%s %s %s %s %d", PLUGIN_NAME,
+			"custom_chain_remove() failed to remove chain", chain,
+			"error code", error);
+}
+
 void api_data_free(api_data *data)
 {
 	if(data)
 	{
 		sailfish_iptables_policy_uninitialize(data);
 		g_hash_table_destroy(data->clients);
+		g_list_free_full(data->custom_chains, custom_chain_remove);
 		data->clients = NULL;
 		g_free(data);
 	}
@@ -106,6 +126,8 @@ api_data* api_data_new()
 	
 	data->clients = g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
 		dbus_client_free1);
+	
+	data->custom_chains = NULL;
 		
 	data->policy = NULL;
 	
@@ -153,6 +175,27 @@ gboolean api_data_remove_peer(api_data *data, const gchar *peer_name)
 				peer_name);
 	}
 	return rval;
+}
+
+// TODO modify these when all tables must be supported
+void api_data_add_custom_chain(api_data *data, const gchar* chain)
+{
+	if(!data || !chain || !(*chain))
+		return;
+	
+	data->custom_chains = g_list_append(data->custom_chains, g_strdup(chain));
+	
+	
+}
+
+// TODO modify these when all tables must be supported
+void api_data_delete_custom_chain(api_data *data, const gchar* chain)
+{
+	if(!data || !chain || !(*chain))
+		return;
+	
+	if(data->custom_chains)
+		data->custom_chains = g_list_remove(data->custom_chains, chain);
 }
 
 client_disconnect_data* client_disconnect_data_new(api_data* data,

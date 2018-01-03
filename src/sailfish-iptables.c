@@ -58,8 +58,7 @@
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
 //#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
 
-
-api_result clear_firewall(rule_params* params)
+api_result clear_firewall(rule_params* params, api_data *data)
 {
 	if(!params)
 		return INVALID;
@@ -73,7 +72,7 @@ api_result clear_firewall(rule_params* params)
 	return INVALID_REQUEST;
 }
 
-api_result get_iptables_content(rule_params* params)
+api_result get_iptables_content(rule_params* params, api_data *data)
 {
 	if(!params)
 		return INVALID;
@@ -87,7 +86,7 @@ api_result get_iptables_content(rule_params* params)
 	return INVALID;
 }
 
-api_result set_policy(rule_params* params)
+api_result set_policy(rule_params* params, api_data *data)
 {
 	gint ret = 0;
 	api_result rval = INVALID;
@@ -125,7 +124,7 @@ api_result set_policy(rule_params* params)
 	return rval;
 }
 
-api_result add_rule_to_iptables(rule_params *params, guint16 op)
+api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 {	
 	api_result rval = INVALID;
 	gint error = 0;
@@ -299,27 +298,27 @@ param_error:
 	return rval;
 }
 
-api_result allow_incoming(rule_params* params)
+api_result allow_incoming(rule_params* params, api_data *data)
 {
-	return add_rule_to_iptables(params, OPERATION_IN | OPERATION_ACCEPT);
+	return add_rule_to_iptables(params, data, OPERATION_IN | OPERATION_ACCEPT);
 }
 
-api_result allow_outgoing(rule_params* params)
+api_result allow_outgoing(rule_params* params, api_data *data)
 {
-	return add_rule_to_iptables(params, OPERATION_OUT | OPERATION_ACCEPT);
+	return add_rule_to_iptables(params, data, OPERATION_OUT | OPERATION_ACCEPT);
 }
 
-api_result deny_incoming(rule_params* params)
+api_result deny_incoming(rule_params* params, api_data *data)
 {
-	return add_rule_to_iptables(params,OPERATION_IN | OPERATION_DENY);
+	return add_rule_to_iptables(params, data, OPERATION_IN | OPERATION_DENY);
 }
 
-api_result deny_outgoing(rule_params* params)
+api_result deny_outgoing(rule_params* params, api_data *data)
 {
-	return add_rule_to_iptables(params,OPERATION_OUT | OPERATION_DENY);
+	return add_rule_to_iptables(params, data, OPERATION_OUT | OPERATION_DENY);
 }
 
-api_result manage_chain(rule_params* params)
+api_result manage_chain(rule_params* params, api_data *data)
 {
 	gint error = 0;
 	switch(params->operation)
@@ -346,10 +345,37 @@ api_result manage_chain(rule_params* params)
 			return INVALID_REQUEST;
 	}
 	
-	if(!error)
+	switch(error)
 	{
-		if(!(error = connman_iptables_commit(params->table)))
-			return OK;
+		// Try to commit
+		case 0:
+			if(!(error = connman_iptables_commit(params->table)))
+			{
+				switch(params->operation)
+				{
+					case ADD:
+						api_data_add_custom_chain(data, params->chain_name);
+						break;
+					case REMOVE:
+						api_data_delete_custom_chain(data, params->chain_name);
+						break;
+					default:
+						break;
+				}
+				return OK;
+			}
+			// Commit failed, try to remove chain
+			else
+				if(!connman_iptables_delete_chain(params->table,
+					params->chain_name))
+					ERR("%s %s %s", PLUGIN_NAME,
+						"manage_chain() commit error",
+						"chain could not be removed, please restart connman.");
+			break;
+		case -1:
+			return INVALID_REQUEST;
+		default:
+			break;
 	}
 	
 	ERR("%s %s %d %s %d", PLUGIN_NAME, "manage_chain() failed with operation",
@@ -358,7 +384,8 @@ api_result manage_chain(rule_params* params)
 }
 
 DBusMessage* process_request(DBusMessage *message,
-	api_result (*func)(rule_params* params), rule_args args, api_data *data)
+	api_result (*func)(rule_params* params, api_data *data),
+	rule_args args, api_data *data)
 {
 	api_result result = INVALID;
 	rule_params *params = NULL;
@@ -368,7 +395,7 @@ DBusMessage* process_request(DBusMessage *message,
 	else if((params = sailfish_iptables_dbus_get_parameters_from_msg(message,
 		args)))
 	{	
-		if((result = func(params)) == OK)
+		if((result = func(params, data)) == OK)
 		{
 			DBusMessage *signal = sailfish_iptables_dbus_signal_from_rule_params(params);
 			if(signal)
@@ -405,8 +432,6 @@ static void sailfish_iptables_exit(void)
 {
 	DBG("%s %s", PLUGIN_NAME, "EXIT IPTABLES API");
 	
-	sailfish_iptables_dbus_unregister();
-	
 	int err = connman_iptables_save(SAILFISH_IPTABLES_TABLE_NAME, NULL);
 	
 	if(err != 0)
@@ -418,6 +443,8 @@ static void sailfish_iptables_exit(void)
 	if(err != 0)
 		DBG("%s %s %s", PLUGIN_NAME, "Cannot clear firewall table",
 			SAILFISH_IPTABLES_TABLE_NAME);
+	
+	sailfish_iptables_dbus_unregister();
 }
 
 CONNMAN_PLUGIN_DEFINE(sailfish_ipt_api, PLUGIN_NAME, CONNMAN_VERSION,

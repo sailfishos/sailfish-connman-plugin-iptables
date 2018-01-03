@@ -91,6 +91,7 @@ typedef struct sailfish_iptables_dbus_client {
 
 typedef struct sailfish_iptables_api_data {
 	GHashTable* clients;
+	GList* custom_chains;
 	DA_BUS da_bus;
     DAPolicy* policy;
 } api_data;
@@ -162,20 +163,21 @@ typedef enum sailfish_iptables_dbus_access {
 	SAILFISH_DBUS_ACCESS_LISTEN
 } dbus_access;
 
-api_result clear_firewall(rule_params* params);
-api_result get_iptables_content(rule_params* params);
+api_result clear_firewall(rule_params* params, api_data *data);
+api_result get_iptables_content(rule_params* params, api_data *data);
 
-api_result set_policy(rule_params* params);
+api_result set_policy(rule_params* params, api_data *data);
 
-api_result allow_incoming(rule_params* params);
-api_result allow_outgoing(rule_params* params);
-api_result deny_incoming(rule_params* params);
-api_result deny_outgoing(rule_params* params);
+api_result allow_incoming(rule_params* params, api_data *data);
+api_result allow_outgoing(rule_params* params, api_data *data);
+api_result deny_incoming(rule_params* params, api_data *data);
+api_result deny_outgoing(rule_params* params, api_data *data);
 
-api_result manage_chain(rule_params* params);
+api_result manage_chain(rule_params* params, api_data *data);
 
 DBusMessage* process_request(DBusMessage *message,
-	api_result (*func)(rule_params* params), rule_args args, api_data* data);
+	api_result (*func)(rule_params* params, api_data *data),
+	rule_args args, api_data* data);
 	
 
 #ifdef __cplusplus

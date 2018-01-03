@@ -62,6 +62,9 @@ dbus_client* api_data_get_peer(api_data *data, const gchar *peer_name);
 gboolean api_data_add_peer(api_data *data, dbus_client *client);
 gboolean api_data_remove_peer(api_data *data, const gchar *peer_name);
 
+void api_data_add_custom_chain(api_data *data, const gchar* chain);
+void api_data_delete_custom_chain(api_data *data, const gchar* chain);
+
 client_disconnect_data* client_disconnect_data_new(api_data* data,
 	dbus_client* client);
 void client_disconnect_data_free(client_disconnect_data* data);

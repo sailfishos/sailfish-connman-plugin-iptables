@@ -17,6 +17,8 @@
 DBusConnection* connman_dbus_get_connection() { return NULL; }
 void connman_log(const char *fmt, ...) { return; }
 gboolean g_dbus_remove_watch(DBusConnection *connection, guint id) { return TRUE; }
+int connman_iptables_delete_chain(const char *table_name, const char *chain) { return 0; }
+int connman_iptables_commit(const char *table_name) { return 0; }
 
 // From connman sailfish_iptables_extension.c
 void connman_iptables_free_content(connman_iptables_content *content)
