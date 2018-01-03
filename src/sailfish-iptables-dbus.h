@@ -71,7 +71,7 @@
 extern "C" {
 #endif
 
-gint sailfish_iptables_dbus_register();
+gint sailfish_iptables_dbus_register(api_data* data);
 
 gint sailfish_iptables_dbus_unregister();
 
@@ -98,7 +98,10 @@ DBusMessage* sailfish_iptables_register_client(DBusConnection* connection,
 DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
 			DBusMessage* message, void *user_data);
 
-DBusMessage* sailfish_iptables_clear_iptables(DBusConnection *connection,
+DBusMessage* sailfish_iptables_clear_iptables_rules(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+			
+DBusMessage* sailfish_iptables_clear_iptables_chains(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
 			
 DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,

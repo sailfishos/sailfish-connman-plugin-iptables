@@ -12,11 +12,11 @@ uses Connection Manager D-Bus functions to register itself to D-Bus.
 
 After the plugin is loaded signal "Initialize" is sent over D-Bus indicating
 that the plugin is running. Then iptables filter table content is loaded from
-the default save path of connman iptables module for IPv4 rules.
+the default save path of connman iptables module for IPv4 rules. All previously created custom chains (prefixed with sfos_) are loaded at plugin startup (using iptables content returned by connman) into plugin's internal database.'
 
 When unloaded (by Connman at exit) iptables filter table is saved to connman's
 default save path, iptables content is cleared, custom chains are removed from
-the filter table and finally signal "Shutdown" is sent over D-Bus.
+the filter table and finally signal "Shutdown" is sent over D-Bus. Custom chains are saved by connman's sailfish iptables extension.
 
 ## Plugin iptables operations
 
@@ -25,9 +25,10 @@ This plugin allows to:
  - Remove a rule from iptables filter table
  - Change policy of a filter table chain INPUT and OUTPUT
  - Add a chain to filter table
- - Save firewall (iptables filter table) to disk at shutdown
- - Load firewall (iptables filter table) from disk at startup
- - Clear firewall (filter table of iptables)
+ - Save iptables to disk at shutdown using connman's sailfish iptables extension
+ - Load iptables from disk at startup using connman's sailfish iptables extension
+ - Clear iptables rules
+ - Clear iptables custom chains
  - Get iptables filter table content
  - Get version of plugin interface
 

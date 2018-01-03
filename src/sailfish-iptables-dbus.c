@@ -96,6 +96,7 @@
 #define SAILFISH_IPTABLES_CHANGE_OUT_POLICY		"ChangeOutputPolicy"
 
 #define SAILFISH_IPTABLES_CLEAR_IPTABLES_TABLE		"ClearIptablesTable"
+#define SAILFISH_IPTABLES_CLEAR_IPTABLES_CHAINS		"ClearIptablesChains"
 
 #define SAILFISH_IPTABLES_REGISTER_CLIENT		"Register"
 #define SAILFISH_IPTABLES_UNREGISTER_CLIENT		"Unregister"
@@ -207,7 +208,14 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_RESULT_TYPE,
 				SAILFISH_IPTABLES_RESULT_STRING),
-			sailfish_iptables_clear_iptables)
+			sailfish_iptables_clear_iptables_rules)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_CLEAR_IPTABLES_CHAINS, 
+			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_TABLE),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING),
+			sailfish_iptables_clear_iptables_chains)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_GET_IPTABLES_CONTENT, 
 			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_TABLE),
@@ -684,10 +692,16 @@ DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
 	return sailfish_iptables_dbus_reply_result(message, result, NULL);
 }
 
-DBusMessage* sailfish_iptables_clear_iptables(DBusConnection *connection,
+DBusMessage* sailfish_iptables_clear_iptables_rules(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	return process_request(message, &clear_firewall, ARGS_CLEAR, user_data);
+	return process_request(message, &clear_iptables_rules, ARGS_CLEAR, user_data);
+}
+
+DBusMessage* sailfish_iptables_clear_iptables_chains(DBusConnection *connection,
+			DBusMessage *message, void *user_data)
+{
+	return process_request(message, &clear_iptables_chains, ARGS_CLEAR, user_data);
 }
 
 DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
@@ -1282,10 +1296,11 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	else
 		params->operation = ADD;
 	
+	// For now always default to "filter" table (SAILFISH_IPTABLES_TABLE_NAME)
 	if(table && *table && g_utf8_validate(table,-1,NULL))
-		params->table = g_utf8_strdown(table,-1);
+		params->table = g_strdup(SAILFISH_IPTABLES_TABLE_NAME);//g_utf8_strdown(table,-1);
 	else
-		params->table = g_strdup("filter");
+		params->table = g_strdup(SAILFISH_IPTABLES_TABLE_NAME);
 	
 	if(policy && g_utf8_validate(policy,-1,NULL))
 	{
@@ -1295,15 +1310,18 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	}
 	
 	if(chain_name && *chain_name && g_utf8_validate(chain_name,-1, NULL))
-		params->chain_name = g_strdup(chain_name);
+		params->chain_name = g_strdup_printf("%s%s", 
+			SAILFISH_IPTABLES_CHAIN_PREFIX, chain_name);
 		
 	return params;
 }
 
-gint sailfish_iptables_dbus_register() {
+gint sailfish_iptables_dbus_register(api_data *data) {
 	
 	gint rval = 0;
-	api_data *data = api_data_new();
+	
+	if(!data)
+		data = api_data_new();
 	
 	DBusConnection* conn = connman_dbus_get_connection();
 	if(conn)
@@ -1352,17 +1370,16 @@ gint sailfish_iptables_dbus_unregister()
 	DBusConnection* conn = connman_dbus_get_connection();
 	if(conn)
 	{
-		if(g_dbus_unregister_interface(conn,
-			SAILFISH_IPTABLES_DBUS_PATH,
-			SAILFISH_IPTABLES_DBUS_INTERFACE))
-		{
-			DBusMessage *signal = sailfish_iptables_dbus_signal(
+		// First send the signal to all
+		DBusMessage *signal = sailfish_iptables_dbus_signal(
 					SAILFISH_IPTABLES_SIGNAL_STOP,
 					DBUS_TYPE_INVALID, NULL);
-			if(signal) // Send to all
-				sailfish_iptables_dbus_send_signal(signal, NULL);
-		}
-		else
+		if(signal)
+			sailfish_iptables_dbus_send_signal(signal, NULL);
+			
+		if(!g_dbus_unregister_interface(conn,
+			SAILFISH_IPTABLES_DBUS_PATH,
+			SAILFISH_IPTABLES_DBUS_INTERFACE))
 		{
 			DBG("%s %s %s", PLUGIN_NAME, "sailfish_iptables_dbus_unregister():",
 				"unregsiter failed");

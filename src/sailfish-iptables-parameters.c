@@ -53,6 +53,101 @@
 #include "sailfish-iptables-parameters.h"
 #include "sailfish-iptables-policy.h"
 
+void custom_chain_remove(void *data, void *table)
+{
+	gint error = 0;
+	
+	gchar *chain = (gchar*)data;
+	gchar *table_name = (gchar*)table;
+	
+	if(!chain || !(*chain) || !table_name || !(*table_name))
+		return;
+	
+	DBG("%s %s %s %s %s", PLUGIN_NAME, "custom_chain_remove() removing", chain,
+		"from table", table_name);
+	
+	error = connman_iptables_delete_chain(table_name, chain);
+	
+	if(!error)
+		error = connman_iptables_commit(table_name);
+	else
+		DBG("%s %s %s %s %s %s %d", PLUGIN_NAME,
+			"custom_chain_remove() failed to remove chain", chain,
+			"from table", table_name, "error code", error);
+			
+	g_free(data);
+}
+
+custom_chain_item* custom_chain_item_new(const gchar* table)
+{
+	if(!table || !(*table))
+		return NULL;
+		
+	custom_chain_item* item = g_new0(custom_chain_item,1);
+	
+	item->table = g_strdup(table);
+	item->chains = NULL;
+	
+	return item;
+}
+
+void custom_chain_item_free(custom_chain_item *item)
+{
+	if(!item)
+		return;
+		
+	g_list_foreach(item->chains, custom_chain_remove, item->table);
+	g_list_free(item->chains);
+	g_free(item->table);
+	
+	g_free(item);
+}
+
+void custom_chain_item_free1(void *data)
+{
+	custom_chain_item_free(data);
+}
+
+gboolean custom_chain_item_remove_from_chains(custom_chain_item *item,
+	const gchar* chain)
+{
+	GList* iter = NULL;
+	gint chains_count = 0;
+	
+	if(!item || !chain || !(*chain))
+		return false;
+	
+	chains_count = g_list_length(item->chains);
+	
+	for(iter = g_list_first(item->chains); iter; iter = iter->next)
+	{
+		if(!g_ascii_strcasecmp(chain, (gchar*)iter->data))
+		{
+			item->chains = g_list_remove_link(item->chains, iter);
+			g_free(iter->data);
+			g_list_free_1(iter);
+			break;
+		}
+	}
+	
+	return chains_count - 1 == g_list_length(item->chains) ? true : false;
+}
+
+gboolean custom_chain_item_add_to_chains(custom_chain_item* item,
+	const gchar* chain)
+{
+	gint chains_count = 0;
+	
+	if(!item || !chain || !(*chain))
+		return false;
+		
+	chains_count = g_list_length(item->chains);
+	
+	item->chains = g_list_prepend(item->chains, g_strdup(chain));
+	
+	return chains_count + 1 == g_list_length(item->chains) ? true : false;
+}
+
 void dbus_client_free(dbus_client *client)
 {
 	if(client)
@@ -90,32 +185,17 @@ dbus_client* dbus_client_new()
 	return client;
 }
 
-void custom_chain_remove(void *data)
-{
-	gint error = 0;
-	
-	gchar* chain = (gchar*)data;
-	
-	DBG("%s %s %s", PLUGIN_NAME, "custom_chain_remove() removing", chain);
-	
-	error = connman_iptables_delete_chain("filter", chain);
-	
-	if(!error)
-		error = connman_iptables_commit("filter");
-	else
-		DBG("%s %s %s %s %d", PLUGIN_NAME,
-			"custom_chain_remove() failed to remove chain", chain,
-			"error code", error);
-}
-
 void api_data_free(api_data *data)
 {
 	if(data)
 	{
 		sailfish_iptables_policy_uninitialize(data);
 		g_hash_table_destroy(data->clients);
-		g_list_free_full(data->custom_chains, custom_chain_remove);
 		data->clients = NULL;
+		
+		g_list_free_full(data->custom_chains, custom_chain_item_free1);
+		data->custom_chains = NULL;
+		
 		g_free(data);
 	}
 }
@@ -177,25 +257,112 @@ gboolean api_data_remove_peer(api_data *data, const gchar *peer_name)
 	return rval;
 }
 
-// TODO modify these when all tables must be supported
-void api_data_add_custom_chain(api_data *data, const gchar* chain)
+GList *api_data_get_custom_chain_table(api_data *data, const gchar* table_name)
 {
-	if(!data || !chain || !(*chain))
-		return;
+	GList* iter = NULL;
 	
-	data->custom_chains = g_list_append(data->custom_chains, g_strdup(chain));
-	
-	
+	if(!data || !table_name || !(*table_name) || !g_list_length(data->custom_chains))
+		return NULL;
+		
+	for(iter = g_list_first(data->custom_chains); iter ; iter = iter->next)
+	{
+		custom_chain_item *item = (custom_chain_item*)iter->data;
+		if(item && item->table && *(item->table) && !g_ascii_strcasecmp(item->table, table_name))
+		{
+			DBG("%s get_custom_chain_table() found table %s chains size %d",
+				PLUGIN_NAME, item->table, g_list_length(item->chains));
+			return iter;
+		}
+	}
+	return NULL;
 }
 
-// TODO modify these when all tables must be supported
-void api_data_delete_custom_chain(api_data *data, const gchar* chain)
+gboolean api_data_remove_custom_chains(api_data *data, const gchar* table_name)
 {
-	if(!data || !chain || !(*chain))
-		return;
+	if(!data || !table_name || !(*table_name))
+		return false;
+		
+	GList *table_entry = api_data_get_custom_chain_table(data, table_name);
 	
-	if(data->custom_chains)
-		data->custom_chains = g_list_remove(data->custom_chains, chain);
+	if(table_entry)
+	{
+		DBG("%s api_data_remove_custom_chains() remove chains from table %s",
+			PLUGIN_NAME, table_name);
+		
+		custom_chain_item *item = (custom_chain_item*)table_entry->data;
+		
+		custom_chain_item_free(item);
+		
+		data->custom_chains = g_list_remove_link(data->custom_chains, table_entry);
+		g_list_free_1(table_entry);
+		
+		return true;
+	}
+	DBG("%s api_data_remove_custom_chains() no entry found for %s",
+		PLUGIN_NAME, table_name);
+	
+	// List is not empty, invalid table name
+	if(g_list_length(data->custom_chains))
+		return false;
+	
+	// List empty, nothing done, request ok.
+	return true;
+}
+
+gboolean api_data_add_custom_chain(api_data *data, const gchar* table_name,
+	const gchar* chain)
+{
+	if(!data || !table_name || !(*table_name) || !chain || !(*chain))
+		return false;
+		
+	GList *table_entry = api_data_get_custom_chain_table(data, table_name);
+	custom_chain_item *item = NULL;
+	
+	// Not found, create new
+	if(!table_entry)
+	{
+		item = custom_chain_item_new(table_name);
+		data->custom_chains = g_list_append(data->custom_chains, item);
+		
+		DBG("%s api_data_add_custom_chain() creating new table %s",
+			PLUGIN_NAME, item->table);
+	}
+	else
+	{
+		item = (custom_chain_item*)table_entry->data;
+		DBG("%s api_data_add_custom_chain() adding to existing table %s (%d)",
+			PLUGIN_NAME, item->table, g_list_length(item->chains));
+	}
+	
+	return custom_chain_item_add_to_chains(item, chain);
+}
+
+gboolean api_data_delete_custom_chain(api_data *data, const gchar* table_name,
+	const gchar* chain)
+{
+	gint chains_count = 0;
+	
+	if(!data || !table_name || !(*table_name) || !chain || !(*chain))
+		return false;
+	
+	if(!data->custom_chains)
+		return false;
+		
+	GList *table_entry = api_data_get_custom_chain_table(data, table_name);
+	
+	if(!table_entry)
+	{
+		DBG("%s api_data_delete_custom_chain() no table %s", PLUGIN_NAME,
+			table_name);
+		return false;
+	}
+		
+	custom_chain_item *item = (custom_chain_item*)table_entry->data;
+	
+	DBG("%s api_data_delete_custom_chain() %s from %s", PLUGIN_NAME, chain,
+		table_name);
+		
+	return custom_chain_item_remove_from_chains(item, chain);
 }
 
 client_disconnect_data* client_disconnect_data_new(api_data* data,

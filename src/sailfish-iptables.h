@@ -53,6 +53,7 @@ extern "C" {
 
 #define SAILFISH_IPTABLES_INTERFACE_VERSION		2
 #define SAILFISH_IPTABLES_TABLE_NAME			"filter"
+#define SAILFISH_IPTABLES_CHAIN_PREFIX			"sfos_"
 #define IPTABLES_CHAIN_INPUT				"INPUT"
 #define IPTABLES_CHAIN_OUTPUT				"OUTPUT"
 #define IPTABLES_ACCEPT					"ACCEPT"
@@ -95,6 +96,11 @@ typedef struct sailfish_iptables_api_data {
 	DA_BUS da_bus;
     DAPolicy* policy;
 } api_data;
+
+typedef struct sailfish_iptables_custom_chain_item {
+	gchar* table;
+	GList* chains;
+} custom_chain_item;
 
 typedef struct sailfish_iptables_client_disconnect_data {
 	api_data* main_data;
@@ -163,7 +169,8 @@ typedef enum sailfish_iptables_dbus_access {
 	SAILFISH_DBUS_ACCESS_LISTEN
 } dbus_access;
 
-api_result clear_firewall(rule_params* params, api_data *data);
+api_result clear_iptables_rules(rule_params* params, api_data *data);
+api_result clear_iptables_chains(rule_params* params, api_data *data);
 api_result get_iptables_content(rule_params* params, api_data *data);
 
 api_result set_policy(rule_params* params, api_data *data);
