@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
+function check_change()
+{	
+	if [[ $(iptables -t filter -L "$1" -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
+		echo 0
+	else
+		echo "check_change() failure :: iptables -t filter -L $1 -n|grep -e $2.*$3.*--.*$4.*$5 ::"
+	fi
+}
+
+# $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
+function check_removed()
+{	
+	if [[ ! $(iptables -t filter -L "$1" -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
+		echo 0
+	else
+		echo "check_removed() failure :: ! iptables -t filter -L $1 -n|grep -e $2.*$3.*--.*$4.*$5 ::"
+	fi
+}
+
+function check_policy_change()
+{
+	if [[ $(iptables -t filter -L "$1" -n|grep -e "Chain $1 (policy $2)") ]] ; then
+		echo 0
+	else
+		echo "check_policy_change() failure :: iptables -t filter -L $1 -n|grep -e Chain $1 (policy $2) ::"
+	fi
+}
+
+# $1 = chain
+function check_chain_added()
+{
+	if [[ $(iptables -t filter -L -n|grep -e "Chain sfos_$1.*references") ]] ; then
+		echo 0
+	else
+		echo "check_chain_added() failure :: iptables -t filter -L -n|grep -e Chain $1.*references ::"
+	fi
+}
+
+function check_chain_removed()
+{
+	if [[ ! $(iptables -t filter -L -n|grep -e "Chain $1.*references") ]] ; then
+		echo 0
+	else
+		echo "check_chain_removed() failure :: iptables -t filter -L -n|grep -e Chain $1.*references ::"
+	fi
+}

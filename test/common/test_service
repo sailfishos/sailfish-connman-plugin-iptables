@@ -1,0 +1,34 @@
+#!/bin/bash
+
+function change_service()
+{
+	if [ -z "$1" ] || [ -z "$2" ] ; then
+		echo "change_service() empty parameter(s)"
+		return
+	fi
+	
+	if [ "$(id -u)" != "0" ] ; then
+		echo "change_service() can be used only as root, called with: $1 $2."
+		exit 1
+	fi
+
+	if [[ ! $(systemctl "$1" "$2") -eq 0 ]] ; then
+		echo "Cannot $1 $2. Quitting."
+		exit 1
+	fi
+}
+
+function restart_service()
+{
+	change_service "restart" "$1"
+}
+
+function stop_service()
+{
+	change_service "stop" "$1"
+}
+
+function start_service()
+{
+	change_service "start" "$1"
+}

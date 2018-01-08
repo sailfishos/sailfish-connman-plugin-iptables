@@ -142,8 +142,9 @@
 #define SAILFISH_IPTABLES_INPUT_TABLE			{"table", "s"}
 #define SAILFISH_IPTABLES_INPUT_CHAIN			{"chain", "s"}
 
-#define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		{"chain", "s"}
+#define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		SAILFISH_IPTABLES_INPUT_CHAIN
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		SAILFISH_IPTABLES_INPUT_POLICY
+#define SAILFISH_IPTABLES_SIGNAL_TABLE			SAILFISH_IPTABLES_INPUT_TABLE
 
 const gchar const * OP_STR[] = {"Add", "Remove", "Undefined", NULL};
 const gchar * EMPTY_STR = "";
@@ -160,19 +161,30 @@ static const GDBusSignalTable signals[] = {
 		},
 		{ GDBUS_SIGNAL(
 			SAILFISH_IPTABLES_SIGNAL_CLEAR,
-			NULL)
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_SIGNAL_TABLE
+			))
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_SIGNAL_CLEAR_CHAINS,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_SIGNAL_TABLE
+			))
 		},
 		{ GDBUS_SIGNAL(
 			SAILFISH_IPTABLES_SIGNAL_POLICY,
 			GDBUS_ARGS(
+				SAILFISH_IPTABLES_SIGNAL_TABLE,
 				SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN, 
 				SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE))
 		},
 		{ GDBUS_SIGNAL(
 			SAILFISH_IPTABLES_SIGNAL_CHAIN,
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN, 
-				SAILFISH_IPTABLES_INPUT_OPERATION))
+				SAILFISH_IPTABLES_SIGNAL_TABLE,
+				SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN,
+				SAILFISH_IPTABLES_INPUT_OPERATION
+			))
 		},
 		{ GDBUS_SIGNAL(
 			SAILFISH_IPTABLES_SIGNAL_RULE,
@@ -695,13 +707,15 @@ DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
 DBusMessage* sailfish_iptables_clear_iptables_rules(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	return process_request(message, &clear_iptables_rules, ARGS_CLEAR, user_data);
+	return process_request(message, &clear_iptables_rules, ARGS_CLEAR,
+		user_data);
 }
 
 DBusMessage* sailfish_iptables_clear_iptables_chains(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	return process_request(message, &clear_iptables_chains, ARGS_CLEAR, user_data);
+	return process_request(message, &clear_iptables_chains, ARGS_CLEAR_CHAINS,
+		user_data);
 }
 
 DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
@@ -1081,27 +1095,28 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 		case ARGS_CLEAR:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_CLEAR,
+				DBUS_TYPE_STRING,	&(params->table),
+				DBUS_TYPE_INVALID);
+			break;
+		case ARGS_CLEAR_CHAINS:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_CLEAR_CHAINS,
+				DBUS_TYPE_STRING,	&(params->table),
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_POLICY_IN:
-			chain = IPTABLES_CHAIN_INPUT;
-			signal = sailfish_iptables_dbus_signal(
-				SAILFISH_IPTABLES_SIGNAL_POLICY,
-				DBUS_TYPE_STRING,	&chain,
-				DBUS_TYPE_STRING,	&(params->policy),
-				DBUS_TYPE_INVALID);
-			break;
 		case ARGS_POLICY_OUT:
-			chain = IPTABLES_CHAIN_OUTPUT;
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_POLICY,
-				DBUS_TYPE_STRING,	&chain,
+				DBUS_TYPE_STRING,	&(params->table),
+				DBUS_TYPE_STRING,	&(params->chain_name),
 				DBUS_TYPE_STRING,	&(params->policy),
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CHAIN:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_CHAIN,
+				DBUS_TYPE_STRING,	&(params->table),
 				DBUS_TYPE_STRING,	&(params->chain_name),
 				DBUS_TYPE_STRING,	&op,
 				DBUS_TYPE_INVALID);
@@ -1179,6 +1194,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CLEAR:
+		case ARGS_CLEAR_CHAINS:
 			// TODO enable this when other than "filter" table is supported
 			/*rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
@@ -1302,11 +1318,25 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	else
 		params->table = g_strdup(SAILFISH_IPTABLES_TABLE_NAME);
 	
-	if(policy && g_utf8_validate(policy,-1,NULL))
+	if(policy && *policy && g_utf8_validate(policy,-1,NULL))
 	{
 		gchar *policy_uppercase = g_utf8_strup(policy,-1);
 		if(validate_policy(policy_uppercase))
+		{
 			params->policy = policy_uppercase;
+			
+			switch(params->args)
+			{
+				case ARGS_POLICY_IN:
+					params->chain_name = g_strdup(IPTABLES_CHAIN_INPUT);
+					break;
+				case ARGS_POLICY_OUT:
+					params->chain_name = g_strdup(IPTABLES_CHAIN_OUTPUT);
+					break;
+				default:
+					break;
+			}
+		}
 	}
 	
 	if(chain_name && *chain_name && g_utf8_validate(chain_name,-1, NULL))

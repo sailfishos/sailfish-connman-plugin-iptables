@@ -140,6 +140,7 @@ typedef enum sailfish_iptables_dbus_rule_args {
 	ARGS_PORT_RANGE,
 	ARGS_SERVICE,
 	ARGS_CLEAR,
+	ARGS_CLEAR_CHAINS,
 	ARGS_POLICY_IN,
 	ARGS_POLICY_OUT,
 	ARGS_GET_CONTENT,
