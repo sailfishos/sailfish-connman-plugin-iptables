@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOURCES="../common/test_send ../common/test_output ../common/test_log"
+SOURCES="../common/test_send ../common/test_output ../common/test_log ../common/test_service ../common/test_check"
 
 IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
 
@@ -105,54 +105,6 @@ function include_sources()
 	done
 }
 
-# $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
-function check_change()
-{	
-	if [[ $(iptables -t filter -L "$1" -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
-		echo 0
-	else
-		echo "check_change() failure :: iptables -t filter -L $1 -n|grep -e $2.*$3.*--.*$4.*$5 ::"
-	fi
-}
-
-# $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
-function check_removed()
-{	
-	if [[ ! $(iptables -t filter -L "$1" -n|grep -e "$2.*$3.*--.*$4.*$5") ]] ; then
-		echo 0
-	else
-		echo "check_removed() failure :: ! iptables -t filter -L $1 -n|grep -e $2.*$3.*--.*$4.*$5 ::"
-	fi
-}
-
-function check_policy_change()
-{
-	if [[ $(iptables -t filter -L "$1" -n|grep -e "Chain $1 (policy $2)") ]] ; then
-		echo 0
-	else
-		echo "check_policy_change() failure :: iptables -t filter -L $1 -n|grep -e Chain $1 (policy $2) ::"
-	fi
-}
-
-# $1 = chain
-function check_chain_added()
-{
-	if [[ $(iptables -t filter -L -n|grep -e "Chain sfos_$1.*references") ]] ; then
-		echo 0
-	else
-		echo "check_chain_added() failure :: iptables -t filter -L -n|grep -e Chain $1.*references ::"
-	fi
-}
-
-function check_chain_removed()
-{
-	if [[ ! $(iptables -t filter -L -n|grep -e "Chain $1.*references") ]] ; then
-		echo 0
-	else
-		echo "check_chain_removed() failure :: iptables -t filter -L -n|grep -e Chain $1.*references ::"
-	fi
-}
-
 # $1=chain $2=target $3...methods
 function run_method_tests()
 {
@@ -205,11 +157,7 @@ function run_method_tests()
 	
 		test_progress
 		
-		if [ $FAILED -eq 0 ] ; then
-			test_end_pass
-		else
-			test_end_fail
-		fi
+		test_end $FAILED
 	
 		INDEX=$((INDEX+1))
 	done
@@ -244,27 +192,25 @@ function run_policy_test()
 	
 	test_progress
 	
-	if [ $FAILED -eq 0 ] ; then
-		test_end_pass
-	else
-		test_end_fail
-	fi
+	test_end $FAILED
 }
 
 function run_clear_test()
 {
+	FAILED=0
+	
 	test_begin
 	
 	CLEARED=$(send_message "ClearIptablesTable" "filter" "$CLEAR_RESULT")
 	
 	test_progress
 	
-	if [[ "$CLEARED" == "0" ]] ; then
-		test_end_pass
-	else
+	if [[ "$CLEARED" != "0" ]] ; then
 		log "$CLEARED"
-		test_end_fail
+		FAILED=1
 	fi
+	
+	test_end $FAILED
 }
 
 function run_register_tests()
@@ -277,18 +223,20 @@ function run_register_tests()
 	INDEX=0
 	
 	for MSG in $MESSAGES ; do
+		FAILED=0
 		test_begin
 	
 		STATUS=$(send_message "$MSG" "" "${REGISTER_TEST_RESULT[$INDEX]}")
 		
 		test_progress
 	
-		if [[ "$STATUS" == "0" ]] ; then
-			test_end_pass
-		else
+		if [[ "$STATUS" != "0" ]] ; then
 			log "$STATUS"
-			test_end_fail
+			FAILED=1
 		fi
+		
+		test_end $FAILED
+		
 		INDEX=$((INDEX+1))
 	done
 }
@@ -343,11 +291,7 @@ function run_chain_management_tests()
 		
 		test_progress
 		
-		if [[ $FAILED -eq 0 ]] ; then
-			test_end_pass
-		else
-			test_end_fail
-		fi
+		test_end $FAILED
 	done
 }
 

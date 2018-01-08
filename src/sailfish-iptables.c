@@ -63,25 +63,31 @@ api_result clear_iptables_rules(rule_params* params, api_data *data)
 	if(!params)
 		return INVALID;
 		
-	const char* table_name = (params->table ?
-		params->table : 
-		SAILFISH_IPTABLES_TABLE_NAME);
+	if(!params->table)
+		return INVALID_REQUEST;
 		
-	DBG("%s %s %s", PLUGIN_NAME, "CLEAR table", table_name);
-	if(!connman_iptables_clear(table_name)) return OK;
-	return INVALID_REQUEST;
+	DBG("%s %s %s", PLUGIN_NAME, "CLEAR table", params->table);
+	
+	if(!connman_iptables_clear(params->table))
+		return OK;
+		
+	return INVALID;
 }
 
 api_result clear_iptables_chains(rule_params* params, api_data *data)
 {
 	if(!params)
 		return INVALID;
+	
+	if(!params->table)
+		return INVALID_REQUEST;
 		
 	DBG("%s %s %s", PLUGIN_NAME, "CLEAR table chains", params->table);
+	
 	if(api_data_remove_custom_chains(data, params->table))
 		return OK;
 	else
-		return INVALID_REQUEST;
+		return INVALID;
 }
 
 api_result get_iptables_content(rule_params* params, api_data *data)
@@ -100,33 +106,20 @@ api_result get_iptables_content(rule_params* params, api_data *data)
 
 api_result set_policy(rule_params* params, api_data *data)
 {
-	gint ret = 0;
+	gint error = 0;
 	api_result rval = INVALID;
-	const gchar* ipt_operation = NULL;
 	
 	if(params && (rval = check_parameters(params)) == OK)
 	{
-		switch(params->args)
+		if(!(error = connman_iptables_change_policy(SAILFISH_IPTABLES_TABLE_NAME,
+					params->chain_name, params->policy)))
 		{
-			case ARGS_POLICY_OUT:
-				ipt_operation = IPTABLES_CHAIN_OUTPUT;
-				break;
-			case ARGS_POLICY_IN:
-				ipt_operation = IPTABLES_CHAIN_INPUT;
-				break;
-			default:
-				return rval;
-		}
-
-		if(!(ret = connman_iptables_change_policy(SAILFISH_IPTABLES_TABLE_NAME,
-					ipt_operation, params->policy)))
-		{
-			if(!(ret = connman_iptables_commit(SAILFISH_IPTABLES_TABLE_NAME)))
+			if(!(error = connman_iptables_commit(SAILFISH_IPTABLES_TABLE_NAME)))
 			{
 				rval = OK;
 				
 				DBG("%s %s %s %s", PLUGIN_NAME, "set_policy(): changed policy", 
-					ipt_operation, params->policy);
+					params->chain_name, params->policy);
 			}
 		}
 		else
@@ -148,12 +141,12 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 	if(!params || ((rval = check_parameters(params)) != OK))
 		return rval;
 
-	if(op & OPERATION_OUT)
+	if(op & OPERATION_OUT) // TODO get this from params
 	{
 		ipt_operation = IPTABLES_CHAIN_OUTPUT;
 		ip_direction = 'd';
 	}
-	else if (op & OPERATION_IN)
+	else if (op & OPERATION_IN) // TODO get this from params
 	{
 		ipt_operation = IPTABLES_CHAIN_INPUT;
 		ip_direction = 's';

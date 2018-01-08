@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOURCES="../common/test_send ../common/test_output ../common/test_log"
+SOURCES="../common/test_send ../common/test_output ../common/test_log ../common/test_service ../common/test_check"
 
 IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
 
@@ -108,14 +108,6 @@ function include_sources()
 	done
 }
 
-function restart_connman()
-{
-	if [[ ! $(systemctl restart connman) -eq 0 ]] ; then
-		echo "Cannot restart connmand. Quitting."
-		exit 1
-	fi
-}
-
 # $1=CHAIN $2=DROP/ACCEPT $3 -> rule line 
 function check_save_file_rule()
 {	
@@ -158,11 +150,7 @@ function run_add_rules_test()
 		INDEX=$((INDEX+1))
 	done
 	
-	if [ $FAILED -eq 0 ] ; then
-		test_end_pass
-	else
-		test_end_fail
-	fi
+	test_end $FAILED
 }
 
 function run_check_rules_test()
@@ -195,11 +183,7 @@ function run_check_rules_test()
 		INDEX=$((INDEX+1))
 	done
 	
-	if [ $FAILED -eq 0 ] ; then
-		test_end_pass
-	else
-		test_end_fail
-	fi
+	test_end $FAILED
 }
 
 
@@ -220,30 +204,32 @@ function run_add_policy_test()
 	
 	test_progress
 	
-	if [ $FAILED -eq 0 ] ; then
-		test_end_pass
-	else
-		test_end_fail
-	fi
+	test_end $FAILED
 }
 
 function run_clear_test()
 {
+	FAILED=0
+	METHODS="ClearIptablesTable ClearIptablesChains"
+	
 	test_begin
 	
-	CLEARED=$(send_message "ClearIptablesTable" "filter" $CLEAR_RESULT)
+	for METHOD in $METHODS ; do
 	
-	test_progress
+		CLEARED=$(send_message "$METHOD" "filter" "$CLEAR_RESULT")
 	
-	if [[ "$CLEARED" != "0" ]] ; then
-		log "$CLEARED"
-		test_end_fail
-	else
-		test_end_pass
-	fi
+		if [[ "$CLEARED" != "0" ]] ; then
+			log "$CLEARED"
+			FAILED=$((FAILED+1))
+		fi
+	
+		test_progress
+	done
+	
+	test_end $FAILED
 }
 
-function run_clear_check()
+function run_clear_test_check()
 {
 	INDEX=0
 	FAILED=0
@@ -262,14 +248,54 @@ function run_clear_check()
 		
 	done < $CONNMAN_SAVE_FILE
 	
-	if [ $FAILED -eq 0 ] ; then
-		test_end_pass
-	else
-		test_end_fail
+	test_end $FAILED
+}
+
+function run_custom_chain_removed_test()
+{
+	if [ "$(id -u)" == "0" ] ; then
+	
+		FAILED=0
+		CHAIN="chain1"
+	
+		test_begin
+		
+		STATUS=$(send_message "ManageChain" "ADD" "0" "string:$CHAIN")
+		
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=1
+		fi
+		
+		test_progress
+		
+		STATUS=$(check_chain_added "$CHAIN")
+	
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=$((FAILED+1))
+		fi
+		
+		test_progress
+		
+		stop_service "connman"
+		
+		STATUS=$(check_chain_removed "$CHAIN")
+	
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=$((FAILED+1))
+		fi
+		
+		test_progress
+		
+		start_service "connman"
+		
+		test_end $FAILED
 	fi
 }
 
-function run_add_tests()
+function run_add_test()
 {
 	run_add_rules_test "INPUT" "ACCEPT" $METHODS_INPUT_ACCEPT
 	run_add_rules_test "OUTPUT" "ACCEPT" $METHODS_OUTPUT_ACCEPT
@@ -281,7 +307,7 @@ function run_add_tests()
 	#run_add_policy_test "ChangeOutputPolicy" "OUTPUT" "ACCEPT"
 }
 
-function run_check_tests()
+function run_add_test_check()
 {
 	run_check_rules_test "INPUT" "ACCEPT"
 	run_check_rules_test "OUTPUT" "ACCEPT"
@@ -339,9 +365,9 @@ function run_post_test_operations()
 		echo "Restoring iptables filter table from $IPTABLES_SAVE_FILE"
 		iptables-restore --table=filter < $IPTABLES_SAVE_FILE
 		
-		systemctl stop connman
+		stop_service "connman"
 		cp -f $IPTABLES_SAVE_FILE $CONNMAN_SAVE_FILE
-		systemctl start connman
+		start_service "connman"
 		
 		rm -v $IPTABLES_SAVE_FILE
 	fi
@@ -370,12 +396,14 @@ function main()
 	sleep 2
 
 	run_clear_test
-	restart_connman 
-	run_clear_check
+	restart_service "connman"
+	run_clear_test_check
 	
-	run_add_tests
-	restart_connman
-	run_check_tests
+	run_custom_chain_removed_test
+	
+	run_add_test
+	restart_service "connman"
+	run_add_test_check
 	
 	run_post_test_operations
 	

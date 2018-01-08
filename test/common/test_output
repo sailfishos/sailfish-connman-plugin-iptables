@@ -39,6 +39,15 @@ function test_end_fail()
 	test_end_line "FAILED"
 }
 
+test_end()
+{
+	if [ $1 -eq 0 ] ; then
+		test_end_pass
+	else
+		test_end_fail
+	fi
+}
+
 function test_finalize()
 {
 	if [ $TESTFAILED -eq 0 ] ; then

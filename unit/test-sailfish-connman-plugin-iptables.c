@@ -934,6 +934,7 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_PARAMETERS "dbus_client", test_iptables_plugin_parameters_dbus_client);
 	g_test_add_func(PREFIX_PARAMETERS "api_data", test_iptables_plugin_parameters_api_data);
 	g_test_add_func(PREFIX_PARAMETERS "api_data_chains", test_iptables_plugin_parameters_api_data_chains);
+	g_test_add_func(PREFIX_PARAMETERS "custom_chain", test_iptables_plugin_parameters_custom_chains);
 	g_test_add_func(PREFIX_PARAMETERS "disconnect_data", test_iptables_plugin_parameters_disconnect_data);
 	
 	g_test_add_func(PREFIX_UTILS "api_result_message", test_iptables_plugin_utils_api_result_message);
