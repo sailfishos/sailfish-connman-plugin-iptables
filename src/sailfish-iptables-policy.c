@@ -39,19 +39,28 @@
  
 #define CONNMAN_API_SUBJECT_TO_CHANGE
 
+#define POLICY_PATH 				"/etc/connman"
+#define POLICY_SUFFIX				".conf"
+#define DEFAULT_POLICY_FILE 		"iptables_policy.conf"
+
 #define SAILFISH_IPTABLES_DBUS_ACCESS_POLICY DA_POLICY_VERSION ";* = deny;" \
     "(user(sailfish-mdm)|group(privileged)) & manage() = allow;" \
     "group(privileged) & listen() = allow;" \
     "group(privileged) & full() = deny;" // maybe not needed
 
 #include <stdbool.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #include <dbusaccess/dbusaccess_peer.h>
 #include <dbusaccess/dbusaccess_policy.h>
+#include <connman/log.h>
 
 #include "sailfish-iptables-policy.h"
 #include "sailfish-iptables-parameters.h"
 #include "sailfish-iptables.h"
+
+#define ERR(fmt,arg...) connman_error(fmt, ## arg)
 
 static const DA_ACTION sailfish_iptables_dbus_access_policy_actions[] = {
 	{ "manage", SAILFISH_DBUS_ACCESS_MANAGE, 0 },
@@ -59,6 +68,41 @@ static const DA_ACTION sailfish_iptables_dbus_access_policy_actions[] = {
 	{ "listen", SAILFISH_DBUS_ACCESS_LISTEN, 0 },
 	{}
 };
+
+gchar* sailfish_iptables_load_policy(const gchar* policyfile)
+{
+	gchar *file = NULL, *file_real = NULL, *contents = NULL;
+	gsize length = 0;
+	GError *error = NULL;
+	
+	// Use default file if not defined
+	if(!policyfile || !(*policyfile))
+		file = g_strdup_printf("%s/%s", POLICY_PATH, DEFAULT_POLICY_FILE);
+	else
+		file = g_strdup_printf("%s/%s", POLICY_PATH, policyfile);
+		
+	file_real = realpath(file, NULL);
+	
+	// If file does not exist, directs outside storage dir, contents is not
+	// available or contents is empty use the default policy
+	if(!file_real || !g_str_has_prefix(file_real, POLICY_PATH) ||
+		!g_str_has_suffix(file_real, POLICY_SUFFIX) ||
+		!g_file_get_contents(file_real, &contents, &length, &error) ||
+		!(*contents))
+	{
+		DBG("%s %s policy file unavailable, using default policy",
+			PLUGIN_NAME, "sailfish_iptables_load_policy()");
+		contents = g_strdup(SAILFISH_IPTABLES_DBUS_ACCESS_POLICY);
+	}
+	
+	DBG("%s %s Loaded policy from %s", PLUGIN_NAME,
+		"sailfish_iptables_load_policy()", file_real ? file_real : "default:");
+	
+	g_free(file);
+	g_free(file_real);
+	
+	return contents;
+}
 
 gboolean sailfish_iptables_policy_check_peer(api_data* data, DAPeer *peer, 
 	dbus_access policy)
@@ -131,9 +175,20 @@ void sailfish_iptables_policy_initialize(api_data* data)
 {
 	if(data)
 	{
+		// Load from default path
+		gchar* dbus_policy = sailfish_iptables_load_policy(DEFAULT_POLICY_FILE);
+		
 		data->da_bus = DA_BUS_SYSTEM;
-		data->policy = da_policy_new_full(SAILFISH_IPTABLES_DBUS_ACCESS_POLICY, 
+		data->policy = da_policy_new_full(dbus_policy, 
 			sailfish_iptables_dbus_access_policy_actions);
+			
+		if(!data->policy)
+			ERR("%s %s %s %s %s/%s",
+				PLUGIN_NAME, "sailfish_iptables_policy_initialize()",
+				"failed to load D-Bus policy, plugin access is restricted.",
+				"Check policy file at", POLICY_PATH, DEFAULT_POLICY_FILE);
+			
+		g_free(dbus_policy);
 	}
 }
 

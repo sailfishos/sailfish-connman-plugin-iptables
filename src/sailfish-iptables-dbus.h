@@ -56,7 +56,7 @@
 #include "sailfish-iptables-parameters.h"
 
 #define SAILFISH_IPTABLES_DBUS_INTERFACE	"org.sailfishos.connman.mdm.iptables"
-#define SAILFISH_IPTABLES_DBUS_PATH			"/org/sailfishos/connman/mdm/iptables"
+#define SAILFISH_IPTABLES_DBUS_PATH		"/org/sailfishos/connman/mdm/iptables"
 
 // SIGNALS 
 

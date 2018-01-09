@@ -16,9 +16,11 @@
 // To be able to build the tests without connman
 DBusConnection* connman_dbus_get_connection() { return NULL; }
 void connman_log(const char *fmt, ...) { return; }
+void connman_error(const char *fmt, ...) { return; }
 gboolean g_dbus_remove_watch(DBusConnection *connection, guint id) { return TRUE; }
 int connman_iptables_delete_chain(const char *table_name, const char *chain) { return 0; }
 int connman_iptables_commit(const char *table_name) { return 0; }
+const char *connman_storage_dir(void) { return "/tmp"; }
 
 GList *api_data_get_custom_chain_table(api_data *data, const gchar* table_name);
 custom_chain_item* custom_chain_item_new(const gchar* table);
@@ -27,6 +29,7 @@ gboolean custom_chain_item_add_to_chains(custom_chain_item* item,
 	const gchar* chain);
 gboolean custom_chain_item_remove_from_chains(custom_chain_item *item,
 	const gchar* chain);
+gchar* sailfish_iptables_load_policy(const gchar* policyfile);
 
 // From connman sailfish_iptables_extension.c
 void connman_iptables_free_content(connman_iptables_content *content)
@@ -204,6 +207,51 @@ static void test_iptables_plugin_policy_check_basic()
 	
 	dbus_message_unref(msg);
 	api_data_free(data);
+}
+
+#define DEFAULT_POLICY1 "1;* = deny;" \
+    "(user(sailfish-mdm)|group(privileged)) & manage() = allow;" \
+    "group(privileged) & listen() = allow;" \
+    "group(privileged) & full() = deny;"
+
+static void test_iptables_plugin_policy_load()
+{
+	gchar *policy = NULL;
+	
+	policy = sailfish_iptables_load_policy(NULL);
+	g_assert(policy);
+	g_assert(!g_ascii_strcasecmp(policy, DEFAULT_POLICY1));
+	g_free(policy);
+	
+	policy = sailfish_iptables_load_policy("");
+	g_assert(policy);
+	g_assert(!g_ascii_strcasecmp(policy, DEFAULT_POLICY1));
+	g_free(policy);
+	
+	policy = sailfish_iptables_load_policy("policy.conf");
+	g_assert(policy);
+	g_assert(!g_ascii_strcasecmp(policy, DEFAULT_POLICY1));
+	g_free(policy);
+	
+	policy = sailfish_iptables_load_policy("policy");
+	g_assert(policy);
+	g_assert(!g_ascii_strcasecmp(policy, DEFAULT_POLICY1));
+	g_free(policy);
+	
+	policy = sailfish_iptables_load_policy("policy.sh");
+	g_assert(policy);
+	g_assert(!g_ascii_strcasecmp(policy, DEFAULT_POLICY1));
+	g_free(policy);
+	
+	policy = sailfish_iptables_load_policy("../../policy.conf");
+	g_assert(policy);
+	g_assert(!g_ascii_strcasecmp(policy, DEFAULT_POLICY1));
+	g_free(policy);
+	
+	policy = sailfish_iptables_load_policy("iptables_policy.conf");
+	g_assert(policy);
+	g_assert(!g_ascii_strcasecmp(policy, DEFAULT_POLICY1));
+	g_free(policy);
 }
 
 static void test_iptables_plugin_utils_api_result_message()
@@ -948,6 +996,7 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_POLICY "basic", test_iptables_plugin_policy_check_basic);
 	g_test_add_func(PREFIX_POLICY "root", test_iptables_plugin_policy_check_root);
 	g_test_add_func(PREFIX_POLICY "user", test_iptables_plugin_policy_check_user);
+	g_test_add_func(PREFIX_POLICY "load", test_iptables_plugin_policy_load);
 
 	return g_test_run();
 }

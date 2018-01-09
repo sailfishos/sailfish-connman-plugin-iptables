@@ -103,7 +103,7 @@
 
 #define SAILFISH_IPTABLES_MANAGE_CHAIN			"ManageChain"
 
-#define SAILFISH_IPTABLES_GET_IPTABLES_CONTENT	"GetIptablesContent"
+#define SAILFISH_IPTABLES_GET_IPTABLES_CONTENT		"GetIptablesContent"
 
 /*
 	Result codes (enum sailfish_iptables_result):

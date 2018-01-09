@@ -80,6 +80,8 @@ api_result check_parameters(rule_params* params);
 }
 #endif
 
+#endif
+
 /*
  * Local Variables:
  * mode: C
@@ -87,5 +89,3 @@ api_result check_parameters(rule_params* params);
  * indent-tabs-mode: t
  * End:
  */
-
-#endif
