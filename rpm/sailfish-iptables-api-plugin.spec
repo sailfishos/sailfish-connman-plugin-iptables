@@ -7,13 +7,13 @@ License: GPLv2
 URL: https://github.com/sailfishos/sailfish-connman-plugin-iptables
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
-Requires: connman >= 1.31+git50.14
+Requires: connman >= 1.31+git51.1
 Requires: glib2 >= 2.28
 Requires: dbus >= 1.4
 Requires: libdbusaccess >= 1.0.2
 Requires: libglibutil >= 1.0.21
 BuildRequires: iptables-devel
-BuildRequires: connman-devel >= 1.31+git50.14
+BuildRequires: connman-devel >= 1.31+git51.1
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
 BuildRequires: pkgconfig(dbus-1) >= 1.4
 BuildRequires: pkgconfig(libdbusaccess) >= 1.0.2
@@ -45,7 +45,7 @@ This package contains the unit tests and unit test runner script for Sailfish Co
 Summary:    Test scripts for Sailfish Connman iptables management plugin
 Group:      Development/Tools
 Requires:   %{name} = %{version}
-Requires:   connman >= 1.31+git50.14
+Requires:   connman >= 1.31+git51.1
 Requires:   bash
 Requires:   dbus >= 1.4
 Requires:   iptables
@@ -71,6 +71,9 @@ rm -rf %{buildroot}
 
 mkdir -p %{buildroot}/%{_libdir}/connman/plugins
 
+mkdir -p %{buildroot}%{_sysconfdir}/connman/
+install -m 644 src/policy.conf %{buildroot}%{_sysconfdir}/connman/iptables_policy.conf
+
 mkdir -p %{buildroot}/%{_libdir}/connman/unit
 install -m 755 unit/run_unit_tests %{buildroot}%{_libdir}/connman/unit/
 install -m 755 unit/plugin_unit_test %{buildroot}%{_libdir}/connman/unit/
@@ -95,6 +98,7 @@ cp -a test/common %{buildroot}/opt/tests/%{name}/
 %files
 %defattr(-,root,root,-)
 %{_libdir}/connman/plugins/sailfish-connman-iptables-plugin.so
+%config %{_sysconfdir}/connman/*.conf
 
 %files unit-tests
 %defattr(-,root,root,-)
