@@ -257,18 +257,37 @@ static void test_iptables_plugin_policy_load()
 static void test_iptables_plugin_utils_api_result_message()
 {
 	g_assert(g_ascii_strcasecmp(api_result_message(OK),"Ok") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(0),"Ok") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_IP),"Invalid IP") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(1),"Invalid IP") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PORT),"Invalid port") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(2),"Invalid port") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PORT_RANGE),"Invalid port range") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(3),"Invalid port range") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_SERVICE),"Invalid service name") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(4),"Invalid service name") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PROTOCOL),"Invalid protocol") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(5),"Invalid protocol") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_POLICY),"Invalid policy") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(6),"Invalid policy") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(RULE_DOES_NOT_EXIST),"Rule does not exist") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(7),"Rule does not exist") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_REQUEST),"Cannot process request") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(8),"Cannot process request") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(INVALID),"Cannot perform operation") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(9),"Cannot perform operation") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(UNAUTHORIZED),"Unauthorized, please try again") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(10),"Unauthorized, please try again") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(REMOVE_FAILED),"Unregister failed") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(11),"Unregister failed") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_CHAIN_NAME), "Invalid chain name given. Chain name is reserved (add) or does not exist (remove).") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(12), "Invalid chain name given. Chain name is reserved (add) or does not exist (remove).") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(ACCESS_DENIED),"Access denied") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(100),"Access denied") == 0);
+	
+	g_assert(!g_ascii_strcasecmp(api_result_message(12),"") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(13),"") == 0);
+	g_assert(g_ascii_strcasecmp(api_result_message(14),"") == 0);
 	g_assert(g_ascii_strcasecmp(api_result_message(999),"") == 0);
 }
 
@@ -460,6 +479,7 @@ static void test_iptables_plugin_parameters_port()
 {
 	/* Port only : ARGS_PORT */
 	rule_params *params = rule_params_new(ARGS_PORT);
+	guint16 i = 0;
 	
 	g_assert(params);
 	g_assert(check_parameters(params) == INVALID_PORT);
@@ -468,7 +488,19 @@ static void test_iptables_plugin_parameters_port()
 	g_assert(check_parameters(params) == INVALID_PROTOCOL);
 	
 	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == OK);
+	g_assert(check_parameters(params) == INVALID_REQUEST);
+	
+	for(i = 2; i < 4 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == INVALID_REQUEST);
+	}
+
+	for(i = 0; i < 2 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == OK);
+	}
 	
 	rule_params_free(params);
 }
@@ -477,6 +509,7 @@ static void test_iptables_plugin_parameters_ip_and_port()
 {
 	/* Port and ip  : ARGS_IP_PORT */
 	rule_params *params = rule_params_new(ARGS_IP_PORT);
+	guint16 i = 0;
 	
 	g_assert(params);
 	g_assert(check_parameters(params) == INVALID_IP);
@@ -488,7 +521,19 @@ static void test_iptables_plugin_parameters_ip_and_port()
 	g_assert(check_parameters(params) == INVALID_PROTOCOL);
 	
 	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == OK);
+	g_assert(check_parameters(params) == INVALID_REQUEST);
+	
+	for(i = 2; i < 4 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == INVALID_REQUEST);
+	}
+
+	for(i = 0; i < 2 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == OK);
+	}
 	
 	rule_params_free(params);
 }
@@ -497,6 +542,7 @@ static void test_iptables_plugin_parameters_ip_and_port_range()
 {
 	/* Port and ip  : ARGS_IP_PORT */
 	rule_params *params = rule_params_new(ARGS_IP_PORT_RANGE);
+	guint16 i = 0;
 	
 	g_assert(params);
 	g_assert(check_parameters(params) == INVALID_IP);
@@ -514,7 +560,19 @@ static void test_iptables_plugin_parameters_ip_and_port_range()
 	g_assert(check_parameters(params) == INVALID_PROTOCOL);
 	
 	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == OK);
+	g_assert(check_parameters(params) == INVALID_REQUEST);
+	
+	for(i = 2; i < 4 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == INVALID_REQUEST);
+	}
+
+	for(i = 0; i < 2 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == OK);
+	}
 	
 	rule_params_free(params);
 }
@@ -523,6 +581,7 @@ static void test_iptables_plugin_parameters_port_range()
 {
 	/* Port range  : ARGS_PORT_RANGE */
 	rule_params *params = rule_params_new(ARGS_PORT_RANGE);
+	guint16 i = 0;
 	
 	g_assert(params);
 
@@ -541,7 +600,19 @@ static void test_iptables_plugin_parameters_port_range()
 	g_assert(check_parameters(params) == INVALID_PROTOCOL);
 	
 	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == OK);
+	g_assert(check_parameters(params) == INVALID_REQUEST);
+	
+	for(i = 2; i < 4 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == INVALID_REQUEST);
+	}
+
+	for(i = 0; i < 2 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == OK);
+	}
 	
 	rule_params_free(params);
 }
@@ -550,6 +621,7 @@ static void test_iptables_plugin_parameters_service()
 {
 	/* service  : ARGS_SERVICE */
 	rule_params *params = rule_params_new(ARGS_SERVICE);
+	guint16 i = 0;
 	
 	g_assert(params);
 
@@ -559,7 +631,92 @@ static void test_iptables_plugin_parameters_service()
 	g_assert(check_parameters(params) == INVALID_PROTOCOL);
 	
 	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == OK);
+	g_assert(check_parameters(params) == INVALID_REQUEST);
+	
+	for(i = 2; i < 4 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == INVALID_REQUEST);
+	}
+
+	for(i = 0; i < 2 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == OK);
+	}
+		
+	rule_params_free(params);
+}
+
+static void test_iptables_plugin_parameters_chain()
+{
+	/* service  : ARGS_SERVICE */
+	rule_params *params = rule_params_new(ARGS_CHAIN);
+	guint16 i = 0;
+	
+	g_assert(params);
+
+	g_assert(check_parameters(params) == INVALID_CHAIN_NAME);
+	
+	params->chain_name = g_strdup("chain1");
+	g_assert(check_parameters(params) == INVALID_REQUEST);
+	
+	params->table = g_strdup("table");
+	g_assert(check_parameters(params) == INVALID_REQUEST);
+	
+	for(i = 3; i < 5 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == INVALID_REQUEST);
+	}
+
+	for(i = 0; i < 2 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_parameters(params) == OK);
+	}
+	
+	params->operation = 0;
+	
+	
+	rule_params_free(params);
+}
+
+static void test_iptables_plugin_parameters_check_operation()
+{
+	rule_params *params = rule_params_new(ARGS_CHAIN);
+	guint16 i = 0;
+	
+	g_assert(params);
+	g_assert(!check_operation(NULL));
+	
+	// ADD, REMOVE and FLUSH ok for ARGS_CHAIN
+	for(i = 0; i < 3 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_operation(params));
+	}
+	
+	for(i = 3; i < 5 ; i++)
+	{
+		params->operation = i;
+		g_assert(!check_operation(params));
+	}
+	
+	params->args = ARGS_IP;
+	
+	// ADD, REMOVE and FLUSH ok for rest that require operation
+	for(i = 0; i < 2 ; i++)
+	{
+		params->operation = i;
+		g_assert(check_operation(params));
+	}
+	
+	for(i = 2; i < 5 ; i++)
+	{
+		params->operation = i;
+		g_assert(!check_operation(params));
+	}
 	
 	rule_params_free(params);
 }
@@ -914,24 +1071,17 @@ static void test_iptables_plugin_validate_port()
 
 static void test_iptables_plugin_validate_operation()
 {
-	g_assert(validate_operation("ADD") == ADD);
-	g_assert(validate_operation("Add") == ADD);
-	g_assert(validate_operation("add") == ADD);
-	g_assert(validate_operation("add ") == ADD);
-	g_assert(validate_operation(" AdD") == ADD);
-	g_assert(validate_operation(" ADD ") == ADD);
+	g_assert(validate_operation(0) == ADD);
 	
-	g_assert(validate_operation("REMOVE") == REMOVE);
-	g_assert(validate_operation("Remove") == REMOVE);
-	g_assert(validate_operation("remove") == REMOVE);
-	g_assert(validate_operation(" Remove") == REMOVE);
-	g_assert(validate_operation("remove ") == REMOVE);
-	g_assert(validate_operation(" REMOVE ") == REMOVE);
+	g_assert(validate_operation(1) == REMOVE);
 	
-	g_assert(validate_operation("Removed") == UNDEFINED);
+	g_assert(validate_operation(2) == FLUSH);
 	
-	g_assert(validate_operation("A D D") == UNDEFINED);
-	g_assert(validate_operation(NULL) == UNDEFINED);
+	g_assert(validate_operation(3) == UNDEFINED);
+	
+	g_assert(validate_operation(42) == UNDEFINED);
+	
+	g_assert(validate_operation(-1) == UNDEFINED);
 }
 
 static void test_iptables_plugin_validate_policy()
@@ -979,6 +1129,8 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_PARAMETERS "ip_and_port_range", test_iptables_plugin_parameters_ip_and_port_range);
 	g_test_add_func(PREFIX_PARAMETERS "port_range", test_iptables_plugin_parameters_port_range);
 	g_test_add_func(PREFIX_PARAMETERS "service", test_iptables_plugin_parameters_service);
+	g_test_add_func(PREFIX_PARAMETERS "chains", test_iptables_plugin_parameters_chain);
+	g_test_add_func(PREFIX_PARAMETERS "operation", test_iptables_plugin_parameters_check_operation);
 	g_test_add_func(PREFIX_PARAMETERS "dbus_client", test_iptables_plugin_parameters_dbus_client);
 	g_test_add_func(PREFIX_PARAMETERS "api_data", test_iptables_plugin_parameters_api_data);
 	g_test_add_func(PREFIX_PARAMETERS "api_data_chains", test_iptables_plugin_parameters_api_data_chains);

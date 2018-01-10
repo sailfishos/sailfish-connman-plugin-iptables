@@ -60,48 +60,45 @@
 
 api_result clear_iptables_rules(rule_params* params, api_data *data)
 {
-	if(!params)
-		return INVALID;
-		
-	if(!params->table)
-		return INVALID_REQUEST;
+	api_result rval = INVALID;
+	
+	if((rval = check_parameters(params)) != OK)
+		return rval;
 		
 	DBG("%s %s %s", PLUGIN_NAME, "CLEAR table", params->table);
 	
 	if(!connman_iptables_clear(params->table))
-		return OK;
+		rval = OK;
 		
-	return INVALID;
+	return rval;
 }
 
 api_result clear_iptables_chains(rule_params* params, api_data *data)
 {
-	if(!params)
-		return INVALID;
+	api_result rval = INVALID;
 	
-	if(!params->table)
-		return INVALID_REQUEST;
+	if((rval = check_parameters(params)) != OK)
+		return rval;
 		
 	DBG("%s %s %s", PLUGIN_NAME, "CLEAR table chains", params->table);
 	
 	if(api_data_remove_custom_chains(data, params->table))
-		return OK;
-	else
-		return INVALID;
+		rval = OK;
+
+	return rval;
 }
 
 api_result get_iptables_content(rule_params* params, api_data *data)
 {
-	if(!params)
-		return INVALID;
+	api_result rval = INVALID;
 	
-	if(!params->table)
-		return INVALID_REQUEST;
+	if((rval = check_parameters(params)) != OK)
+		return rval;
 		
 	if((params->iptables_content = connman_iptables_get_content(params->table)))
-		return OK;
+		rval = OK;
 	
-	return INVALID;
+	return rval;
 }
 
 api_result set_policy(rule_params* params, api_data *data)
@@ -109,7 +106,7 @@ api_result set_policy(rule_params* params, api_data *data)
 	gint error = 0;
 	api_result rval = INVALID;
 	
-	if(params && (rval = check_parameters(params)) == OK)
+	if((rval = check_parameters(params)) == OK)
 	{
 		if(!(error = connman_iptables_change_policy(SAILFISH_IPTABLES_TABLE_NAME,
 					params->chain_name, params->policy)))

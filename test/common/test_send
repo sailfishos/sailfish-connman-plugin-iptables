@@ -10,7 +10,22 @@ function send_message()
 {
 	LAST_PARAM=""
 	
-	if [ ! -z "$2" ] ; then LAST_PARAM="string:$2" ; fi
+	if [ ! -z "$2" ] ; then
+		case "$2" in
+			"ADD")
+				LAST_PARAM="uint16:0"
+				;;
+			"REMOVE")
+				LAST_PARAM="uint16:1"
+				;;
+			"FLUSH")
+				LAST_PARAM="uint16:2"
+				;;
+			*)
+				LAST_PARAM="string:$2"
+				;;
+		esac
+	fi
 
 	RETURN=$(dbus-send --system --type=method_call --print-reply --dest="$DESTINATION" "$DBUS_PATH" "$METHOD_PREFIX.$1" "${@:4}" $LAST_PARAM 2>&1)
 	

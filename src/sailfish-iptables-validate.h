@@ -56,7 +56,7 @@ gboolean validate_ip_address(gint type, const gchar* ip);
 guint16 validate_service_name(const gchar *service);
 gboolean validate_protocol(const gchar *protocol);
 gboolean validate_port(guint16 port);
-rule_operation validate_operation(const gchar *operation);
+rule_operation validate_operation(guint16 operation);
 gboolean validate_path(const gchar *path);
 gboolean validate_policy(const gchar* policy);
 

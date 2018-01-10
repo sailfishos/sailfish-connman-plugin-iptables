@@ -207,26 +207,19 @@ gboolean validate_port(guint16 port)
 	return port && port <= 0xFFFF;
 }
 
-rule_operation validate_operation(const gchar *operation)
+rule_operation validate_operation(guint16 operation)
 {
-	rule_operation op = UNDEFINED;
-	
-	if(operation && *operation)
+	switch(operation)
 	{
-		gchar* operation_strip = g_strstrip(g_strdup(operation));
-		
-		if(!g_ascii_strcasecmp(operation_strip,"ADD"))
-			op = ADD;
-
-		if(!g_ascii_strcasecmp(operation_strip,"REMOVE"))
-			op = REMOVE;
-			
-		if(!g_ascii_strcasecmp(operation_strip,"FLUSH"))
-			op = FLUSH;
-		g_free(operation_strip);
+		case ADD:
+			return ADD;
+		case REMOVE:
+			return REMOVE;
+		case FLUSH:
+			return FLUSH;
+		default:
+			return UNDEFINED;
 	}
-	
-	return op;
 }
 
 gboolean validate_policy(const gchar* policy)

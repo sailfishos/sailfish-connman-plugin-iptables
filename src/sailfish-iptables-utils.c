@@ -48,6 +48,8 @@
 
 #include "sailfish-iptables-utils.h"
 
+#define ERRCODE_MAX 13
+
 const gchar const * RESULT_STR[] = {
 	"Ok",
 	"Invalid IP",
@@ -68,8 +70,11 @@ const gchar const * RESULT_STR[] = {
 
 const char* api_result_message(api_result result)
 {
-	if(result >= OK && result <= ACCESS_DENIED)
+	if(result >= OK && result < ERRCODE_MAX)
 		return RESULT_STR[result];
+		
+	if(result == ACCESS_DENIED)
+		return RESULT_STR[ERRCODE_MAX];
 		
 	return "";
 }
