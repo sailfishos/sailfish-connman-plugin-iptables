@@ -121,7 +121,7 @@ typedef enum sailfish_iptables_result {
 	UNAUTHORIZED, // 10
 	REMOVE_FAILED, // 11
 	INVALID_CHAIN_NAME, // 12
-	ACCESS_DENIED // 13
+	ACCESS_DENIED = 100 // 13
 } api_result;
 
 typedef enum sailfish_iptables_rule_operation {

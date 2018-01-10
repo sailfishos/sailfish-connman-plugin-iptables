@@ -137,7 +137,7 @@
 #define SAILFISH_IPTABLES_INPUT_PORT_STR		{"port","s"}
 #define SAILFISH_IPTABLES_INPUT_SERVICE			{"service","s"}
 #define SAILFISH_IPTABLES_INPUT_PROTOCOL		{"protocol","s"}
-#define SAILFISH_IPTABLES_INPUT_OPERATION		{"operation","s"}
+#define SAILFISH_IPTABLES_INPUT_OPERATION		{"operation","q"}
 #define SAILFISH_IPTABLES_INPUT_POLICY			{"policy", "s"}
 #define SAILFISH_IPTABLES_INPUT_TABLE			{"table", "s"}
 #define SAILFISH_IPTABLES_INPUT_CHAIN			{"chain", "s"}
@@ -609,28 +609,77 @@ static const GDBusMethodTable methods[] = {
 		{ }
 	};
 	
-/* New method sailfish_iptables_rule:
-	IP: str / uint32
-	Mask: uint8 (0-128)
-	Port start: uint16
-	Port end: uint16
-	Protocol: uint8 (IPPROTO_TCP/UDP/SCTP))
-	Operation: uint8 0/1 (add-default,remove)
-	Direction: uint8 0/1 (INPUT/OUTPUT)
-	Target:	uint8 0/1/2/3/4 (ACCEPT,DROP,QUEUE,RETURN,REJECT) - custom target?
-	
+/* New method sailfish_iptables_ip
+	Table:				s
+	Chain:				s
+	Target:				q
+	Source IP:			s
+	Destination IP:		s
 */
 
-/* New method sailfish_iptables_new_custom_rule:
-	IP: str / uint32
-	Mask: uint8 (0-128)
-	Port start: uint16
-	Port end: uint16
-	Protocol: uint8 (IPPROTO_TCP/UDP/SCTP))
-	Operation: uint8 0/1 (add-default,remove)
-	Direction: uint8 0/1 (INPUT/OUTPUT)
-	Target:	str (custom chain name)
+/* New method sailfish_iptables_ip_port
+	Table:				s
+	Chain:				s
+	Target:				q
+	Source IP:			s
+	Destination IP:		s
+	Ports (multiport)	a(q)
+*/
+
+/* New method sailfish_iptables_ip_port_range
+	Table:				s
+	Chain:				s
+	Target:				q
+	Source IP:			s
+	Destination IP:		s
+	Port start:			q
+	Port end:			q
+*/
+
+/* New method sailfish_iptables_ip_service
+	Table:				s
+	Chain:				s
+	Target:				q
+	Source IP:			s
+	Destination IP:		s
+	Service name:		s
+*/
+
+/* New method sailfish_iptables_port
+	Table:				s
+	Chain:				s
+	Target:				q
+	Ports (multiport)	a(q)
+*/
+
+/* New method sailfish_iptables_port_range
+	Table:				s
+	Chain:				s
+	Target:				q
+	Port start:			q
+	Port end:			q
+*/
+
+/* New method sailfish_iptables_service
+	Table:				s
+	Chain:				s
+	Target:				q
+	Service name:		s
+*/
 	
+/* New method sailfish_iptables_rule:
+	Table:											s
+	Chain:	(INPUT, OUTPUT, CUSTOM)					s
+	Target:	uint8 (ACCEPT,DROP,QUEUE,RETURN,REJECT)	q
+	Dest IP: str / uint32 							a(si)
+	Source IP: str / uint32							a(si)
+	Mask: uint8 (0-128) 							q
+	Ports : uint16									a(q)
+	Protocol: uint8 (IPPROTO_TCP/UDP/SCTP))			q
+	Operation: uint8 0/1 (add-default,remove)		q
+	
+	
+	-> a(ssqa(si)a(si)qa(q)qq)
 */
 
 
@@ -1059,7 +1108,6 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 	DBusMessage* signal = NULL;
 	gchar *port_str = port_to_str(params);
 	const gchar *empty = EMPTY_STR;
-	const gchar *op = OP_STR[params->operation];
 	const gchar *chain = NULL;
 
 	switch(params->args)
@@ -1069,7 +1117,7 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				SAILFISH_IPTABLES_SIGNAL_RULE,
 				DBUS_TYPE_STRING,	&(params->ip),
 				DBUS_TYPE_STRING,	&empty,
-				DBUS_TYPE_STRING,	&op,
+				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_IP_PORT:
@@ -1079,7 +1127,7 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				SAILFISH_IPTABLES_SIGNAL_RULE,
 				DBUS_TYPE_STRING,	&(params->ip),
 				DBUS_TYPE_STRING,	&port_str,
-				DBUS_TYPE_STRING,	&op,
+				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_PORT:
@@ -1089,7 +1137,7 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				SAILFISH_IPTABLES_SIGNAL_RULE,
 				DBUS_TYPE_STRING,	&empty,
 				DBUS_TYPE_STRING,	&port_str,
-				DBUS_TYPE_STRING,	&op,
+				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CLEAR:
@@ -1118,7 +1166,7 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				SAILFISH_IPTABLES_SIGNAL_CHAIN,
 				DBUS_TYPE_STRING,	&(params->table),
 				DBUS_TYPE_STRING,	&(params->chain_name),
-				DBUS_TYPE_STRING,	&op,
+				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
 		default:
 			break;
@@ -1133,8 +1181,9 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	DBusError* error = NULL;
 	
 	gchar *ip = NULL, *service = NULL, *protocol = NULL, *port_str = NULL;
-	gchar *table = NULL, *policy = NULL, *operation = NULL, *chain_name = NULL;
+	gchar *table = NULL, *policy = NULL, *chain_name = NULL;
 	dbus_uint16_t port[2] = {0};
+	dbus_uint16_t operation = 0;
 	rule_operation op = UNDEFINED;
 	gint index = 0;
 	
@@ -1145,7 +1194,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 		case ARGS_IP:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &ip,
-						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_IP_PORT:
@@ -1153,7 +1202,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_STRING, &ip,
 						DBUS_TYPE_UINT16, &port,
 						DBUS_TYPE_STRING, &protocol,
-						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_IP_PORT_RANGE:
@@ -1161,7 +1210,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_STRING, &ip,
 						DBUS_TYPE_STRING, &port_str,
 						DBUS_TYPE_STRING, &protocol,
-						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_IP_SERVICE:
@@ -1169,28 +1218,28 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_STRING, &ip,
 						DBUS_TYPE_STRING, &service,
 						DBUS_TYPE_STRING, &protocol,
-						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_PORT:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_UINT16, &port,
 						DBUS_TYPE_STRING, &protocol,			
-						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_PORT_RANGE:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &port_str,
 						DBUS_TYPE_STRING, &protocol,
-						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_SERVICE:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &service,
 						DBUS_TYPE_STRING, &protocol,
-						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CLEAR:
@@ -1210,7 +1259,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 		case ARGS_CHAIN:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &chain_name,
-						DBUS_TYPE_STRING, &operation,
+						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_GET_CONTENT:
@@ -1302,15 +1351,9 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 		}
 	}
 	
-	// Operation defined
-	if(operation && *operation)
-	{
-		if((op = validate_operation(operation)) != UNDEFINED)
-			params->operation = op;
-	}
-	// No operation defined, defaults to ADD
-	else
-		params->operation = ADD;
+	// Operation is always set, if operation is UNDEFINED check_parameters()
+	// will return INVALID_REQUEST
+	params->operation = validate_operation(operation);
 	
 	// For now always default to "filter" table (SAILFISH_IPTABLES_TABLE_NAME)
 	if(table && *table && g_utf8_validate(table,-1,NULL))

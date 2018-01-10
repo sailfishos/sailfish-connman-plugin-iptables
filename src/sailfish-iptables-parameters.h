@@ -74,6 +74,8 @@ void client_disconnect_data_free(client_disconnect_data* data);
 
 void rule_params_free(rule_params *params);
 rule_params* rule_params_new(rule_args args);
+
+gboolean check_operation(rule_params *params);
 api_result check_parameters(rule_params* params);
 
 #ifdef __cplusplus

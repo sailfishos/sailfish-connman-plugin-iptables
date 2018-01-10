@@ -426,11 +426,24 @@ rule_params* rule_params_new(rule_args args)
 	return params;
 }
 
+gboolean check_operation(rule_params *params)
+{
+	rule_args upper = FLUSH;
+	
+	if(!params)
+		return false;
+	
+	if(params->args == ARGS_CHAIN)
+		upper = UNDEFINED;	
+	
+	return params->operation >= OK && params->operation < upper;
+}
+
 api_result check_parameters(rule_params* params)
 {
 	if(!params)
 		return INVALID;
-
+		
 	switch(params->args)
 	{
 		case ARGS_IP:
@@ -439,6 +452,7 @@ api_result check_parameters(rule_params* params)
 			if(!params->ip) return INVALID_IP;
 			if(!params->port[0]) return INVALID_PORT;
 			if(!params->protocol) return INVALID_PROTOCOL;
+			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_IP_PORT_RANGE:
 			if(!params->ip) return INVALID_IP;
@@ -447,16 +461,19 @@ api_result check_parameters(rule_params* params)
 			if(params->port[1] < params->port[0] &&
 				params->port[1] != params->port[0]) return INVALID_PORT_RANGE;
 			if(!params->protocol) return INVALID_PROTOCOL;
+			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_IP_SERVICE:
 			if(!params->ip) return INVALID_IP;
 			if(!params->service) return INVALID_SERVICE;
 			if(!params->port[0]) return INVALID_SERVICE;
 			if(!params->protocol) return INVALID_PROTOCOL;
+			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_PORT:
 			if(!params->port[0]) return INVALID_PORT;
 			if(!params->protocol) return INVALID_PROTOCOL;
+			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_PORT_RANGE:
 			if(!params->port[0]) return INVALID_PORT;
@@ -464,19 +481,26 @@ api_result check_parameters(rule_params* params)
 			if(params->port[1] < params->port[0] &&
 				params->port[1] != params->port[0]) return INVALID_PORT_RANGE;
 			if(!params->protocol) return INVALID_PROTOCOL;
+			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_SERVICE:
 			if(!params->service) return INVALID_SERVICE;
 			if(!params->protocol) return INVALID_PROTOCOL;
+			if(!check_operation(params)) return INVALID_REQUEST;;
 			return OK;
 		case ARGS_CLEAR:
+		case ARGS_CLEAR_CHAINS:
+			if(!params->table) return INVALID_REQUEST;
 			return OK;
 		case ARGS_POLICY_IN:
 		case ARGS_POLICY_OUT:
-			return params->policy ? OK : INVALID_POLICY;
+			if(!check_operation(params)) return INVALID_REQUEST;
+			if(!params->policy) return INVALID_POLICY;
+			return OK;
 		case ARGS_CHAIN:
 			if(!params->chain_name) return INVALID_CHAIN_NAME;
 			if(!params->table) return INVALID_REQUEST;
+			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_GET_CONTENT:
 			return params->table ? OK : INVALID_REQUEST;
