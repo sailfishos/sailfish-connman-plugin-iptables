@@ -8,6 +8,10 @@
 				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
 				</step>
 			</case>
+			<case manual="false" name="End-to-end test as privileged user">
+				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /bin/su -g privileged -c '/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test' nemo
+				</step>
+			</case>
 			<case manual="false" name="End-to-end test as regular user">
 				<step>/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
 				</step>
