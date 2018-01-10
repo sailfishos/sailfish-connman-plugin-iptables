@@ -1,0 +1,29 @@
+#!/bin/bash
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+DOCBOOK_HTML="sailfish_iptables_api_documentation.html"
+DOCBOOK_XML="generated-doc-org.sailfishos.connman.mdm.iptables.xml"
+DOCBOOK_XSL="/usr/share/xml/docbook/stylesheet/docbook-xsl/xhtml-1_1/docbook.xsl"
+
+if [ $(which xsltproc) ] && [ -f $DOCBOOK_XSL ] ; then
+
+	if [ ! -f $DOCBOOK_XML ] ; then
+		make -C $SCRIPTDIR docbook_xml
+	fi
+
+	xsltproc --output $DOCBOOK_HTML $DOCBOOK_XSL $DOCBOOK_XML
+	case $? in
+		0)
+			echo "DOCBOOK HTML created: $DOCBOOK_HTML"
+			;;
+		5|6)
+			echo "DOCBOOK HTML created: $DOCBOOK_HTML (with errors)"
+                        ;;
+		*)
+			echo "Cannot create DOCBOOK HTML $?"
+			;;
+	esac
+else
+	echo "No xsltproc or $DOCBOOK_XSL found. Install xsltproc, docbook, docbook-xsl, docbook-xsl-ns, and docbook5-xml."
+fi

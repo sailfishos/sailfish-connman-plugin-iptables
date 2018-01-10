@@ -2,35 +2,52 @@
 "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 <node>
 
-<interface name="org.freedesktop.DBus.Introspectable">
-
-<method name="Introspect"><arg name="xml" type="s" direction="out"/>
-</method>
-
-</interface>
-
-<!-- The name of the sailfish connman iptables plugin interface -->
+<!--
+	org.sailfishos.connman.mdm.iptables:
+	@short_description:  SailfishOS connman iptables API description.
+	
+	SailfishOS connman iptables API.
+	
+	The error codes are common for each method, following list presents the codes with generalized error message descriptions. These should be shown to the end-user.
+	
+	0: Ok
+	
+	1: Invalid IP
+	
+	2: Invalid port
+	
+	3: Invalid port range
+	
+	4: Invalid service name
+	
+	5: Invalid protocol
+	
+	6: Invalid policy
+	
+	7: Rule does not exist
+	
+	8: Cannot process request
+	
+	9: Cannot perform operation
+	
+	10: Unauthorized, please try again
+	
+	11: Unregister failed
+	
+	12: Invalid chain name given. Chain name is reserved (add) or does not exist (remove).
+	
+	13: Access denied
+-->
 <interface name="org.sailfishos.connman.mdm.iptables">
 
-<!-- Each function returns a code and descriptive string.
-The returned result codes and string pairs are:
-0 = "Ok"
-1 = "Invalid IP"
-2 = "Invalid port"
-3 = "Invalid port range"
-4 = "Invalid service name"
-5 = "Invalid protocol"
-6 = "Invalid policy"
-7 = "Rule does not exist"
-8 = "Cannot process request"
-9 = "Cannot perform operation"
-10 = "Unauthorized, please try again"
-11 = "Unregister failed"
-12 = "Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."
-13 = "Access denied"
--->
+<property name="Result" type="q" access="read"/>
 
-<!-- 
+<!--
+	ClearIptablesTable:
+	@table: Iptables table to clear.
+	@result: result code, 0 = cleared, 8 = table name was invalid, 9 = cannot make change (iptables error), 13 = access denied
+	@string: result string.
+
 Clears given table from iptables. Defaults to filter table. Currentlty only filter table is used, table parameter is ignored for now.
 Sends signal FirewallCleared
 -->
@@ -40,9 +57,13 @@ Sends signal FirewallCleared
 <arg name="string" type="s" direction="out"/>
 </method>
 
-<!-- 
+<!--
+	ClearIptablesChains:
+	@table: Iptables table to clear from used defined chains.
+	@result: result code, 0 = cleared, 8 = table name was invalid, 9 = cannot make change (iptables error), 13 = access denied
+	@string: result string.
+
 Clears all custom chains from given iptables table. Defaults to filter table, table parameter is ignored now.
-TODO: add signal for this.
 -->
 <method name="ClearIptablesChains">
 <arg name="table" type="s" direction="in"/>
@@ -51,6 +72,13 @@ TODO: add signal for this.
 </method>
 
 <!--
+	GetIptablesContent:
+	@table: Iptables table to get content from.
+	@result: result code, 0 = Request done, 8 = table name was invalid, 9 = cannot make change (iptables error), 13 = access denied
+	@string: result string.
+	@chains: list of chains in the table, format: CHAIN POLICY
+	@rules: list of rules in the table, format is similar to iptables-save command format
+
 Get iptables content from given table. Defaults to filter table, table parameter is ignored now.
 -->
 <method name="GetIptablesContent">
@@ -62,6 +90,10 @@ Get iptables content from given table. Defaults to filter table, table parameter
 </method>
 
 <!--
+	Register:
+	@result: 0 = registered, 10 = error authorizing please try again, 13 = access denied
+	@string: result string.
+
 Registers the client to listen for signals emitted by iptables api.
 -->
 <method name="Register">
@@ -70,7 +102,11 @@ Registers the client to listen for signals emitted by iptables api.
 </method>
 
 <!--
-Removes the client from signal listeners.
+	Unregister:
+	@result: 0 = unregistered, 11 = unregister failed client not registered
+	@string: result string
+
+	Removes the client from signal listeners.
 -->
 <method name="Unregister">
 <arg name="result" type="q" direction="out"/>
@@ -79,9 +115,14 @@ Removes the client from signal listeners.
 
 
 <!--
-Change policy of filter table INPUT chain. Parameter is the same as iptables
-command (ACCEPT/DROP)
-Sends signal PolicyChanged
+	ChangeInputPolicy:
+	@policy: Policy as string ACCEPT or DROP
+	@result: 0 = changed, 6 = invalid policy, 9 = cannot make change (iptables error), 13 = access denied
+	@string: result string.
+	
+	Change policy of filter table INPUT chain. Parameter is the same as iptables command (ACCEPT/DROP)
+
+	Sends signal PolicyChanged
 -->
 <method name="ChangeInputPolicy">
 <arg name="policy" type="s" direction="in"/>
@@ -90,9 +131,14 @@ Sends signal PolicyChanged
 </method>
 
 <!--
-Change policy of filter table OUTPUT chain. Parameter is the same as iptables
-command (ACCEPT/DROP)
-Sends signal PolicyChanged
+	ChangeOutputPolicy:
+	@policy: Policy as string ACCEPT or DROP
+	@result: 0 = changed, 6 = invalid policy, 9 = cannot make change (iptables error), 13 = access denied
+	@string: result string.
+	
+	Change policy of filter table OUTPUT chain. Parameter is the same as iptables command (ACCEPT/DROP)
+	
+	Sends signal PolicyChanged
 -->
 <method name="ChangeOutputPolicy">
 <arg name="policy" type="s" direction="in"/>
@@ -101,9 +147,14 @@ Sends signal PolicyChanged
 </method>
 
 <!--
-Manage chains in filter table. Custom chains can be added (ADD), removed
-(REMOVE) and flushed (FLUSH). Builtin chains or duplicates are not allowed 
-(returns error).
+	ManageChain:
+	@chain: Name of the chain to be managed
+	@operation: Operation type, ADD or REMOVE
+	@result: 0 = changed, 6 = invalid policy, 9 = cannot make change (iptables error), 13 = access denied
+	@string: result string.
+	
+	Manage chains in filter table. Custom chains can be added (ADD), removed (REMOVE) and flushed (FLUSH). Builtin chains or duplicates are not allowed (returns error code 9).
+
 Sends signal ChainChanged
 -->
 <method name="ManageChain">
@@ -478,36 +529,92 @@ Parameter protocol can be omitted, if service is found.
 <arg name="string" type="s" direction="out"/>
 </method>
 
-<!-- Method that returns sailfish iptables api version -->
+<!-- 
+	GetVersion:
+	@version: Version number of the iptables API
+	
+	Returns sailfish iptables API version
+-->
 <method name="GetVersion">
 <arg name="version" type="i" direction="out"/>
 </method>
 
 <!--
-Sent when plugin is loaded into Connection Manager to notify that iptables can
-be managed using this DBUS API.
+	Initialize:
+	
+	Sent when plugin is loaded into Connection Manager to notify that iptables can be managed using this DBUS API.
 -->
 <signal name="Initialize"></signal>
 
 <!--
-Sent when plugin is removed from Connection Manager.
+	Shutdown:
+	
+	Sent when plugin is removed from Connection Manager.
 -->
 <signal name="Shutdown"></signal>
 
-<!-- Sent when ClearIptablesTable succeeds -->
-<signal name="FirewallCleared"></signal>
+<!--
+	IptablesTableCleared:
+	@table: The table that was cleared.
+	
+	Sent when iptables table was cleared from rules.
+-->
+<signal name="IptablesTableCleared">
+<arg name="table" type="s"/>
+</signal>
 
-<!-- Sent when policy is changed for a chain -->
+<!--
+	IptablesChainsCleared:
+	@table: The table that was cleared from custom chains.
+	
+	Sent when iptables table was cleared from custom chains.
+-->
+<signal name="IptablesChainsCleared">
+<arg name="table" type="s"/>
+</signal>
+
+<!--
+	PolicyChanged:
+	@chain: Name of the chain that was changed.
+	@policy: New policy for the chain.
+	
+Sent when policy is changed for a chain
+-->
 <signal name="PolicyChanged">
 <arg name="chain" type="s"/>
 <arg name="policy" type="s"/>
 </signal>
 
-<!-- Sent after a rule is succesfully added to iptables -->
-<signal name="RuleChanged"><arg name="ip" type="s"/>
+<!--
+	RuleChanged:
+	@ip: IP address in the rule, can be empty "" if no source/destination IP was defined 
+	@port: Port in the rule, can be empty "" if no port was defined
+	@protocol: Protocol regarding the rule, can be empty "" if no protocol is defined or required
+	@operation: Type of the change: ADD or REMOVE
+	
+Sent after a rule is succesfully added to or removed from iptables TODO rethink content
+-->
+<signal name="RuleChanged">
+<arg name="ip" type="s"/>
 <arg name="port" type="s"/>
 <arg name="protocol" type="s"/>
 <arg name="operation" type="s"/>
 </signal>
 
-</interface></node>
+<!--
+	ChainChanged:
+	@table: Affected table name
+	@chain: Affected chain name
+	@operation: Type of change: ADD or REMOVE
+	
+Sent when chain was added to or removed from a table.
+-->
+<signal name="ChainChanged">
+<arg name="table" type="s"/>
+<arg name="chain" type="s"/>
+<arg name="operation" type="s"/>
+</signal>
+
+
+</interface>
+</node>

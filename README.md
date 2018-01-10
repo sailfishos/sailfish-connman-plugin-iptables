@@ -2,6 +2,16 @@
 
 Connman plugin that provides D-Bus API for controlling iptables rules.
 
+## API description
+
+The detailed API description is provided as D-Bus introspect XML file (in
+spec/sailfish_iptables_dbus_interface_description.xml) from which a docbook XML
+is generated for the docs-package (run make -C doc). A html page can be
+generated from the introspect XML with the script at doc/docbook_html. The
+script requires xsltproc, docbook, docbook-xsl, docbook-xsl-ns, and docbook5-xml
+in order to generate the file from docbook XML.
+
+
 ## Loading the plugin
 
 Plugin is loaded by Connection Manager at startup.
@@ -12,11 +22,14 @@ uses Connection Manager D-Bus functions to register itself to D-Bus.
 
 After the plugin is loaded signal "Initialize" is sent over D-Bus indicating
 that the plugin is running. Then iptables filter table content is loaded from
-the default save path of connman iptables module for IPv4 rules. All previously created custom chains (prefixed with sfos_) are loaded at plugin startup (using iptables content returned by connman) into plugin's internal database.'
+the default save path of connman iptables module for IPv4 rules. All previously
+created custom chains (prefixed with sfos_) are loaded at plugin startup (using
+iptables content returned by connman) into plugin's internal database.
 
 When unloaded (by Connman at exit) iptables filter table is saved to connman's
 default save path, iptables content is cleared, custom chains are removed from
-the filter table and finally signal "Shutdown" is sent over D-Bus. Custom chains are saved by connman's sailfish iptables extension.
+the filter table and finally signal "Shutdown" is sent over D-Bus. Custom chains
+are saved by connman's sailfish iptables extension.
 
 ## Plugin iptables operations
 
@@ -31,6 +44,8 @@ This plugin allows to:
  - Clear iptables custom chains
  - Get iptables filter table content
  - Get version of plugin interface
+ - Register (and unregister) to listen for API change signals
+ 
 
 Rules can be added to INPUT or OUTPUT chains of iptables filter table. Each rule
 can be added as ACCEPT or DENY.
@@ -49,7 +64,84 @@ plugin (sailfish_iptables_dbus_interface_description.xml).
 
 ## Plugin D-Bus interface access
 
-WIP no access control is yet implemented.
+Access control prevents regular users from changing iptables content or to
+listen for signals emitted by API. Default configuration is provided by the
+installation and installed to /etc/connman/iptables_policy.conf. Configuration
+is loaded from this file, which follows libdbusaccess policy format (see 
+https://git.merproject.org/mer-core/libdbusaccess/).
+
+If a client wishes to get the signals (detailed later) client has to call
+method Register() successfully. Method use does not require use of Register()
+method. On each function call (except GetVersion()) the access is checked
+from D-Bus access policy (via libdbusaccess).
+
+Three different properties are supported in the policy configuration file:
+full, manage and listen.
+
+### full()
+
+Allow everything, no restrictions on access. All signals can be received.
+
+### manage()
+
+Make changes to iptables content (add/remove rules and custom chains). Clearing
+of iptables table with ClearIptablesTable() method is not allowed. All signals
+can be received.
+
+### listen()
+
+Can only listen for D-Bus signals emitted by API after calling method Register().
+
+## Signals
+
+The API emits following signals (further described in the D-Bus introspect XML/
+HTML documentation):
+
+### Initialize
+
+Plugin is initialized and ready to be used.
+
+Signal is sent to all.
+
+### Shutdown
+
+Plugin is unloaded.
+
+Signal is sent to all.
+
+### IptablesTableCleared
+
+Iptables table has been cleared from all rules. Table name as string parameter.
+
+Signal is sent to clients with at least listen() access.
+
+### IptablesChainsCleared
+
+Iptables table has been cleared from all custom chains. Table name as string
+parameter.
+
+Signal is sent to clients with at least listen() access.
+
+### PolicyChanged
+
+Iptables chain policy has been changed. Signal contains table and chain names
+as strings as well as the new policy.
+
+Signal is sent to clients with at least listen() access.
+
+### RuleChanged
+
+A rule has been changed (add or remove) in iptables. Ip address, port/port
+range, protocol and operation (ADD/REMOVE) are sent as string parameters.
+
+Signal is sent to clients with at least listen() access.
+
+### ChainChanged
+
+A chain was added or removed in a table. Affected table and chain are sent as
+string parameter with operation type (ADD/REMOVE).
+
+Signal is sent to clients with at least listen() access.
 
 ## Example of use
 
@@ -99,7 +191,7 @@ org.sailfishos.connman.mdm.iptables.DenyIncomingIpWithService \
 string:"192.168.0.2" string:"ssh" string:"" string:"remove"
 ```
 
-### Errors to method calls
+### Result codes to method calls
 
 Each method call results in a reply containing integer and corresponding
 textual description as follows:
@@ -121,7 +213,8 @@ textual description as follows:
 |12 |"Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."|
 |13 |"Access denied"|
 
-In addition, GetIptablesContent will return two string arrays:
+In addition, GetIptablesContent will return two string arrays (if error these
+are empty arrays):
 
 | Return value | Description |
 |--------------|-------------|
