@@ -58,9 +58,9 @@ run:
 	gtester $(NAME)
 
 clean:
-	rm -f *~ $/*~
-	rm *.d *.o
-	rm $(NAME)
+	$(RM) -f *~ $/*~
+	$(RM) *.d *.o
+	$(RM) $(NAME)
 
 %.o : %.c
 	$(CC) -c $(RELEASE_CFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" $< -o $@
