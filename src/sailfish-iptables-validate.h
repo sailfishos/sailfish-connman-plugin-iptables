@@ -55,10 +55,14 @@ gboolean validate_ip_mask(gint type, const gchar* mask);
 gboolean validate_ip_address(gint type, const gchar* ip);
 guint16 validate_service_name(const gchar *service);
 gboolean validate_protocol(const gchar *protocol);
+gchar* validate_protocol_int(gint protocol);
 gboolean validate_port(guint16 port);
 rule_operation validate_operation(guint16 operation);
+gchar* validate_chain(const gchar *table, const gchar *chain);
+gchar* validate_target(const gchar* table, const gchar *target);
 gboolean validate_path(const gchar *path);
 gboolean validate_policy(const gchar* policy);
+gchar* validate_policy_int(guint16 policy_int);
 
 #ifdef __cplusplus
 }

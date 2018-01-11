@@ -60,6 +60,14 @@
 
 #define SAILFISH_IPTABLES_GET_VERSION			"GetVersion"
 
+#define SAILFISH_IPTABLES_RULE_IP			"RuleIp"
+#define SAILFISH_IPTABLES_RULE_IP_PORT			"RuleIpWithPort"
+#define SAILFISH_IPTABLES_RULE_IP_PORT_RANGE		"RuleIpWithPortRange"
+#define SAILFISH_IPTABLES_RULE_PORT			"RulePort"
+#define SAILFISH_IPTABLES_RULE_PORT_RANGE		"RulePortRange"
+#define SAILFISH_IPTABLES_RULE_IP_SERVICE		"RuleIpWithService"
+#define SAILFISH_IPTABLES_RULE_SERVICE			"RuleService"
+
 #define SAILFISH_IPTABLES_ALLOW_IN_IP			"AllowIncomingIp"
 #define SAILFISH_IPTABLES_ALLOW_IN_IP_PORT		"AllowIncomingIpWithPort"
 #define SAILFISH_IPTABLES_ALLOW_IN_IP_PORT_RANGE	"AllowIncomingIpWithPortRange"
@@ -94,6 +102,7 @@
 
 #define SAILFISH_IPTABLES_CHANGE_IN_POLICY		"ChangeInputPolicy"
 #define SAILFISH_IPTABLES_CHANGE_OUT_POLICY		"ChangeOutputPolicy"
+#define SAILFISH_IPTABLES_CHANGE_POLICY			"ChangePolicy"
 
 #define SAILFISH_IPTABLES_CLEAR_IPTABLES_TABLE		"ClearIptablesTable"
 #define SAILFISH_IPTABLES_CLEAR_IPTABLES_CHAINS		"ClearIptablesChains"
@@ -121,7 +130,8 @@
 	10 = "Unauthorized, please try again",
 	11 = "Unregister failed",
 	12 = "Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."
-	13 = "Access denied",
+	13 = "Invalid table name given."
+	100 = "Access denied",
 */
 
 #define SAILFISH_IPTABLES_RESULT_TYPE			{"result", "q"}
@@ -133,14 +143,28 @@
 
 #define SAILFISH_IPTABLES_INPUT_ABSOLUTE_PATH		{"absolute_path","s"}
 #define SAILFISH_IPTABLES_INPUT_IP			{"ip","s"}
+#define SAILFISH_IPTABLES_INPUT_IP_SRC			{"source_ip", "s"}
+#define SAILFISH_IPTABLES_INPUT_IP_DST			{"destination_ip", "s"}
 #define SAILFISH_IPTABLES_INPUT_PORT			{"port","q"}
+#define SAILFISH_IPTABLES_INPUT_PORT_SRC		{"source_port","q"}
+#define SAILFISH_IPTABLES_INPUT_PORT_DST		{"destination_port","q"}
 #define SAILFISH_IPTABLES_INPUT_PORT_STR		{"port","s"}
+// TODO use array of uint16 for port ranges
+#define SAILFISH_IPTABLES_INPUT_PORT_SRC_A	{"source_port_start","q"}
+#define SAILFISH_IPTABLES_INPUT_PORT_SRC_B	{"source_port_end","q"}
+#define SAILFISH_IPTABLES_INPUT_PORT_DST_A	{"destination_port_start","q"}
+#define SAILFISH_IPTABLES_INPUT_PORT_DST_B	{"destination_port_end","q"}
 #define SAILFISH_IPTABLES_INPUT_SERVICE			{"service","s"}
-#define SAILFISH_IPTABLES_INPUT_PROTOCOL		{"protocol","s"}
+#define SAILFISH_IPTABLES_INPUT_SERVICE_SRC		{"source_service","s"}
+#define SAILFISH_IPTABLES_INPUT_SERVICE_DST		{"destination_service","s"}
+#define SAILFISH_IPTABLES_INPUT_PROTOCOL_STR	{"protocol","s"}
+#define SAILFISH_IPTABLES_INPUT_PROTOCOL		{"protocol","u"}
 #define SAILFISH_IPTABLES_INPUT_OPERATION		{"operation","q"}
 #define SAILFISH_IPTABLES_INPUT_POLICY			{"policy", "s"}
+#define SAILFISH_IPTABLES_INPUT_POLICY_INT		{"policy", "q"}
 #define SAILFISH_IPTABLES_INPUT_TABLE			{"table", "s"}
 #define SAILFISH_IPTABLES_INPUT_CHAIN			{"chain", "s"}
+#define SAILFISH_IPTABLES_INPUT_TARGET			{"target", "s"}
 
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		SAILFISH_IPTABLES_INPUT_CHAIN
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		SAILFISH_IPTABLES_INPUT_POLICY
@@ -189,9 +213,16 @@ static const GDBusSignalTable signals[] = {
 		{ GDBUS_SIGNAL(
 			SAILFISH_IPTABLES_SIGNAL_RULE,
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_INPUT_IP,
-				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_PORT_DST_A,
+				SAILFISH_IPTABLES_INPUT_PORT_DST_B,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC_A,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC_B,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			))
 		},
@@ -247,8 +278,17 @@ static const GDBusMethodTable methods[] = {
 			),
 			sailfish_iptables_change_input_policy)
 		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_CHANGE_OUT_POLICY, 
+			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_POLICY),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_change_output_policy)
+		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_MANAGE_CHAIN, 
 			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
 				SAILFISH_IPTABLES_INPUT_CHAIN,
 				SAILFISH_IPTABLES_INPUT_OPERATION),
 			GDBUS_ARGS(
@@ -257,13 +297,135 @@ static const GDBusMethodTable methods[] = {
 			),
 			sailfish_iptables_manage_chain)
 		},
-		{ GDBUS_METHOD(SAILFISH_IPTABLES_CHANGE_OUT_POLICY, 
-			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_POLICY),
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_CHANGE_POLICY, 
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_POLICY_INT),
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_RESULT_TYPE,
 				SAILFISH_IPTABLES_RESULT_STRING
 			),
-			sailfish_iptables_change_output_policy)
+			sailfish_iptables_change_policy)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_RULE_IP,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_OPERATION),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_rule_ip)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_RULE_IP_PORT,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_PORT_DST,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_OPERATION
+			),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_rule_ip_port)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_RULE_IP_PORT_RANGE,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_PORT_DST_A,
+				SAILFISH_IPTABLES_INPUT_PORT_DST_B,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC_A,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC_B,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_OPERATION
+			),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_rule_ip_port_range)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_RULE_IP_SERVICE,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_SERVICE_DST,
+				SAILFISH_IPTABLES_INPUT_SERVICE_SRC,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_OPERATION
+			),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_rule_ip_service)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_RULE_PORT,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_PORT_DST,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_OPERATION
+			),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_rule_port)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_RULE_PORT_RANGE,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_PORT_DST_A,
+				SAILFISH_IPTABLES_INPUT_PORT_DST_B,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC_A,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC_B,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_OPERATION
+			),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_rule_port_range)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_RULE_SERVICE,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_SERVICE_DST,
+				SAILFISH_IPTABLES_INPUT_SERVICE_SRC,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_OPERATION),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE,
+				SAILFISH_IPTABLES_RESULT_STRING
+			),
+			sailfish_iptables_rule_service)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_ALLOW_IN_IP,
 			GDBUS_ARGS(
@@ -279,7 +441,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_PORT,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -292,7 +454,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -304,7 +466,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_ALLOW_IN_PORT,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_PORT,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -316,7 +478,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_ALLOW_IN_PORT_RANGE,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -329,7 +491,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_SERVICE,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -341,7 +503,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_ALLOW_IN_SERVICE,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_SERVICE,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION),
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_RESULT_TYPE,
@@ -363,7 +525,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_PORT,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -376,7 +538,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -388,7 +550,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_ALLOW_OUT_PORT,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_PORT,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -400,7 +562,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_ALLOW_OUT_PORT_RANGE,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -413,7 +575,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_SERVICE,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -425,7 +587,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_ALLOW_OUT_SERVICE,
 			GDBUS_ARGS(
 			SAILFISH_IPTABLES_INPUT_SERVICE,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION),
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_RESULT_TYPE,
@@ -447,7 +609,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_PORT,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -460,7 +622,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -472,7 +634,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_DENY_IN_PORT,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_PORT,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -484,7 +646,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_DENY_IN_PORT_RANGE,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -497,7 +659,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_SERVICE,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -509,7 +671,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_DENY_IN_SERVICE,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_SERVICE,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION),
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_RESULT_TYPE,
@@ -531,7 +693,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_PORT,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -544,7 +706,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -556,7 +718,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_DENY_OUT_PORT,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_PORT,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -568,7 +730,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_DENY_OUT_PORT_RANGE,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_PORT_STR,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -581,7 +743,7 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_IP,
 				SAILFISH_IPTABLES_INPUT_SERVICE,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
@@ -593,7 +755,7 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_DENY_OUT_SERVICE,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_SERVICE,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
 				SAILFISH_IPTABLES_INPUT_OPERATION),
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_RESULT_TYPE,
@@ -608,64 +770,7 @@ static const GDBusMethodTable methods[] = {
 		},
 		{ }
 	};
-	
-/* New method sailfish_iptables_ip
-	Table:				s
-	Chain:				s
-	Target:				q
-	Source IP:			s
-	Destination IP:		s
-*/
 
-/* New method sailfish_iptables_ip_port
-	Table:				s
-	Chain:				s
-	Target:				q
-	Source IP:			s
-	Destination IP:		s
-	Ports (multiport)	a(q)
-*/
-
-/* New method sailfish_iptables_ip_port_range
-	Table:				s
-	Chain:				s
-	Target:				q
-	Source IP:			s
-	Destination IP:		s
-	Port start:			q
-	Port end:			q
-*/
-
-/* New method sailfish_iptables_ip_service
-	Table:				s
-	Chain:				s
-	Target:				q
-	Source IP:			s
-	Destination IP:		s
-	Service name:		s
-*/
-
-/* New method sailfish_iptables_port
-	Table:				s
-	Chain:				s
-	Target:				q
-	Ports (multiport)	a(q)
-*/
-
-/* New method sailfish_iptables_port_range
-	Table:				s
-	Chain:				s
-	Target:				q
-	Port start:			q
-	Port end:			q
-*/
-
-/* New method sailfish_iptables_service
-	Table:				s
-	Chain:				s
-	Target:				q
-	Service name:		s
-*/
 	
 /* New method sailfish_iptables_rule:
 	Table:											s
@@ -798,6 +903,61 @@ DBusMessage* sailfish_iptables_change_output_policy(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
 	return process_request(message, &set_policy, ARGS_POLICY_OUT, user_data);
+}
+
+DBusMessage* sailfish_iptables_change_policy(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &set_policy, ARGS_POLICY, user_data);
+}
+
+// Rules 
+DBusMessage* sailfish_iptables_rule_ip(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &iptables_rule, ARGS_IP_FULL,
+		user_data);
+}
+
+DBusMessage* sailfish_iptables_rule_ip_port(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &iptables_rule, ARGS_IP_PORT_FULL,
+		user_data);
+}
+
+DBusMessage* sailfish_iptables_rule_ip_port_range(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &iptables_rule, ARGS_IP_PORT_RANGE_FULL,
+		user_data);
+}
+
+DBusMessage* sailfish_iptables_rule_port(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &iptables_rule, ARGS_PORT_FULL, user_data);
+}
+
+DBusMessage* sailfish_iptables_rule_port_range(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &iptables_rule, ARGS_PORT_RANGE_FULL,
+		user_data);
+}
+
+DBusMessage* sailfish_iptables_rule_ip_service(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &iptables_rule, ARGS_IP_SERVICE_FULL,
+		user_data);
+}
+
+DBusMessage* sailfish_iptables_rule_service(
+			DBusConnection *connection,	DBusMessage *message, void *user_data)
+{
+	return process_request(message, &iptables_rule, ARGS_SERVICE_FULL,
+		user_data);
 }
 
 // ALLOW INCOMING
@@ -1115,7 +1275,7 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 		case ARGS_IP:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_RULE,
-				DBUS_TYPE_STRING,	&(params->ip),
+				DBUS_TYPE_STRING,	&(params->ip_src),
 				DBUS_TYPE_STRING,	&empty,
 				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
@@ -1125,7 +1285,7 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 		case ARGS_IP_SERVICE:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_RULE,
-				DBUS_TYPE_STRING,	&(params->ip),
+				DBUS_TYPE_STRING,	&(params->ip_src),
 				DBUS_TYPE_STRING,	&port_str,
 				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
@@ -1140,32 +1300,55 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
 			break;
+		case ARGS_IP_FULL:
+		case ARGS_IP_PORT_FULL:
+		case ARGS_IP_PORT_RANGE_FULL:
+		case ARGS_IP_SERVICE_FULL:
+		case ARGS_PORT_FULL:
+		case ARGS_PORT_RANGE_FULL:
+		case ARGS_SERVICE_FULL:
+			signal = sailfish_iptables_dbus_signal(
+				SAILFISH_IPTABLES_SIGNAL_RULE,
+				DBUS_TYPE_STRING,	params->table ? &(params->table) : &empty,
+				DBUS_TYPE_STRING,	params->chain ? &(params->chain) : &empty,
+				DBUS_TYPE_STRING,	params->target ? &(params->target) : &empty,
+				DBUS_TYPE_STRING,	params->ip_dst ? &(params->ip_dst) : &empty,
+				DBUS_TYPE_STRING,	params->ip_src ? &(params->ip_src) : &empty,
+				DBUS_TYPE_UINT16,	&(params->port_dst[0]),
+				DBUS_TYPE_UINT16,	&(params->port_dst[1]),
+				DBUS_TYPE_UINT16,	&(params->port_src[0]),
+				DBUS_TYPE_UINT16,	&(params->port_src[1]),
+				DBUS_TYPE_STRING,	params->protocol ? &(params->protocol) : &empty,
+				DBUS_TYPE_UINT16,	&(params->operation),
+				DBUS_TYPE_INVALID);
+			break;
 		case ARGS_CLEAR:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_CLEAR,
-				DBUS_TYPE_STRING,	&(params->table),
+				DBUS_TYPE_STRING,	params->table ? &(params->table) : &empty,
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CLEAR_CHAINS:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_CLEAR_CHAINS,
-				DBUS_TYPE_STRING,	&(params->table),
+				DBUS_TYPE_STRING,	params->table ? &(params->table) : &empty,
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_POLICY_IN:
 		case ARGS_POLICY_OUT:
+		case ARGS_POLICY:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_POLICY,
-				DBUS_TYPE_STRING,	&(params->table),
-				DBUS_TYPE_STRING,	&(params->chain_name),
-				DBUS_TYPE_STRING,	&(params->policy),
+				DBUS_TYPE_STRING,	params->table ? &(params->table) : &empty,
+				DBUS_TYPE_STRING,	params->chain ? &(params->chain) : &empty,
+				DBUS_TYPE_STRING,	params->policy ? &(params->policy) : &empty,
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CHAIN:
 			signal = sailfish_iptables_dbus_signal(
 				SAILFISH_IPTABLES_SIGNAL_CHAIN,
-				DBUS_TYPE_STRING,	&(params->table),
-				DBUS_TYPE_STRING,	&(params->chain_name),
+				DBUS_TYPE_STRING,	params->table ? &(params->table) : &empty,
+				DBUS_TYPE_STRING,	params->chain ? &(params->chain) : &empty,
 				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
 		default:
@@ -1180,10 +1363,14 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	rule_params *params = rule_params_new(args);
 	DBusError* error = NULL;
 	
-	gchar *ip = NULL, *service = NULL, *protocol = NULL, *port_str = NULL;
-	gchar *table = NULL, *policy = NULL, *chain_name = NULL;
-	dbus_uint16_t port[2] = {0};
-	dbus_uint16_t operation = 0;
+	gchar *ip_src = NULL, *ip_dst = NULL, *service = NULL, *protocol = NULL;
+	gchar *port_str = NULL, *table = NULL, *policy = NULL, *chain_name = NULL;
+	gchar *custom_chain_name = NULL, *target = NULL;
+	gchar *service_dst = NULL, *service_src = NULL, *service_lowercase = NULL;
+	dbus_uint16_t port_dst[2] = {0};
+	dbus_uint16_t port_src[2] = {0};
+	dbus_uint16_t operation = 0, policy_int = 0;
+	dbus_uint32_t protocol_int = 0;
 	rule_operation op = UNDEFINED;
 	gint index = 0;
 	
@@ -1193,21 +1380,21 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	{
 		case ARGS_IP:
 			rval = dbus_message_get_args(message, error,
-						DBUS_TYPE_STRING, &ip,
+						DBUS_TYPE_STRING, &ip_src,
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_IP_PORT:
 			rval = dbus_message_get_args(message, error,
-						DBUS_TYPE_STRING, &ip,
-						DBUS_TYPE_UINT16, &port,
+						DBUS_TYPE_STRING, &ip_src,
+						DBUS_TYPE_UINT16, &port_dst,
 						DBUS_TYPE_STRING, &protocol,
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_IP_PORT_RANGE:
 			rval = dbus_message_get_args(message, error,
-						DBUS_TYPE_STRING, &ip,
+						DBUS_TYPE_STRING, &ip_src,
 						DBUS_TYPE_STRING, &port_str,
 						DBUS_TYPE_STRING, &protocol,
 						DBUS_TYPE_UINT16, &operation,
@@ -1215,7 +1402,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 			break;
 		case ARGS_IP_SERVICE:
 			rval = dbus_message_get_args(message, error,
-						DBUS_TYPE_STRING, &ip,
+						DBUS_TYPE_STRING, &ip_src,
 						DBUS_TYPE_STRING, &service,
 						DBUS_TYPE_STRING, &protocol,
 						DBUS_TYPE_UINT16, &operation,
@@ -1223,7 +1410,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 			break;
 		case ARGS_PORT:
 			rval = dbus_message_get_args(message, error,
-						DBUS_TYPE_UINT16, &port,
+						DBUS_TYPE_UINT16, &port_dst,
 						DBUS_TYPE_STRING, &protocol,			
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
@@ -1242,31 +1429,121 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
+		case ARGS_IP_FULL:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &target,
+						DBUS_TYPE_STRING, &ip_src,
+						DBUS_TYPE_STRING, &ip_dst,
+						DBUS_TYPE_UINT16, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_IP_PORT_FULL:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &target,
+						DBUS_TYPE_STRING, &ip_src,
+						DBUS_TYPE_STRING, &ip_dst,
+						DBUS_TYPE_UINT16, &port_dst,
+						DBUS_TYPE_UINT16, &port_src,
+						DBUS_TYPE_UINT32, &protocol_int,
+						DBUS_TYPE_UINT16, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_IP_PORT_RANGE_FULL:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &target,
+						DBUS_TYPE_STRING, &ip_src,
+						DBUS_TYPE_STRING, &ip_dst,
+						DBUS_TYPE_UINT16, &(port_dst[0]),
+						DBUS_TYPE_UINT16, &(port_dst[1]),
+						DBUS_TYPE_UINT16, &(port_src[0]),
+						DBUS_TYPE_UINT16, &(port_src[1]),
+						DBUS_TYPE_UINT32, &protocol_int,
+						DBUS_TYPE_UINT16, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_IP_SERVICE_FULL:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &target,
+						DBUS_TYPE_STRING, &ip_src,
+						DBUS_TYPE_STRING, &ip_dst,
+						DBUS_TYPE_STRING, &service_dst,
+						DBUS_TYPE_STRING, &service_src,
+						DBUS_TYPE_UINT32, &protocol_int,
+						DBUS_TYPE_UINT16, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_PORT_FULL:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &target,
+						DBUS_TYPE_UINT16, &port_dst,
+						DBUS_TYPE_UINT16, &port_src,
+						DBUS_TYPE_UINT32, &protocol_int,			
+						DBUS_TYPE_UINT16, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_PORT_RANGE_FULL:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &target,
+						DBUS_TYPE_UINT16, &(port_dst[0]),
+						DBUS_TYPE_UINT16, &(port_dst[1]),
+						DBUS_TYPE_UINT16, &(port_src[0]),
+						DBUS_TYPE_UINT16, &(port_src[1]),
+						DBUS_TYPE_UINT32, &protocol_int,
+						DBUS_TYPE_UINT16, &operation,
+						DBUS_TYPE_INVALID);
+			break;
+		case ARGS_SERVICE_FULL:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &target,
+						DBUS_TYPE_STRING, &service_dst,
+						DBUS_TYPE_STRING, &service_src,
+						DBUS_TYPE_UINT32, &protocol_int,
+						DBUS_TYPE_UINT16, &operation,
+						DBUS_TYPE_INVALID);
+			break;
 		case ARGS_CLEAR:
 		case ARGS_CLEAR_CHAINS:
-			// TODO enable this when other than "filter" table is supported
-			/*rval = dbus_message_get_args(message, error,
+			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
-						DBUS_TYPE_INVALID);*/
+						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_POLICY_IN:
 		case ARGS_POLICY_OUT:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &policy,
 						DBUS_TYPE_INVALID);
-			
+		case ARGS_POLICY:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_UINT16, &policy_int,
+						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CHAIN:
 			rval = dbus_message_get_args(message, error,
-						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &custom_chain_name,
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
 		case ARGS_GET_CONTENT:
-			// TODO enable this when other than "filter" table is supported
-			/*rval = dbus_message_get_args(message, error,
+			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
-						DBUS_TYPE_INVALID);*/
+						DBUS_TYPE_INVALID);
 			break;
 	}
 	
@@ -1280,19 +1557,34 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 		return NULL;
 	}
 	
-	if(ip && g_utf8_validate(ip,-1,NULL) && validate_ip_address(IPV4,ip))
+	// Source IP (iptables -s)
+	if(ip_src && g_utf8_validate(ip_src,-1,NULL) &&
+		validate_ip_address(IPV4, ip_src))
 	{
-		if(negated_ip_address(ip))
+		if(negated_ip_address(ip_src))
 		{
-			params->ip = format_ip(IPV4,&(ip[1]));
-			params->ip_negate = true;
+			params->ip_src = format_ip(IPV4, &(ip_src[1]));
+			params->ip_negate_src = true;
 		}
 		else
-			params->ip = format_ip(IPV4,ip);
+			params->ip_src = format_ip(IPV4, ip_src);
+	}
+	
+	// Destination IP (iptables -d)
+	if(ip_dst && g_utf8_validate(ip_dst,-1,NULL) &&
+		validate_ip_address(IPV4,ip_dst))
+	{
+		if(negated_ip_address(ip_dst))
+		{
+			params->ip_dst = format_ip(IPV4, &(ip_dst[1]));
+			params->ip_negate_dst = true;
+		}
+		else
+			params->ip_dst = format_ip(IPV4,ip_dst);
 	}
 	
 	// Protocol defined
-	if(protocol && g_utf8_validate(protocol, -1, NULL))
+	if(protocol && *protocol && g_utf8_validate(protocol, -1, NULL))
 	{
 		gchar* protocol_lowercase = g_utf8_strdown(protocol, -1);
 
@@ -1300,19 +1592,56 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 			params->protocol = protocol_lowercase;
 	}
 	
-	// Service defined
-	if(service && g_utf8_validate(service,-1,NULL))
+	// Protocol number set (proto = 0, not supported, see /etc/protocols)
+	// G_MAXUINT32 = all
+	if(protocol_int)
+		params->protocol = validate_protocol_int(protocol_int);
+	
+	// Service defined TODO REMOVE THIS - old api
+	if(service && *service && g_utf8_validate(service,-1,NULL))
 	{
-		gchar* service_lowercase = g_utf8_strdown(service,-1);
+		service_lowercase = g_utf8_strdown(service,-1);
 		
 		// Check if the service with given name can be found, port and
 		// protocol can be retrieved then also
-		if((params->port[0] = validate_service_name(service_lowercase)))
+		if((params->port_dst[0] = validate_service_name(service_lowercase)))
 		{
-			params->service	= service_lowercase;
+			params->service_src = service_lowercase;
 			
 			if(!params->protocol)
-				params->protocol = get_protocol_for_service(params->service);
+				params->protocol = get_protocol_for_service(params->service_src);
+		}
+	}
+	
+	// Service destination defined
+	if(service_dst && *service_dst && g_utf8_validate(service_dst,-1,NULL))
+	{
+		service_lowercase = g_utf8_strdown(service_dst,-1);
+		
+		// Check if the service with given name can be found, port and
+		// protocol can be retrieved then also
+		if((params->port_dst[0] = validate_service_name(service_lowercase)))
+		{
+			params->service_dst	= service_lowercase;
+			
+			if(!params->protocol)
+				params->protocol = get_protocol_for_service(params->service_dst);
+		}
+	}
+	
+	// Service source defined
+	if(service_src && *service_src && g_utf8_validate(service_src,-1,NULL))
+	{
+		service_lowercase = g_utf8_strdown(service_src,-1);
+		
+		// Check if the service with given name can be found, port and
+		// protocol can be retrieved then also
+		if((params->port_src[0] = validate_service_name(service_lowercase)))
+		{
+			params->service_src	= service_lowercase;
+			
+			if(!params->protocol)
+				params->protocol = get_protocol_for_service(params->service_src);
 		}
 	}
 	
@@ -1324,10 +1653,10 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 		if(tokens)
 		{
 			for(index = 0; index < 2 && tokens[index] ; index++)
-				port[index] = (guint16)g_ascii_strtoull(tokens[index],NULL,10);
+				port_dst[index] = (guint16)g_ascii_strtoull(tokens[index],NULL,10);
 		
 			// No second port was found, treat as ARGS_PORT/ARGS_IP_PORT
-			if(!port[1])
+			if(!port_dst[1])
 			{
 				if(params->args == ARGS_IP_PORT_RANGE)
 					params->args = ARGS_IP_PORT;
@@ -1342,12 +1671,20 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	// Check both ports
 	for(index = 0; index < 2 ; index++)
 	{
-		if(port[index] && validate_port(port[index]))
+		if(port_dst[index] && validate_port(port_dst[index]))
 		{
-			params->port[index] = port[index];
+			params->port_dst[index] = port_dst[index];
 
 			if(!params->protocol)
-				params->protocol = get_protocol_for_port(params->port[index]);
+				params->protocol = get_protocol_for_port(params->port_dst[index]);
+		}
+		
+		if(port_src[index] && validate_port(port_src[index]))
+		{
+			params->port_src[index] = port_src[index];
+
+			if(!params->protocol)
+				params->protocol = get_protocol_for_port(params->port_src[index]);
 		}
 	}
 	
@@ -1357,7 +1694,8 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	
 	// For now always default to "filter" table (SAILFISH_IPTABLES_TABLE_NAME)
 	if(table && *table && g_utf8_validate(table,-1,NULL))
-		params->table = g_strdup(SAILFISH_IPTABLES_TABLE_NAME);//g_utf8_strdown(table,-1);
+		params->table = g_strdup(SAILFISH_IPTABLES_TABLE_NAME);
+		//params->table = g_utf8_strdown(table,-1);
 	else
 		params->table = g_strdup(SAILFISH_IPTABLES_TABLE_NAME);
 	
@@ -1371,10 +1709,10 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 			switch(params->args)
 			{
 				case ARGS_POLICY_IN:
-					params->chain_name = g_strdup(IPTABLES_CHAIN_INPUT);
+					params->chain = g_strdup(IPTABLES_CHAIN_INPUT);
 					break;
 				case ARGS_POLICY_OUT:
-					params->chain_name = g_strdup(IPTABLES_CHAIN_OUTPUT);
+					params->chain = g_strdup(IPTABLES_CHAIN_OUTPUT);
 					break;
 				default:
 					break;
@@ -1382,10 +1720,23 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 		}
 	}
 	
+	if(policy_int)
+		params->policy = validate_policy_int(policy_int);
+	
+	// Chain from a iptables rule
 	if(chain_name && *chain_name && g_utf8_validate(chain_name,-1, NULL))
-		params->chain_name = g_strdup_printf("%s%s", 
-			SAILFISH_IPTABLES_CHAIN_PREFIX, chain_name);
-		
+		params->chain = validate_chain(params->table, chain_name);
+	
+	// User specified chain change
+	if(custom_chain_name && *custom_chain_name && 
+		g_utf8_validate(custom_chain_name,-1, NULL))
+		params->chain = g_strdup_printf("%s%s", 
+			SAILFISH_IPTABLES_CHAIN_PREFIX, custom_chain_name);
+			
+	// Target, validate_target() 
+	if(target && *target && g_utf8_validate(target, -1, NULL))
+		params->target = validate_target(params->table, target);
+	
 	return params;
 }
 

@@ -1,0 +1,798 @@
+#!/bin/bash
+
+SOURCES="../common/test_send ../common/test_output ../common/test_log ../common/test_service ../common/test_check"
+
+IPTABLES_SAVE_FILE="/tmp/sailfish_iptables.filter.$RANDOM"
+
+REQUIRED_COMMANDS_BASE="dbus-send grep id"
+REQUIRED_COMMANDS_PRIV="$REQUIRED_COMMANDS_BASE"
+REQUIRED_COMMANDS_ROOT="$REQUIRED_COMMANDS_BASE iptables iptables-save iptables-restore"
+
+REQUIRED_USERS="root nemo"
+REQUIRED_GROUPS="users privileged"
+PRIVILEGED=0
+
+CUSTOM_CHAIN="CUSTOM1"
+
+TEST_CHAINS="INPUT OUTPUT $CUSTOM_CHAIN"
+
+TEST_TARGETS="ACCEPT DROP REJECT $CUSTOM_CHAIN"
+
+# string:filter string:chain string:target
+IP_INPUTS[0]='string:192.168.10.1 string:'
+IP_INPUTS[1]='string: string:192.168.10.2'
+IP_INPUTS[2]='string:192.168.10.1 string:192.168.10.2'
+IP_INPUTS[3]='' # Empty as last
+
+IP_VERIFY[0]='192.168.10.1'
+IP_VERIFY[1]='192.168.10.2'
+IP_VERIFY[2]='192.168.10.1.*192.168.10.2'
+IP_VERIFY[3]=''
+
+IP_INPUTS_VERIFY[0]="all ${IP_VERIFY[0]}"
+IP_INPUTS_VERIFY[1]="all ${IP_VERIFY[1]}"
+IP_INPUTS_VERIFY[2]="all ${IP_VERIFY[2]}"
+IP_INPUTS_VERIFY[3]=''
+
+PORT_VERIFY_PRE[0]='udp'
+PORT_VERIFY_PRE[1]='tcp'
+PORT_VERIFY_PRE[2]='tcp'
+PORT_VERIFY_PRE[3]=''
+
+PORT_INPUTS[0]='uint16:23 uint16:0 uint32:17'
+PORT_INPUTS[1]='uint16:0 uint16:873 uint32:6'
+PORT_INPUTS[2]='uint16:80 uint16:443 uint32:6'
+PORT_INPUTS[3]=''
+
+PORT_INPUTS_VERIFY[0]='dpt:23'
+PORT_INPUTS_VERIFY[1]='spt:873'
+PORT_INPUTS_VERIFY[2]='spt:443 dpt:80'
+PORT_INPUTS_VERIFY[3]=''
+
+PORT_RANGE_INPUTS[0]='uint16:23 uint16:24 uint16:0 uint16:0 uint32:17'
+PORT_RANGE_INPUTS[1]='uint16:0 uint16:0 uint16:1000 uint16:2000 uint32:6'
+PORT_RANGE_INPUTS[2]='uint16:23 uint16:24 uint16:1000 uint16:2000 uint32:6'
+PORT_RANGE_INPUTS[3]=''
+
+SERVICE_INPUTS[0]='string:telnet string: uint32:17'
+SERVICE_INPUTS[1]='string: string:rsync uint32:6'
+SERVICE_INPUTS[2]='string:http string:https uint32:6'
+SERVICE_INPUTS[3]=''
+
+PORT_RANGE_INPUTS_VERIFY[0]='dpts:23:24'
+PORT_RANGE_INPUTS_VERIFY[1]='spts:1000:2000'
+PORT_RANGE_INPUTS_VERIFY[2]='spts:1000:2000 dpts:23:24'
+PORT_RANGE_INPUTS_VERIFY[3]=''
+
+METHOD_INPUTS_RESULT="0"
+CLEAR_RESULT="0"
+POLICY_RESULT="0"
+CHAIN_RESULT="0"
+
+RESULT_ACCESS_DENIED='100'
+
+REGISTER_TEST_RESULT[0]='11'
+REGISTER_TEST_RESULT[1]='0'
+REGISTER_TEST_RESULT[2]='11'
+
+function include_sources()
+{
+	SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+	for SRC in $SOURCES ; do
+		if [ -f "$SCRIPTDIR/$SRC" ] ; then
+			source "$SCRIPTDIR/$SRC"
+		else
+			echo "Source file \"$SCRIPTDIR/$SRC\" not available. Quitting."
+			exit 1
+		fi
+	done
+}
+
+function run_method_test_rule()
+{	
+	# 1:Method 2:ADD/REMOVE 3:result 4:...rule: table, chain, target, rest of rule 
+	RESULT=$(send_message "$1" "$2" "$METHOD_INPUTS_RESULT" "string:filter" "string:$3" "string:$4" ${@:5})
+	
+	if [[ "$RESULT" != "0" ]] ; then
+		log "$RESULT"
+		echo 1
+	else
+		echo 0
+	fi
+}
+
+#$1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
+function run_method_test_check_change()
+{
+	if [ "$(id -u)" == "0" ] ; then
+	
+		if [ "$1" == "$CUSTOM_CHAIN" ] ; then
+			CHAIN="sfos_$1"
+		else
+			CHAIN="$1"
+		fi
+			
+		RESULT=$(check_change "$CHAIN" "$2" ${@:3})
+
+		if [[ "$RESULT" != "0" ]] ; then
+			log "$RESULT"
+			echo 1
+		else
+			echo 0
+		fi
+	else
+		# Do nothing, report success
+		echo 0
+	fi
+}
+
+# $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
+function run_method_test_check_removed()
+{
+	if [ "$(id -u)" == "0" ] ; then
+		
+		if [ "$1" == "$CUSTOM_CHAIN" ] ; then
+			CHAIN="sfos_$1"
+		else
+			CHAIN="$1"
+		fi
+		
+		RESULT=$(check_removed "$CHAIN" "$2" ${@:3})
+
+		if [[ "$RESULT" != "0" ]] ; then
+			log "$RESULT"
+			echo 1
+		else
+			echo 0
+		fi
+	else
+		# Do nothing, report success
+		echo 0
+	fi
+}
+
+function test_rule_ip()
+{
+	INDEX=0
+	METHOD="RuleIp"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX]} ]] ; do
+			
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="${IP_INPUTS[$INDEX]}"
+					VERIFY="${IP_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
+			
+					test_begin
+					
+					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+					
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+					
+					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+					
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+					test_end "$FAILED"
+				fi
+				
+				INDEX=$((INDEX+1))
+			done
+			INDEX=0
+		done
+	done
+}
+
+function test_rule_ip_port()
+{
+	INDEX=0
+	INDEX_IP=0
+	METHOD="RuleIpWithPort"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${PORT_INPUTS[$INDEX]} ]] ; do
+			
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						RULE="${IP_INPUTS[$INDEX_IP]} ${PORT_INPUTS[$INDEX]}"
+						VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${IP_VERIFY[$INDEX_IP]} ${PORT_INPUTS_VERIFY[$INDEX]}"
+						FAILED=0
+			
+						test_begin
+					
+						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+						test_end "$FAILED"
+					fi
+					INDEX=$((INDEX+1))
+					
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+}
+
+function test_rule_ip_port_range()
+{
+	INDEX=0
+	INDEX_IP=0
+	METHOD="RuleIpWithPortRange"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${PORT_RANGE_INPUTS[$INDEX]} ]] ; do
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						RULE="${IP_INPUTS[$INDEX_IP]} ${PORT_RANGE_INPUTS[$INDEX]}"
+						VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${IP_VERIFY[$INDEX_IP]} ${PORT_RANGE_INPUTS_VERIFY[$INDEX]}"
+						FAILED=0
+			
+						test_begin
+					
+						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+						test_end "$FAILED"
+					fi
+					INDEX=$((INDEX+1))
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+}
+
+function test_rule_ip_service()
+{
+	INDEX=0
+	INDEX_IP=0
+	METHOD="RuleIpWithService"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${SERVICE_INPUTS[$INDEX]} ]] ; do
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						RULE="${IP_INPUTS[$INDEX_IP]} ${SERVICE_INPUTS[$INDEX]}"
+						VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${IP_VERIFY[$INDEX_IP]} ${PORT_INPUTS_VERIFY[$INDEX]}"
+						FAILED=0
+			
+						test_begin
+					
+						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+						test_end "$FAILED"
+					fi
+					INDEX=$((INDEX+1))
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+}
+
+function test_rule_port()
+{
+	INDEX=0
+	METHOD="RulePort"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${PORT_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="${PORT_INPUTS[$INDEX]}"
+					VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${PORT_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
+	
+					test_begin
+					
+					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+				
+					test_end "$FAILED"
+				fi
+			
+				INDEX=$((INDEX+1))
+			done
+			INDEX=0
+		done
+	done
+}
+
+function test_rule_port_range()
+{
+	INDEX=0
+	METHOD="RulePortRange"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${PORT_RANGE_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="${PORT_RANGE_INPUTS[$INDEX]}"
+					VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${PORT_RANGE_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
+		
+					test_begin
+					
+					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+				
+					test_end "$FAILED"
+				fi
+			
+				INDEX=$((INDEX+1))
+			done
+			INDEX=0
+		done
+	done
+}
+
+function test_rule_service()
+{
+	INDEX=0
+	METHOD="RuleService"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${SERVICE_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="${SERVICE_INPUTS[$INDEX]}"
+					VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${PORT_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
+		
+					test_begin
+					
+					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+				
+					test_end "$FAILED"
+				fi
+			
+				INDEX=$((INDEX+1))
+			done
+			INDEX=0
+		done
+	done
+}
+
+function test_rule_pre()
+{
+	test_begin
+	FAILED=0
+		
+	STATUS=$(send_message "ManageChain" "ADD" $CHAIN_RESULT "string:filter" "string:$CUSTOM_CHAIN")
+	
+	if [[ "$STATUS" != "0" ]] ; then
+		log "$STATUS"
+		FAILED=1
+	fi
+	
+	test_progress
+	
+	if [ "$(id -u)" == "0" ] ; then
+		STATUS=$(check_chain_added "$CUSTOM_CHAIN")
+	
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=1
+		fi
+	fi
+	
+	test_end $FAILED
+}
+
+function test_rule_post()
+{
+	test_begin
+	FAILED=0
+		
+	STATUS=$(send_message "ManageChain" "REMOVE" $CHAIN_RESULT "string:filter" "string:$CUSTOM_CHAIN")
+	
+	if [[ "$STATUS" != "0" ]] ; then
+		log "$STATUS"
+		FAILED=1
+	fi
+	
+	test_progress
+	
+	if [ "$(id -u)" == "0" ] ; then
+		STATUS=$(check_chain_removed "$CUSTOM_CHAIN")
+	
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=1
+		fi
+	fi
+	
+	test_end $FAILED
+}
+
+function run_rule_tests()
+{
+	test_rule_pre
+	test_rule_ip
+	test_rule_ip_port
+	test_rule_ip_port_range
+	test_rule_ip_service
+	test_rule_port
+	test_rule_port_range
+	test_rule_service
+	test_rule_post
+}
+#run_policy_test "ChangeInputPolicy" "INPUT" "DROP" 
+function run_policy_tests()
+{
+	METHOD="ChangePolicy"
+	CHAINS="INPUT OUTPUT FORWARD"
+	POLICIES="DROP ACCEPT"
+	
+	for CHAIN in $CHAINS ; do
+		for POLICY in $POLICIES ; do
+		
+			FAILED=0
+			test_begin
+	
+			PROCESSED=$(send_message "$METHOD" "$POLICY" "$POLICY_RESULT" "string:filter" "string:$CHAIN")
+	
+			test_progress
+	
+			if [[ "$PROCESSED" != "0" ]] ; then
+				log "$PROCESSED"
+				FAILED=1
+			fi
+	
+			test_progress
+	
+			# Checking of policy change only possible for root, hence iptables command
+			if [ "$(id -u)" == "0" ] ; then
+				CHANGE=$(check_policy_change "$CHAIN" "$POLICY")
+	
+				if [[ "$CHANGE" != "0" ]] ; then
+					log "$CHANGE"
+					FAILED=1
+				fi
+			fi
+	
+			test_progress
+	
+			test_end $FAILED
+		done
+	done
+}
+
+function run_clear_test()
+{
+	FAILED=0
+	
+	test_begin
+	
+	CLEARED=$(send_message "ClearIptablesTable" "filter" "$CLEAR_RESULT")
+	
+	test_progress
+	
+	if [[ "$CLEARED" != "0" ]] ; then
+		log "$CLEARED"
+		FAILED=1
+	fi
+	
+	test_end $FAILED
+}
+
+function run_register_tests()
+{
+	# 1. unregister, 11 for all
+	# 2. register, 0 for root, privileged, 12 for nemo
+	# 3. unregister, 11 for all since dbus-send quits after send
+	
+	MESSAGES="Unregister Register Unregister"
+	INDEX=0
+	
+	for MSG in $MESSAGES ; do
+		FAILED=0
+		test_begin
+	
+		STATUS=$(send_message "$MSG" "" "${REGISTER_TEST_RESULT[$INDEX]}")
+		
+		test_progress
+	
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=1
+		fi
+		
+		test_end $FAILED
+		
+		INDEX=$((INDEX+1))
+	done
+}
+
+function run_chain_management_tests()
+{
+	CHAINS_PASS="TESTCHAIN1 TESTCHAIN2"
+	
+	for CHAIN in $CHAINS_PASS ; do
+	
+		FAILED=0
+	
+		test_begin
+		
+		STATUS=$(send_message "ManageChain" "ADD" $CHAIN_RESULT "string:filter" "string:$CHAIN")
+		
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=1
+		fi
+		
+		test_progress
+		
+		if [ "$(id -u)" == "0" ] ; then
+			STATUS=$(check_chain_added "$CHAIN")
+		
+			if [[ "$STATUS" != "0" ]] ; then
+				log "$STATUS"
+				FAILED=1
+			fi
+		fi
+		
+		test_progress
+		
+		STATUS=$(send_message "ManageChain" "REMOVE" $CHAIN_RESULT "string:filter" "string:$CHAIN")
+		
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=1
+		fi
+		
+		test_progress
+		
+		if [ "$(id -u)" == "0" ] ; then
+			STATUS=$(check_chain_removed "$CHAIN")
+		
+			if [[ "$STATUS" != "0" ]] ; then
+				log "$STATUS"
+				FAILED=1
+			fi
+		fi
+		
+		test_progress
+		
+		test_end $FAILED
+	done
+}
+
+function run_tests()
+{
+	USER=$(whoami)
+	case $USER in
+		"nemo" | "sailfish_mdm")
+			run_clear_test
+			;;
+	esac
+	
+	run_rule_tests
+	
+	run_policy_tests
+	
+	run_register_tests
+	
+	run_chain_management_tests
+}
+
+function run_command_checks()
+{
+	if [ "$(id -u)" == "0" ] ; then
+		for command in $REQUIRED_COMMANDS_ROOT ; do
+			if [[ ! $(which "$command" 2>/dev/null) ]] ; then
+				echo "Command \"$command\" is not found. Tests cannot be run."
+				exit 1
+			fi
+		done
+	else # For now user and privileged has same cmd requirements
+		for command in $REQUIRED_COMMANDS_PRIV ; do
+			if [[ ! $(which "$command" 2>/dev/null) ]] ; then
+				echo "Command \"$command\" is not found. Tests cannot be run."
+				exit 1
+			fi
+		done
+	fi
+}
+
+function run_pre_test_operations()
+{
+	if [ "$(id -u)" == "0" ] ; then
+		echo "Saving current iptables filter table to $IPTABLES_SAVE_FILE"
+		iptables-save --table=filter > $IPTABLES_SAVE_FILE
+	
+		CLEARED=$(send_message "ClearIptablesTable" "filter" "$CLEAR_RESULT")
+	
+		if [[ "$CLEARED" != "0" ]] ; then
+			echo "Cannot clear iptables filter table. Test may report invalid results."
+		fi
+		
+		CLEARED=$(send_message "ClearIptablesChains" "filter" "$CLEAR_RESULT")
+	
+		if [[ "$CLEARED" != "0" ]] ; then
+			echo "Cannot clear chains from iptables filter table. Test may report invalid results."
+		fi
+	fi
+}
+
+function run_post_test_operations() 
+{
+	if [ "$(id -u)" == "0" ] ; then
+		CLEARED=$(send_message "ClearIptablesTable" "filter" "$CLEAR_RESULT")
+	
+		if [[ "$CLEARED" != "0" ]] ; then
+			echo "Cannot clear iptables filter table."
+		fi
+		echo "Restoring iptables filter table from $IPTABLES_SAVE_FILE"
+		iptables-restore --table=filter < "$IPTABLES_SAVE_FILE"
+		rm -v "$IPTABLES_SAVE_FILE"
+	fi
+}
+
+function run_user_checks()
+{
+	for USER in $REQUIRED_USERS ; do
+		if [[ ! $(id -u "$USER" 2>/dev/null) ]] ; then
+			echo "User \"$USER\" does not exist in the system, test cannot be run."
+			exit 1
+		fi
+	done
+	
+	for GROUP in $REQUIRED_GROUPS ; do
+		if ! grep /etc/group -q -e "$GROUP" ; then 
+			echo "Group \"$GROUP\" does not exist in the system, test cannot be run."
+			exit 1
+		fi
+	done
+	
+	if [[ $(groups|grep privileged) ]] ; then
+		PRIVILEGED=1
+	fi
+}
+
+function set_expected_result()
+{
+	USER=$(whoami)
+	case $USER in
+		"root")
+			;;
+		"nemo" | "sailfish-mdm")
+			CLEAR_RESULT=$RESULT_ACCESS_DENIED
+			if [[ $PRIVILEGED -eq 0 ]] ; then
+				METHOD_INPUTS_RESULT=$RESULT_ACCESS_DENIED
+				POLICY_RESULT=$RESULT_ACCESS_DENIED
+				REGISTER_TEST_RESULT[0]='11'
+				REGISTER_TEST_RESULT[1]=$RESULT_ACCESS_DENIED
+				REGISTER_TEST_RESULT[2]='11'
+				CHAIN_RESULT=$RESULT_ACCESS_DENIED
+			fi
+			;;
+		*)
+			echo "User $USER not recognized, default settings are used."
+			;;
+	esac
+}
+
+function main()
+{
+	include_sources
+	
+	prepare_log "ete-test"
+
+	run_user_checks # for all users
+	run_command_checks # for each user
+	
+	if [[ $PRIVILEGED -eq 1 ]] ; then
+		echo "Running tests with privileged group permissions"
+	else
+		echo "Running tests as $(whoami)"
+	fi
+	
+	run_pre_test_operations # only with root
+	
+	sleep 2
+	
+	set_expected_result
+
+	run_tests # for each user
+	
+	run_post_test_operations #only with root
+	
+	test_finalize "$TEST_LOG_FILE"
+}
+
+main

@@ -6,11 +6,13 @@ Connman plugin that provides D-Bus API for controlling iptables rules.
 
 The detailed API description is provided as D-Bus introspect XML file (in
 spec/sailfish_iptables_dbus_interface_description.xml) from which a docbook XML
-is generated for the docs-package (run make -C doc). A html page can be
-generated from the introspect XML with the script at doc/docbook_html. The
-script requires xsltproc, docbook, docbook-xsl, docbook-xsl-ns, and docbook5-xml
-in order to generate the file from docbook XML.
+is generated for the docs-package (run make -C doc). 
 
+File contains descriptions for all the methods and parameters for each method.
+
+### Generating documentation HTML
+
+A html page can be generated from the introspect XML with the script at doc/docbook_html. The script requires xsltproc, docbook, docbook-xsl, docbook-xsl-ns, and docbook5-xml in order to generate the file from docbook XML.
 
 ## Loading the plugin
 
@@ -37,9 +39,7 @@ This plugin allows to:
  - Add a rule to iptables filter table
  - Remove a rule from iptables filter table
  - Change policy of a filter table chain INPUT and OUTPUT
- - Add a chain to filter table
- - Save iptables to disk at shutdown using connman's sailfish iptables extension
- - Load iptables from disk at startup using connman's sailfish iptables extension
+ - Add a custom chain to filter table
  - Clear iptables rules
  - Clear iptables custom chains
  - Get iptables filter table content
@@ -47,17 +47,24 @@ This plugin allows to:
  - Register (and unregister) to listen for API change signals
  
 
-Rules can be added to INPUT or OUTPUT chains of iptables filter table. Each rule
-can be added as ACCEPT or DENY.
+Rules can be added to any chains found iptables filter table. Each rule
+can be added with any iptables target: ACCEPT, DENY, REJECT, QUEUE, LOG and
+custom chains can be used as targets too. Custom chains must be used with the
+name they are added, e.g., adding chain CUSTOM1 is added as sfos_CUSTOM1 and it
+has to be used without the prefix "sfos_" as CUSTOM1.
 
 Following parameters are supported:
- - Ip address or network
+ - Ip address or network 
  - Ip address or network with port
  - Ip address or network with port range
  - Ip address or network with service name
- - Port with any address (0.0.0.0)
- - Port range with any address (0.0.0.0)
- - Service name with any address (0.0.0.0)
+ - Port with any address 0.0.0.0
+ - Port range with any address 0.0.0.0
+ - Service name with any address 0.0.0.0
+ 
+Both source and destination parameters are supported for all. Either or both
+parameters (source or destination) must be set. They are added to iptables
+accordingly.
  
 For more information refer to xml documentation of the D-Bus interface of this
 plugin (sailfish_iptables_dbus_interface_description.xml).
@@ -152,6 +159,7 @@ The following examples use command "dbus-send".
 ```
 dbus-send --system \
 --type=method_call \
+--print-reply \
 --dest="net.connman" \
 /org/sailfishos/connman/mdm/iptables \
 org.sailfishos.connman.mdm.iptables.ChangeInputPolicy \
@@ -163,10 +171,12 @@ string:"drop"
 ```
 dbus-send --system \
 --type=method_call \
+--print-reply \
 --dest="net.connman" \
 /org/sailfishos/connman/mdm/iptables \
-org.sailfishos.connman.mdm.iptables.AllowIncomingIp \
-string:"192.168.0.1" string:"add"
+org.sailfishos.connman.mdm.iptables.RuleIp \
+string:filter string:INPUT string:ACCEPT \
+string:192.168.0.1 string: uint16:0
 ```
 
 ### Deny outgoing connections to tcp ports 8000 to 9000
@@ -174,10 +184,27 @@ string:"192.168.0.1" string:"add"
 ```
 dbus-send --system \
 --type=method_call \
+--print-reply \
 --dest="net.connman" \
 /org/sailfishos/connman/mdm/iptables \
-org.sailfishos.connman.mdm.iptables.DenyOutgoingPortRange \
-string:"8000:9000" string:"tcp" string:"add"
+org.sailfishos.connman.mdm.iptables.RulePortRange \
+string:filter string:OUTPUT string:DROP \
+uint16:8000 uint16:9000 uint16:0 uint16:0 \
+uint32:6 uint16:0
+```
+
+### Deny incoming connections from udp ports 8000 to 9000
+
+```
+dbus-send --system \
+--type=method_call \
+--print-reply \
+--dest="net.connman" \
+/org/sailfishos/connman/mdm/iptables \
+org.sailfishos.connman.mdm.iptables.RulePortRange \
+string:filter string:INPUT string:DROP \
+uint16:0 uint16:0 uint16:8000 uint16:9000 \
+uint32:17 uint16:0
 ```
 
 ### Remove rule to drop connections from ssh service running on 192.168.0.2
@@ -185,10 +212,24 @@ string:"8000:9000" string:"tcp" string:"add"
 ```
 dbus-send --system \
 --type=method_call \
+--print-reply \
 --dest="net.connman" \
 /org/sailfishos/connman/mdm/iptables \
-org.sailfishos.connman.mdm.iptables.DenyIncomingIpWithService \
-string:"192.168.0.2" string:"ssh" string:"" string:"remove"
+org.sailfishos.connman.mdm.iptables.RuleIpWithService \
+string:filter string:INPUT string:DROP \
+string:"192.168.0.2" string:"ssh" string:"" uint16:1
+```
+
+### Add a custom chain to filter table
+
+```
+dbus-send --system \
+--type=method_call \
+--print-reply \
+--dest="net.connman" \
+/org/sailfishos/connman/mdm/iptables \
+org.sailfishos.connman.mdm.iptables.ManageChain \
+string:filter string:CUSTOM1 uint16:0
 ```
 
 ### Result codes to method calls

@@ -117,6 +117,31 @@ DBusMessage* sailfish_iptables_change_input_policy(
 DBusMessage* sailfish_iptables_change_output_policy(
 			DBusConnection *connection,	DBusMessage *message, void *user_data);
 
+DBusMessage* sailfish_iptables_change_policy(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+// New api functions
+DBusMessage* sailfish_iptables_rule_ip(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+DBusMessage* sailfish_iptables_rule_ip_port(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+DBusMessage* sailfish_iptables_rule_ip_port_range(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+DBusMessage* sailfish_iptables_rule_port(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+DBusMessage* sailfish_iptables_rule_port_range(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+DBusMessage* sailfish_iptables_rule_ip_service(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+DBusMessage* sailfish_iptables_rule_service(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
 // ALLOW INCOMING
 DBusMessage* sailfish_iptables_allow_incoming_ip(
 			DBusConnection *connection,	DBusMessage *message, void *user_data);

@@ -48,7 +48,7 @@
 
 #include "sailfish-iptables-utils.h"
 
-#define ERRCODE_MAX 13
+#define ERRCODE_MAX 15
 
 const gchar const * RESULT_STR[] = {
 	"Ok",
@@ -64,6 +64,8 @@ const gchar const * RESULT_STR[] = {
 	"Unauthorized, please try again",
 	"Unregister failed",
 	"Invalid chain name given. Chain name is reserved (add) or does not exist (remove).",
+	"Invalid table name given.",
+	"Invalid target name given.",
 	"Access denied",
 	NULL
 };
@@ -217,15 +219,21 @@ gchar *port_to_str(rule_params *params)
 		switch(params->args)
 		{
 			case ARGS_IP_PORT_RANGE:
+			case ARGS_IP_PORT_RANGE_FULL:
 			case ARGS_PORT_RANGE:
+			case ARGS_PORT_RANGE_FULL:			
 				port_str = g_strdup_printf("%u:%u",
-					params->port[0],params->port[1]);
+					params->port_dst[0],params->port_dst[1]);
 				break;
 			case ARGS_IP_PORT:
 			case ARGS_IP_SERVICE:
 			case ARGS_PORT:
 			case ARGS_SERVICE:
-				port_str = g_strdup_printf("%u",params->port[0]);
+			case ARGS_IP_PORT_FULL:
+			case ARGS_IP_SERVICE_FULL:
+			case ARGS_PORT_FULL:
+			case ARGS_SERVICE_FULL:
+				port_str = g_strdup_printf("%u",params->port_dst[0]);
 				break;
 			default:
 				break;
