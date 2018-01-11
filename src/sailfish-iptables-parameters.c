@@ -485,8 +485,8 @@ api_result check_parameters(rule_params* params)
 			return OK;
 		case ARGS_SERVICE:
 			if(!params->service) return INVALID_SERVICE;
-			if(!params->protocol) return INVALID_PROTOCOL;
-			if(!check_operation(params)) return INVALID_REQUEST;;
+			if(!params->protocol) return INVALID_SERVICE;
+			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_CLEAR:
 		case ARGS_CLEAR_CHAINS:

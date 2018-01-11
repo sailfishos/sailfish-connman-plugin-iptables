@@ -628,7 +628,7 @@ static void test_iptables_plugin_parameters_service()
 	g_assert(check_parameters(params) == INVALID_SERVICE);
 	
 	params->service = g_strdup("http");
-	g_assert(check_parameters(params) == INVALID_PROTOCOL);
+	g_assert(check_parameters(params) == INVALID_SERVICE);
 	
 	params->protocol = g_strdup("tcp");
 	g_assert(check_parameters(params) == INVALID_REQUEST);

@@ -135,7 +135,7 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 	const gchar* ipt_operation = NULL;
 	gchar ip_direction = 's';
 	
-	if(!params || ((rval = check_parameters(params)) != OK))
+	if((rval = check_parameters(params)) != OK)
 		return rval;
 
 	if(op & OPERATION_OUT) // TODO get this from params
@@ -154,67 +154,39 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 	rule = g_string_new("");
 	
 	// Generate rule
-	if(params->args == ARGS_IP)
-	{	
-		if(params->ip)
+	
+	switch(params->args)
+	{
+		case ARGS_IP:
 			g_string_append_printf(rule,"-%c%s%s",
 				ip_direction, params->ip_negate ? " ! " : " ", params->ip);
-		else
-			rval = INVALID_IP;
-	}
-	else if(params->args == ARGS_IP_PORT)
-	{
-		if(params->protocol)
+			break;
+		case ARGS_IP_PORT:
+		case ARGS_IP_SERVICE:
 			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %u",
 				ip_direction, params->ip_negate ? " ! " : " ",
-				params->ip, params->protocol, params->protocol, params->port[0]);
-		else
-			rval = INVALID_PROTOCOL;
-	}
-	else if(params->args == ARGS_IP_PORT_RANGE)
-	{
-		if(params->protocol)
+				params->ip, params->protocol, params->protocol,
+				params->port[0]);
+			break;
+		case ARGS_IP_PORT_RANGE:
 			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %u:%u",
 				ip_direction, params->ip_negate ? " ! " : " ",
 				params->ip, params->protocol, params->protocol,
 				params->port[0], params->port[1]);
-		else
-			rval = INVALID_PROTOCOL;
-	}
-	else if(params->args == ARGS_IP_SERVICE)
-	{
-		if(params->protocol)
-			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %d",
-				ip_direction, params->ip_negate ? " ! " : " ",
-				params->ip, params->protocol, params->protocol,
-				params->port[0]);
-		else
-			rval = INVALID_SERVICE;
-	}
-	else if(params->args == ARGS_PORT)
-	{
-		if(params->protocol)
+			break;
+		case ARGS_PORT:
+		case ARGS_SERVICE:
 			g_string_append_printf(rule,"-p %s -m %s --dport %u", 
 				params->protocol, params->protocol, params->port[0]);
-		else
-			rval = INVALID_PROTOCOL;
-	}
-	else if(params->args == ARGS_PORT_RANGE)
-	{
-		if(params->protocol)
+			break;
+		case ARGS_PORT_RANGE:
 			g_string_append_printf(rule,"-p %s -m %s --dport %u:%u",
 				params->protocol, params->protocol, 
 				params->port[0], params->port[1]);
-		else
-			rval = INVALID_PROTOCOL;
-	}
-	else if(params->args == ARGS_SERVICE)
-	{
-		if(params->protocol)
-			g_string_append_printf(rule,"-p %s -m %s --dport %d",
-				params->protocol, params->protocol, params->port[0]);
-		else
-			rval = INVALID_SERVICE;
+			break;
+		default:
+			rval = INVALID_REQUEST;
+			break;
 	}
 	
 	// Add target to rule
