@@ -51,13 +51,15 @@ extern "C" {
 
 #define PLUGIN_NAME "Sailfish iptables API"
 
-#define SAILFISH_IPTABLES_INTERFACE_VERSION		2
+#define SAILFISH_IPTABLES_INTERFACE_VERSION		3
 #define SAILFISH_IPTABLES_TABLE_NAME			"filter"
 #define SAILFISH_IPTABLES_CHAIN_PREFIX			"sfos_"
 #define IPTABLES_CHAIN_INPUT				"INPUT"
 #define IPTABLES_CHAIN_OUTPUT				"OUTPUT"
 #define IPTABLES_ACCEPT					"ACCEPT"
+#define IPTABLES_ACCEPT_INT				1
 #define IPTABLES_DROP					"DROP"
+#define IPTABLES_DROP_INT				2
 #define IPTABLES_RULE_ACCEPT				" -j "IPTABLES_ACCEPT
 #define IPTABLES_RULE_DROP				" -j "IPTABLES_DROP
 
@@ -65,6 +67,7 @@ extern "C" {
 #define OPERATION_OUT 					0x0002
 #define OPERATION_ACCEPT 				0x0004
 #define OPERATION_DENY 					0x0008
+#define OPERATION_PARAMS				0x0016
 
 #define IP_MASK_DELIM					"/"
 #define PORT_RANGE_DELIM				":"
@@ -121,7 +124,9 @@ typedef enum sailfish_iptables_result {
 	UNAUTHORIZED, // 10
 	REMOVE_FAILED, // 11
 	INVALID_CHAIN_NAME, // 12
-	ACCESS_DENIED = 100 // 13
+	INVALID_TABLE, // 13
+	INVALID_TARGET, // 14
+	ACCESS_DENIED = 100 
 } api_result;
 
 typedef enum sailfish_iptables_rule_operation {
@@ -139,24 +144,37 @@ typedef enum sailfish_iptables_dbus_rule_args {
 	ARGS_PORT,
 	ARGS_PORT_RANGE,
 	ARGS_SERVICE,
+	ARGS_IP_FULL,
+	ARGS_IP_PORT_FULL,
+	ARGS_IP_PORT_RANGE_FULL,
+	ARGS_IP_SERVICE_FULL,
+	ARGS_PORT_FULL,
+	ARGS_PORT_RANGE_FULL,
+	ARGS_SERVICE_FULL, 
 	ARGS_CLEAR,
 	ARGS_CLEAR_CHAINS,
 	ARGS_POLICY_IN,
 	ARGS_POLICY_OUT,
+	ARGS_POLICY,
 	ARGS_GET_CONTENT,
 	ARGS_CHAIN
 } rule_args;
  
 typedef struct sailfish_iptables_rule_params {
-	gchar *ip;
-	gboolean ip_negate;
-	gchar *service;
-	guint16 port[2];
+	gchar *table;
+	gchar *chain;
+	gchar *target;
+	gchar *policy;
+	gchar *ip_src;
+	gchar *ip_dst;
+	gboolean ip_negate_src;
+	gboolean ip_negate_dst;
+	gchar *service_src;
+	gchar *service_dst;
+	guint16 port_src[2];
+	guint16 port_dst[2];
 	gchar *protocol;
 	rule_operation operation;
-	gchar *table;
-	gchar *policy;
-	gchar *chain_name;
 	connman_iptables_content *iptables_content;
 	rule_args args;
 } rule_params;
@@ -180,6 +198,8 @@ api_result allow_incoming(rule_params* params, api_data *data);
 api_result allow_outgoing(rule_params* params, api_data *data);
 api_result deny_incoming(rule_params* params, api_data *data);
 api_result deny_outgoing(rule_params* params, api_data *data);
+
+api_result iptables_rule(rule_params* params, api_data *data);
 
 api_result manage_chain(rule_params* params, api_data *data);
 

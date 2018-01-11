@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 
 #include "sailfish-iptables-validate.h"
 #include "sailfish-iptables-utils.h"
@@ -202,6 +203,34 @@ gboolean validate_protocol(const gchar *protocol)
 	return false;
 }
 
+gchar* validate_protocol_int(gint protocol)
+{
+	gchar *proto_str = NULL;
+	
+	/* TODO add support for other protocols too via getprotobynumber(). */
+	switch(protocol)
+	{
+		case IPPROTO_TCP:
+			return g_strdup("tcp");
+		case IPPROTO_UDP:
+			return g_strdup("udp");
+		default:
+			return NULL;
+	}
+	
+	/*if(protocol && protocol != G_MAXUINT32)
+	{
+		struct protoent *p = getprotobynumber(protocol);
+		
+		if(p)
+			proto_str = g_utf8_strdown(p->p_name, -1);
+	}
+	else if(protocol == G_MAXUINT32)
+		proto_str = g_strdup("all");*/
+	
+	return proto_str;
+}
+
 gboolean validate_port(guint16 port)
 {
 	return port && port <= 0xFFFF;
@@ -222,6 +251,110 @@ rule_operation validate_operation(guint16 operation)
 	}
 }
 
+gchar *validate_chain(const gchar *table, const gchar *chain)
+{
+	gint i = 0;
+	gchar *custom_chain = NULL;
+	
+	if(!table || !(*table) || !chain || !(*chain))
+		return NULL;
+	
+	const gchar const * DEFAULT_CHAINS[] = {
+		"INPUT",
+		"OUTPUT",
+		"FORWARD",
+		NULL
+	};
+	
+	for(i = 0; DEFAULT_CHAINS[i]; i++)
+	{
+		if(!g_ascii_strcasecmp(chain,DEFAULT_CHAINS[i]))
+			return g_utf8_strup(chain, -1); // return a copy
+	}
+	
+	// Prefix chain
+	custom_chain = g_strdup_printf("%s%s", SAILFISH_IPTABLES_CHAIN_PREFIX, chain);
+	
+	// Find chain with prefixed target name, table can be NULL and results in
+	// -EINVAL but check_parameters() will return INVALID_TABLE in such case
+	switch(connman_iptables_find_chain(table, custom_chain))
+	{
+		case 0:
+			return custom_chain; // Return formatted chain that is prefixed
+		// TODO add DBG to these
+		case 1: 
+		case -1:
+		case -EINVAL:
+		default:
+			break;
+	}
+	
+	g_free(custom_chain);
+	
+	return NULL;
+}
+
+gchar* validate_target(const gchar *table, const gchar *target)
+{
+	gint i = 0;
+	gchar *chain = NULL;
+	
+	if(!table || !(*table) || !target || !(*target))
+		return NULL;
+	
+	// Add sailfish builtin targets here
+	const gchar const * ALLOWED_TARGETS[] = {
+		"ACCEPT",
+		"DROP",
+		"QUEUE",
+		"RETURN",
+		"REJECT",
+		NULL
+	};
+	
+	const gchar const * DENIED_TARGETS[] = {
+		"INPUT",
+		"OUTPUT",
+		"FORWARD",
+		NULL
+	};
+	
+	// One of the builtin targets
+	for(i = 0; ALLOWED_TARGETS[i]; i++)
+	{
+		if(!g_ascii_strcasecmp(target, ALLOWED_TARGETS[i]))
+			return g_utf8_strup(target, -1); // Return a copy
+	}
+	
+	// If one of the bultin chains
+	for(i = 0; DENIED_TARGETS[i]; i++)
+	{
+		if(!g_ascii_strcasecmp(target, ALLOWED_TARGETS[i]))
+			return NULL; // Return null, this is invalid target
+	}
+	
+	// Prefix chain
+	chain = g_strdup_printf("%s%s",	SAILFISH_IPTABLES_CHAIN_PREFIX, target);
+	
+	// Find chain with prefixed target name, table can be NULL and results in
+	// -EINVAL but check_parameters() will return INVALID_TABLE in such case
+	switch(connman_iptables_find_chain(table, chain))
+	{
+		case 0:
+			return chain; // Return formatted chain that is prefixed
+		// TODO add DBG to these
+		case 1: 
+		case -1:
+		case -EINVAL:
+		default:
+			break;
+	}
+	
+	g_free(chain);
+	
+	return NULL;
+}
+
 gboolean validate_policy(const gchar* policy)
 {
 	if(policy && *policy)
@@ -231,6 +364,19 @@ gboolean validate_policy(const gchar* policy)
 			return true;
 	}
 	return false;
+}
+
+gchar* validate_policy_int(guint16 policy_int)
+{
+	switch(policy_int)
+	{
+		case IPTABLES_ACCEPT_INT:
+			return g_strdup(IPTABLES_ACCEPT);
+		case IPTABLES_DROP_INT:
+			return g_strdup(IPTABLES_DROP);
+		default:
+			return NULL;
+	}
 }
 
 /*

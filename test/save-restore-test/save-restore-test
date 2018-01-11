@@ -260,7 +260,7 @@ function run_custom_chain_removed_test()
 	
 		test_begin
 		
-		STATUS=$(send_message "ManageChain" "ADD" "0" "string:$CHAIN")
+		STATUS=$(send_message "ManageChain" "ADD" "0" "string:filter" "string:$CHAIN")
 		
 		if [[ "$STATUS" != "0" ]] ; then
 			log "$STATUS"

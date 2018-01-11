@@ -21,6 +21,12 @@ function send_message()
 			"FLUSH")
 				LAST_PARAM="uint16:2"
 				;;
+			"ACCEPT")
+				LAST_PARAM="uint16:1"
+				;;
+			"DROP")
+				LAST_PARAM="uint16:2"
+				;;
 			*)
 				LAST_PARAM="string:$2"
 				;;

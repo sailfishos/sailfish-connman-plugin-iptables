@@ -253,7 +253,7 @@ function run_chain_management_tests()
 	
 		test_begin
 		
-		STATUS=$(send_message "ManageChain" "ADD" $CHAIN_RESULT "string:$CHAIN")
+		STATUS=$(send_message "ManageChain" "ADD" $CHAIN_RESULT "string:filter" "string:$CHAIN")
 		
 		if [[ "$STATUS" != "0" ]] ; then
 			log "$STATUS"
@@ -273,7 +273,7 @@ function run_chain_management_tests()
 		
 		test_progress
 		
-		STATUS=$(send_message "ManageChain" "REMOVE" $CHAIN_RESULT "string:$CHAIN")
+		STATUS=$(send_message "ManageChain" "REMOVE" $CHAIN_RESULT "string:filter" "string:$CHAIN")
 		
 		if [[ "$STATUS" != "0" ]] ; then
 			log "$STATUS"

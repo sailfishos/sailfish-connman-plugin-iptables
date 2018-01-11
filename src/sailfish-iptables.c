@@ -109,14 +109,14 @@ api_result set_policy(rule_params* params, api_data *data)
 	if((rval = check_parameters(params)) == OK)
 	{
 		if(!(error = connman_iptables_change_policy(SAILFISH_IPTABLES_TABLE_NAME,
-					params->chain_name, params->policy)))
+					params->chain, params->policy)))
 		{
 			if(!(error = connman_iptables_commit(SAILFISH_IPTABLES_TABLE_NAME)))
 			{
 				rval = OK;
 				
 				DBG("%s %s %s %s", PLUGIN_NAME, "set_policy(): changed policy", 
-					params->chain_name, params->policy);
+					params->chain, params->policy);
 			}
 		}
 		else
@@ -138,13 +138,20 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 	if((rval = check_parameters(params)) != OK)
 		return rval;
 
-	if(op & OPERATION_OUT) // TODO get this from params
+	if (op == OPERATION_PARAMS)
 	{
+		DBG("add_rule_to_iptables() set chain: %s", params->chain);
+		ipt_operation = params->chain;
+	}
+	else if(op & OPERATION_OUT) // TODO get this from params
+	{
+		DBG("add_rule_to_iptables() out");
 		ipt_operation = IPTABLES_CHAIN_OUTPUT;
 		ip_direction = 'd';
 	}
 	else if (op & OPERATION_IN) // TODO get this from params
 	{
+		DBG("add_rule_to_iptables() in");
 		ipt_operation = IPTABLES_CHAIN_INPUT;
 		ip_direction = 's';
 	}
@@ -159,30 +166,97 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 	{
 		case ARGS_IP:
 			g_string_append_printf(rule,"-%c%s%s",
-				ip_direction, params->ip_negate ? " ! " : " ", params->ip);
+				ip_direction, params->ip_negate_src ? " ! " : " ", params->ip_src);
 			break;
 		case ARGS_IP_PORT:
 		case ARGS_IP_SERVICE:
 			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %u",
-				ip_direction, params->ip_negate ? " ! " : " ",
-				params->ip, params->protocol, params->protocol,
-				params->port[0]);
+				ip_direction, params->ip_negate_src ? " ! " : " ",
+				params->ip_src, params->protocol, params->protocol,
+				params->port_dst[0]);
 			break;
 		case ARGS_IP_PORT_RANGE:
 			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %u:%u",
-				ip_direction, params->ip_negate ? " ! " : " ",
-				params->ip, params->protocol, params->protocol,
-				params->port[0], params->port[1]);
+				ip_direction, params->ip_negate_src ? " ! " : " ",
+				params->ip_src, params->protocol, params->protocol,
+				params->port_dst[0], params->port_dst[1]);
 			break;
 		case ARGS_PORT:
+		case ARGS_PORT_FULL:
 		case ARGS_SERVICE:
-			g_string_append_printf(rule,"-p %s -m %s --dport %u", 
-				params->protocol, params->protocol, params->port[0]);
+		case ARGS_SERVICE_FULL:
+			g_string_append_printf(rule,"-p %s -m %s", 
+				params->protocol, params->protocol);
+				
+			if(params->port_dst[0])
+				g_string_append_printf(rule," --dport %u", params->port_dst[0]);
+				
+			if(params->port_src[0])
+				g_string_append_printf(rule," --sport %u", params->port_src[0]);
+				
 			break;
 		case ARGS_PORT_RANGE:
-			g_string_append_printf(rule,"-p %s -m %s --dport %u:%u",
-				params->protocol, params->protocol, 
-				params->port[0], params->port[1]);
+		case ARGS_PORT_RANGE_FULL:
+			g_string_append_printf(rule,"-p %s -m %s",
+				params->protocol, params->protocol);
+				
+			if(params->port_dst[0])
+				g_string_append_printf(rule," --dport %u:%u", params->port_dst[0],
+					params->port_dst[1]);
+				
+			if(params->port_src[0])
+				g_string_append_printf(rule," --sport %u:%u", params->port_src[0],
+					params->port_src[1]);
+				
+			break;
+		case ARGS_IP_FULL:
+			if(params->ip_src)
+				g_string_append_printf(rule,"-s%s%s", 
+					params->ip_negate_src ? " ! " : " ", params->ip_src);
+					
+			if(params->ip_dst)
+				g_string_append_printf(rule," -d%s%s",
+					params->ip_negate_dst ? " ! " : " ", params->ip_dst);
+			break;
+		case ARGS_IP_PORT_FULL:
+		case ARGS_IP_SERVICE_FULL:
+			if(params->ip_src)
+				g_string_append_printf(rule,"-s%s%s", 
+					params->ip_negate_src ? " ! " : " ", params->ip_src);
+					
+			if(params->ip_dst)
+				g_string_append_printf(rule," -d%s%s",
+					params->ip_negate_dst ? " ! " : " ", params->ip_dst);
+					
+			g_string_append_printf(rule," -p %s -m %s",
+				params->protocol, params->protocol);
+				
+			if(params->port_dst[0])
+				g_string_append_printf(rule," --dport %u", params->port_dst[0]);
+				
+			if(params->port_src[0])
+				g_string_append_printf(rule," --sport %u", params->port_src[0]);
+
+			break;
+		case ARGS_IP_PORT_RANGE_FULL:
+			if(params->ip_src)
+				g_string_append_printf(rule,"-s%s%s", 
+					params->ip_negate_src ? " ! " : " ", params->ip_src);
+					
+			if(params->ip_dst)
+				g_string_append_printf(rule," -d%s%s",
+					params->ip_negate_dst ? " ! " : " ", params->ip_dst);
+					
+			g_string_append_printf(rule," -p %s -m %s",
+				params->protocol, params->protocol);
+				
+			if(params->port_dst[0])
+				g_string_append_printf(rule," --dport %u:%u", params->port_dst[0],
+					params->port_dst[1]);
+				
+			if(params->port_src[0])
+				g_string_append_printf(rule," --sport %u:%u", params->port_src[0],
+					params->port_src[1]);
 			break;
 		default:
 			rval = INVALID_REQUEST;
@@ -190,7 +264,9 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 	}
 	
 	// Add target to rule
-	if(op & OPERATION_ACCEPT)
+	if(op == OPERATION_PARAMS)
+		g_string_append_printf(rule," -j %s", params->target);
+	else if(op & OPERATION_ACCEPT)
 		g_string_append(rule,IPTABLES_RULE_ACCEPT);
 	else if(op & OPERATION_DENY)
 		g_string_append(rule,IPTABLES_RULE_DROP);
@@ -292,6 +368,11 @@ api_result deny_outgoing(rule_params* params, api_data *data)
 	return add_rule_to_iptables(params, data, OPERATION_OUT | OPERATION_DENY);
 }
 
+api_result iptables_rule(rule_params* params, api_data *data)
+{
+	return add_rule_to_iptables(params, data, OPERATION_PARAMS);
+}
+
 api_result manage_chain(rule_params* params, api_data *data)
 {
 	gint error = 0;
@@ -299,21 +380,34 @@ api_result manage_chain(rule_params* params, api_data *data)
 	{
 		case ADD:
 			DBG("%s Adding chain %s to table %s", PLUGIN_NAME,
-				params->chain_name, params->table);
+				params->chain, params->table);
 			error = connman_iptables_new_chain(params->table, 
-				params->chain_name);
+				params->chain);
 			break;
 		case REMOVE:
+			DBG("%s Flushing chain %s from table %s (pre-removal)",
+				PLUGIN_NAME, params->chain, params->table);
+			error = connman_iptables_flush_chain(params->table,
+				params->chain);
+				
+			if(error)
+			{
+				ERR("%s Flushing chain %s in table %s failed (pre-removal) %s",
+					PLUGIN_NAME, params->chain, params->table,
+					"chain cannot be deleted.");
+				return INVALID; // TODO add iptables error.
+			}
+			
 			DBG("%s Removing chain %s from table %s", PLUGIN_NAME,
-				params->chain_name, params->table);
+				params->chain, params->table);
 			error = connman_iptables_delete_chain(params->table,
-				params->chain_name);
+				params->chain);
 			break;
 		case FLUSH:
 			DBG("%s Flushing chain %s from table %s", PLUGIN_NAME,
-				params->chain_name, params->table);
+				params->chain, params->table);
 			error = connman_iptables_flush_chain(params->table,
-				params->chain_name);
+				params->chain);
 			break;
 		default:
 			return INVALID_REQUEST;
@@ -329,11 +423,11 @@ api_result manage_chain(rule_params* params, api_data *data)
 				{
 					case ADD:
 						api_data_add_custom_chain(data, params->table, 
-							params->chain_name);
+							params->chain);
 						break;
 					case REMOVE:
 						api_data_delete_custom_chain(data, params->table, 
-							params->chain_name);
+							params->chain);
 						break;
 					default:
 						break;
@@ -343,7 +437,7 @@ api_result manage_chain(rule_params* params, api_data *data)
 			// Commit failed, try to remove chain
 			else
 				if(!connman_iptables_delete_chain(params->table,
-					params->chain_name))
+					params->chain))
 					ERR("%s %s %s", PLUGIN_NAME,
 						"manage_chain() commit error",
 						"chain could not be removed, please restart connman.");
@@ -402,8 +496,8 @@ void setup_custom_chains_from_output(api_data *data)
 		
 		if(g_str_has_prefix(chain, SAILFISH_IPTABLES_CHAIN_PREFIX))
 		{
-			DBG("setup_custom_chains_from_output() adding %s", chain);
 			gchar **tokens = g_strsplit(chain," ", 2);
+			DBG("setup_custom_chains_from_output() adding %s", tokens[0]);
 			if(api_data_add_custom_chain(data, SAILFISH_IPTABLES_TABLE_NAME, tokens[0]))
 				DBG("setup_custom_chains_from_output() added %s", tokens[0]);
 			g_strfreev(tokens);

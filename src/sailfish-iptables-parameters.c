@@ -53,6 +53,8 @@
 #include "sailfish-iptables-parameters.h"
 #include "sailfish-iptables-policy.h"
 
+#define ERR(fmt,arg...) connman_error(fmt, ## arg)
+
 void custom_chain_remove(void *data, void *table)
 {
 	gint error = 0;
@@ -62,6 +64,15 @@ void custom_chain_remove(void *data, void *table)
 	
 	if(!chain || !(*chain) || !table_name || !(*table_name))
 		return;
+		
+	DBG("%s %s %s %s %s", PLUGIN_NAME, "custom_chain_remove() flushing", chain,
+		"from table", table_name);
+		
+	error = connman_iptables_flush_chain(table_name, chain);
+		
+	if(error)
+		ERR("%s %s %s %s %s", PLUGIN_NAME, "custom_chain_remove() flushing",
+			chain, " failed from table", table_name);
 	
 	DBG("%s %s %s %s %s", PLUGIN_NAME, "custom_chain_remove() removing", chain,
 		"from table", table_name);
@@ -394,12 +405,15 @@ void rule_params_free(rule_params *params)
 {
 	if(params)
 	{
-		g_free(params->ip);
-		g_free(params->service);
+		g_free(params->ip_src);
+		g_free(params->ip_dst);
+		g_free(params->service_src);
+		g_free(params->service_dst);
 		g_free(params->protocol);
 		g_free(params->table);
 		g_free(params->policy);
-		g_free(params->chain_name);
+		g_free(params->chain);
+		g_free(params->target);
 		
 		if(params->iptables_content)
 			connman_iptables_free_content(params->iptables_content);
@@ -411,15 +425,20 @@ void rule_params_free(rule_params *params)
 rule_params* rule_params_new(rule_args args)
 {
 	rule_params *params = g_new0(rule_params,1);
-	params->ip = NULL;
-	params->ip_negate = false;
-	params->service = NULL;
-	params->port[0] = params->port[1] = 0;
+	params->ip_src = NULL;
+	params->ip_dst = NULL;
+	params->ip_negate_src = false;
+	params->ip_negate_dst = false;
+	params->service_src = NULL;
+	params->service_dst = NULL;
+	params->port_dst[0] = params->port_dst[1] = 0;
+	params->port_src[0] = params->port_src[1] = 0;
 	params->protocol = NULL;
 	params->operation = UNDEFINED;
 	params->table = NULL;
 	params->policy = NULL;
-	params->chain_name = NULL;
+	params->chain = NULL;
+	params->target = NULL;
 	params->iptables_content = NULL;
 	params->args = args;
 	
@@ -439,52 +458,173 @@ gboolean check_operation(rule_params *params)
 	return params->operation >= OK && params->operation < upper;
 }
 
+gboolean check_port_range(rule_params *params)
+{
+	if(!params)
+		return false;
+		
+	if(params->port_dst[1] < params->port_dst[0] &&
+		params->port_dst[1] != params->port_dst[0])
+		return false;
+	
+	if(params->port_src[1] < params->port_src[0] &&
+		params->port_src[1] != params->port_src[0])
+		return false;
+		
+	return true;
+}
+
+gboolean check_ips(rule_params *params)
+{
+	if(!params)
+		return false;
+
+	if(params->args >= ARGS_IP && params->args <= ARGS_IP_SERVICE)
+		return params->ip_src ? true : false;
+	
+	if(params->args >= ARGS_IP_FULL && params->args <= ARGS_IP_SERVICE_FULL)
+		return params->ip_src || params->ip_dst ? true : false;
+	
+	return false;
+}
+
+gboolean check_ports(rule_params *params)
+{
+	gboolean rval = false;
+	if(!params)
+		return false;
+		
+	switch(params->args)
+	{
+		// dst only
+		case ARGS_IP_PORT: 
+		case ARGS_IP_SERVICE:
+		case ARGS_PORT:
+		case ARGS_SERVICE:
+			return params->port_dst[0] ? true : false;
+		// src or dst has to be set
+		case ARGS_IP_PORT_FULL:
+		case ARGS_IP_SERVICE_FULL:
+		case ARGS_PORT_FULL:
+		case ARGS_SERVICE_FULL:
+			if(params->port_dst[0])
+				rval = true;
+			if(params->port_src[0])
+				rval |= true;
+			return rval;
+		// dst both must be set
+		case ARGS_IP_PORT_RANGE:
+		case ARGS_PORT_RANGE:
+			return params->port_dst[0] && params->port_dst[1] ? true : false;
+		// either dst or src range must be set, or both
+		case ARGS_IP_PORT_RANGE_FULL:
+		case ARGS_PORT_RANGE_FULL:
+			if(params->port_dst[0] && params->port_dst[1])
+				rval = true;
+			if(params->port_src[0] && params->port_src[1])
+				rval |= true;
+			return rval;
+		default:
+			return false;
+	}
+}
+
+gboolean check_service(rule_params *params)
+{
+	if(!params)
+		return false;
+
+	switch(params->args)
+	{
+		case ARGS_IP_SERVICE:
+		case ARGS_SERVICE:
+			return params->service_src ? true : false;
+		case ARGS_IP_SERVICE_FULL:
+		case ARGS_SERVICE_FULL:
+			return params->service_src || params->service_dst ? true : false;
+		default:
+			return false;
+	}
+}
+
+gboolean check_chain_restricted(rule_params *params)
+{
+	const gchar const * DEFAULT_CHAINS[] = {
+		"INPUT",
+		"OUTPUT",
+		"FORWARD",
+		NULL
+	};
+	
+	if(!params || !params->chain)
+		return false;
+	
+	gint i = 0;
+	
+	for(i = 0; DEFAULT_CHAINS[i]; i++)
+	{
+		if(!g_ascii_strcasecmp(params->chain, DEFAULT_CHAINS[i]))
+			return true;
+	}
+	return false;
+}
+
 api_result check_parameters(rule_params* params)
 {
 	if(!params)
 		return INVALID;
 		
+	if(params->args >= ARGS_IP_FULL && params->args <= ARGS_SERVICE_FULL)
+	{
+		if(!params->table) return INVALID_TABLE;
+		if(!params->chain) return INVALID_CHAIN_NAME;
+		if(!params->target) return INVALID_TARGET;
+	}
+		
 	switch(params->args)
 	{
 		case ARGS_IP:
-			return params->ip ? OK : INVALID_IP;
+		case ARGS_IP_FULL:
+			return check_ips(params) ? OK : INVALID_IP;
 		case ARGS_IP_PORT:
-			if(!params->ip) return INVALID_IP;
-			if(!params->port[0]) return INVALID_PORT;
+		case ARGS_IP_PORT_FULL:
+			if(!check_ips(params)) return INVALID_IP;
+			if(!check_ports(params)) return INVALID_PORT;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_IP_PORT_RANGE:
-			if(!params->ip) return INVALID_IP;
-			if(!params->port[0]) return INVALID_PORT;
-			if(!params->port[1]) return INVALID_PORT;
-			if(params->port[1] < params->port[0] &&
-				params->port[1] != params->port[0]) return INVALID_PORT_RANGE;
+		case ARGS_IP_PORT_RANGE_FULL:
+			if(!check_ips(params)) return INVALID_IP;
+			if(!check_ports(params)) return INVALID_PORT;
+			if(!check_port_range(params)) return INVALID_PORT_RANGE;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_IP_SERVICE:
-			if(!params->ip) return INVALID_IP;
-			if(!params->service) return INVALID_SERVICE;
-			if(!params->port[0]) return INVALID_SERVICE;
+		case ARGS_IP_SERVICE_FULL:
+			if(!check_ips(params)) return INVALID_IP;
+			if(!check_service(params)) return INVALID_SERVICE;
+			if(!check_ports(params)) return INVALID_SERVICE;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_PORT:
-			if(!params->port[0]) return INVALID_PORT;
+		case ARGS_PORT_FULL:
+			if(!check_ports(params)) return INVALID_PORT;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_PORT_RANGE:
-			if(!params->port[0]) return INVALID_PORT;
-			if(!params->port[1]) return INVALID_PORT;
-			if(params->port[1] < params->port[0] &&
-				params->port[1] != params->port[0]) return INVALID_PORT_RANGE;
+		case ARGS_PORT_RANGE_FULL:
+			if(!check_ports(params)) return INVALID_PORT;
+			if(!check_port_range(params)) return INVALID_PORT_RANGE;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_SERVICE:
-			if(!params->service) return INVALID_SERVICE;
+		case ARGS_SERVICE_FULL:
+			if(!check_service(params)) return INVALID_SERVICE;
 			if(!params->protocol) return INVALID_SERVICE;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
@@ -497,8 +637,13 @@ api_result check_parameters(rule_params* params)
 			if(!check_operation(params)) return INVALID_REQUEST;
 			if(!params->policy) return INVALID_POLICY;
 			return OK;
+		case ARGS_POLICY:
+			if(!params->chain) return INVALID_CHAIN_NAME;
+			if(!params->table) return INVALID_REQUEST;
+			if(!params->policy) return INVALID_POLICY;
+			return OK;
 		case ARGS_CHAIN:
-			if(!params->chain_name) return INVALID_CHAIN_NAME;
+			if(!params->chain) return INVALID_CHAIN_NAME;
 			if(!params->table) return INVALID_REQUEST;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
