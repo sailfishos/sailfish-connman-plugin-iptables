@@ -12,64 +12,59 @@ REQUIRED_USERS="root nemo"
 REQUIRED_GROUPS="users privileged"
 PRIVILEGED=0
 
-# -t filter -L INPUT |grep ACCEPT
-METHODS_INPUT_ACCEPT="
-AllowIncomingIp
-AllowIncomingIpWithPort
-AllowIncomingIpWithPortRange
-AllowIncomingPort
-AllowIncomingPortRange
-AllowIncomingIpWithService
-AllowIncomingService
-"
+CUSTOM_CHAIN="CUSTOM1"
 
-# -t filter -L OUTPUT |grep ACCEPT
-METHODS_OUTPUT_ACCEPT="
-AllowOutgoingIp
-AllowOutgoingIpWithPort
-AllowOutgoingIpWithPortRange
-AllowOutgoingPort
-AllowOutgoingPortRange
-AllowOutgoingIpWithService
-AllowOutgoingService"
+TEST_CHAINS="INPUT OUTPUT $CUSTOM_CHAIN"
 
-# -t filter -L INPUT |grep DROP
-METHODS_INPUT_DROP="
-DenyIncomingIp
-DenyIncomingIpWithPort
-DenyIncomingIpWithPortRange 
-DenyIncomingPort
-DenyIncomingPortRange
-DenyIncomingIpWithService
-DenyIncomingService"
+TEST_TARGETS="ACCEPT DROP REJECT $CUSTOM_CHAIN"
 
-# -t filter -L OUTPUT |grep DROP
-METHODS_OUTPUT_DROP="
-DenyOutgoingIp
-DenyOutgoingIpWithPort
-DenyOutgoingIpWithPortRange
-DenyOutgoingPort
-DenyOutgoingPortRange
-DenyOutgoingIpWithService
-DenyOutgoingService"
+# string:filter string:chain string:target
+IP_INPUTS[0]='string:192.168.10.1 string:'
+IP_INPUTS[1]='string: string:192.168.10.2'
+IP_INPUTS[2]='string:192.168.10.1 string:192.168.10.2'
+IP_INPUTS[3]='' # Empty as last
 
-# Inputs for the methods
-METHOD_INPUTS[0]='string:192.168.10.1'
-METHOD_INPUTS[1]='string:192.168.10.1 uint16:22 string:tcp'
-METHOD_INPUTS[2]='string:192.168.10.1 string:80:90 string:tcp'
-METHOD_INPUTS[3]='uint16:8080 string:tcp'
-METHOD_INPUTS[4]='string:8088:8090 string:tcp'
-METHOD_INPUTS[5]='string:192.168.10.1 string:telnet string:tcp'
-METHOD_INPUTS[6]='string:telnet string:tcp'
+IP_VERIFY[0]='192.168.10.1'
+IP_VERIFY[1]='192.168.10.2'
+IP_VERIFY[2]='192.168.10.1.*192.168.10.2'
+IP_VERIFY[3]=''
 
-METHOD_INPUTS_RESULT[0]='0'
-METHOD_INPUTS_RESULT[1]='0'
-METHOD_INPUTS_RESULT[2]='0'
-METHOD_INPUTS_RESULT[3]='0'
-METHOD_INPUTS_RESULT[4]='0'
-METHOD_INPUTS_RESULT[5]='0'
-METHOD_INPUTS_RESULT[6]='0'
+IP_INPUTS_VERIFY[0]="all ${IP_VERIFY[0]}"
+IP_INPUTS_VERIFY[1]="all ${IP_VERIFY[1]}"
+IP_INPUTS_VERIFY[2]="all ${IP_VERIFY[2]}"
+IP_INPUTS_VERIFY[3]=''
 
+PORT_VERIFY_PRE[0]='udp'
+PORT_VERIFY_PRE[1]='tcp'
+PORT_VERIFY_PRE[2]='tcp'
+PORT_VERIFY_PRE[3]=''
+
+PORT_INPUTS[0]='uint16:23 uint16:0 uint32:17'
+PORT_INPUTS[1]='uint16:0 uint16:873 uint32:6'
+PORT_INPUTS[2]='uint16:80 uint16:443 uint32:6'
+PORT_INPUTS[3]=''
+
+PORT_INPUTS_VERIFY[0]='dpt:23'
+PORT_INPUTS_VERIFY[1]='spt:873'
+PORT_INPUTS_VERIFY[2]='spt:443 dpt:80'
+PORT_INPUTS_VERIFY[3]=''
+
+PORT_RANGE_INPUTS[0]='uint16:23 uint16:24 uint16:0 uint16:0 uint32:17'
+PORT_RANGE_INPUTS[1]='uint16:0 uint16:0 uint16:1000 uint16:2000 uint32:6'
+PORT_RANGE_INPUTS[2]='uint16:23 uint16:24 uint16:1000 uint16:2000 uint32:6'
+PORT_RANGE_INPUTS[3]=''
+
+SERVICE_INPUTS[0]='string:telnet string: uint32:17'
+SERVICE_INPUTS[1]='string: string:rsync uint32:6'
+SERVICE_INPUTS[2]='string:http string:https uint32:6'
+SERVICE_INPUTS[3]=''
+
+PORT_RANGE_INPUTS_VERIFY[0]='dpts:23:24'
+PORT_RANGE_INPUTS_VERIFY[1]='spts:1000:2000'
+PORT_RANGE_INPUTS_VERIFY[2]='spts:1000:2000 dpts:23:24'
+PORT_RANGE_INPUTS_VERIFY[3]=''
+
+METHOD_INPUTS_RESULT="0"
 CLEAR_RESULT="0"
 POLICY_RESULT="0"
 CHAIN_RESULT="0"
@@ -79,19 +74,6 @@ RESULT_ACCESS_DENIED='100'
 REGISTER_TEST_RESULT[0]='11'
 REGISTER_TEST_RESULT[1]='0'
 REGISTER_TEST_RESULT[2]='11'
-
-# protocol, ip, dpt/spt:port
-METHOD_VERIFY[0]='all 192.168.10.1'
-METHOD_VERIFY[1]='tcp 192.168.10.1 dpt:22'
-METHOD_VERIFY[2]='tcp 192.168.10.1 dpts:80:90'
-METHOD_VERIFY[3]='tcp 0.0.0.0 dpt:8080'
-METHOD_VERIFY[4]='tcp 0.0.0.0 dpts:8088:8090'
-METHOD_VERIFY[5]='tcp 192.168.10.1 dpt:23'
-METHOD_VERIFY[6]='tcp 0.0.0.0 dpt:23'
-
-DESTINATION="net.connman"
-DBUS_PATH="/org/sailfishos/connman/mdm/iptables"
-METHOD_PREFIX="org.sailfishos.connman.mdm.iptables"
 
 function include_sources()
 {
@@ -107,94 +89,467 @@ function include_sources()
 	done
 }
 
-# $1=chain $2=target $3...methods
-function run_method_tests()
+function run_method_test_rule()
+{	
+	# 1:Method 2:ADD/REMOVE 3:result 4:...rule: table, chain, target, rest of rule 
+	RESULT=$(send_message "$1" "$2" "$METHOD_INPUTS_RESULT" "string:filter" "string:$3" "string:$4" ${@:5})
+	
+	if [[ "$RESULT" != "0" ]] ; then
+		log "$RESULT"
+		echo 1
+	else
+		echo 0
+	fi
+}
+
+#$1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
+function run_method_test_check_change()
+{
+	if [ "$(id -u)" == "0" ] ; then
+	
+		if [ "$1" == "$CUSTOM_CHAIN" ] ; then
+			CHAIN="sfos_$1"
+		else
+			CHAIN="$1"
+		fi
+			
+		RESULT=$(check_change "$CHAIN" "$2" ${@:3})
+
+		if [[ "$RESULT" != "0" ]] ; then
+			log "$RESULT"
+			echo 1
+		else
+			echo 0
+		fi
+	else
+		# Do nothing, report success
+		echo 0
+	fi
+}
+
+# $1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
+function run_method_test_check_removed()
+{
+	if [ "$(id -u)" == "0" ] ; then
+		
+		if [ "$1" == "$CUSTOM_CHAIN" ] ; then
+			CHAIN="sfos_$1"
+		else
+			CHAIN="$1"
+		fi
+		
+		RESULT=$(check_removed "$CHAIN" "$2" ${@:3})
+
+		if [[ "$RESULT" != "0" ]] ; then
+			log "$RESULT"
+			echo 1
+		else
+			echo 0
+		fi
+	else
+		# Do nothing, report success
+		echo 0
+	fi
+}
+
+function test_rule_ip()
 {
 	INDEX=0
+	METHOD="RuleIp"
 
-	for METHOD in "${@:3}" ; do
-	
-		test_begin
-		FAILED=0
-		
-		PROCESSED=$(send_message "$METHOD" "ADD" ${METHOD_INPUTS_RESULT[$INDEX]} ${METHOD_INPUTS[$INDEX]})
-	
-		if [[ "$PROCESSED" != "0" ]] ; then
-			log "$PROCESSED"
-			FAILED=1
-		fi
-	
-		test_progress
-	
-		# Checking of change only possible for root, hence iptables command
-		if [ "$(id -u)" == "0" ] ; then
-			CHANGE=$(check_change "$1" "$2" ${METHOD_VERIFY[$INDEX]})
-	
-			if [[ "$CHANGE" != "0" ]] ; then
-				log "$CHANGE"
-				FAILED=1
-			fi
-		fi
-	
-		test_progress
-	
-		PROCESSED=$(send_message "$METHOD" "REMOVE" ${METHOD_INPUTS_RESULT[$INDEX]} ${METHOD_INPUTS[$INDEX]})
-	
-		if [[ "$PROCESSED" != "0" ]] ; then
-			log "$PROCESSED"
-			FAILED=1
-		fi
-		
-		test_progress
-	
-		# Checking of removed only possible for root, hence iptables command
-		if [ "$(id -u)" == "0" ] ; then
-			CHANGE=$(check_removed "$1" "$2" ${METHOD_VERIFY[$INDEX]})
-	
-			if [[ "$CHANGE" != "0" ]] ; then
-				log "$CHANGE"
-				FAILED=1
-			fi
-		fi
-	
-		test_progress
-		
-		test_end $FAILED
-	
-		INDEX=$((INDEX+1))
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX]} ]] ; do
+			
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="${IP_INPUTS[$INDEX]}"
+					VERIFY="${IP_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
+			
+					test_begin
+					
+					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+					
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+					
+					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+					
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+					test_end "$FAILED"
+				fi
+				
+				INDEX=$((INDEX+1))
+			done
+			INDEX=0
+		done
 	done
 }
 
-function run_policy_test()
+function test_rule_ip_port()
 {
-	FAILED=0
+	INDEX=0
+	INDEX_IP=0
+	METHOD="RuleIpWithPort"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${PORT_INPUTS[$INDEX]} ]] ; do
+			
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						RULE="${IP_INPUTS[$INDEX_IP]} ${PORT_INPUTS[$INDEX]}"
+						VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${IP_VERIFY[$INDEX_IP]} ${PORT_INPUTS_VERIFY[$INDEX]}"
+						FAILED=0
+			
+						test_begin
+					
+						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+						test_end "$FAILED"
+					fi
+					INDEX=$((INDEX+1))
+					
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+}
+
+function test_rule_ip_port_range()
+{
+	INDEX=0
+	INDEX_IP=0
+	METHOD="RuleIpWithPortRange"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${PORT_RANGE_INPUTS[$INDEX]} ]] ; do
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						RULE="${IP_INPUTS[$INDEX_IP]} ${PORT_RANGE_INPUTS[$INDEX]}"
+						VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${IP_VERIFY[$INDEX_IP]} ${PORT_RANGE_INPUTS_VERIFY[$INDEX]}"
+						FAILED=0
+			
+						test_begin
+					
+						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+						test_end "$FAILED"
+					fi
+					INDEX=$((INDEX+1))
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+}
+
+function test_rule_ip_service()
+{
+	INDEX=0
+	INDEX_IP=0
+	METHOD="RuleIpWithService"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${SERVICE_INPUTS[$INDEX]} ]] ; do
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						RULE="${IP_INPUTS[$INDEX_IP]} ${SERVICE_INPUTS[$INDEX]}"
+						VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${IP_VERIFY[$INDEX_IP]} ${PORT_INPUTS_VERIFY[$INDEX]}"
+						FAILED=0
+			
+						test_begin
+					
+						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+						test_end "$FAILED"
+					fi
+					INDEX=$((INDEX+1))
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+}
+
+function test_rule_port()
+{
+	INDEX=0
+	METHOD="RulePort"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${PORT_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="${PORT_INPUTS[$INDEX]}"
+					VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${PORT_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
 	
+					test_begin
+					
+					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+				
+					test_end "$FAILED"
+				fi
+			
+				INDEX=$((INDEX+1))
+			done
+			INDEX=0
+		done
+	done
+}
+
+function test_rule_port_range()
+{
+	INDEX=0
+	METHOD="RulePortRange"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${PORT_RANGE_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="${PORT_RANGE_INPUTS[$INDEX]}"
+					VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${PORT_RANGE_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
+		
+					test_begin
+					
+					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+				
+					test_end "$FAILED"
+				fi
+			
+				INDEX=$((INDEX+1))
+			done
+			INDEX=0
+		done
+	done
+}
+
+function test_rule_service()
+{
+	INDEX=0
+	METHOD="RuleService"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${SERVICE_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="${SERVICE_INPUTS[$INDEX]}"
+					VERIFY="${PORT_VERIFY_PRE[$INDEX]} ${PORT_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
+		
+					test_begin
+					
+					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+				
+					test_end "$FAILED"
+				fi
+			
+				INDEX=$((INDEX+1))
+			done
+			INDEX=0
+		done
+	done
+}
+
+function test_rule_pre()
+{
 	test_begin
+	FAILED=0
+		
+	STATUS=$(send_message "ManageChain" "ADD" $CHAIN_RESULT "string:filter" "string:$CUSTOM_CHAIN")
 	
-	PROCESSED=$(send_message "$1" "$3" "$POLICY_RESULT")
-	
-	test_progress
-	
-	if [[ "$PROCESSED" != "0" ]] ; then
-		log "$PROCESSED"
+	if [[ "$STATUS" != "0" ]] ; then
+		log "$STATUS"
 		FAILED=1
 	fi
 	
 	test_progress
 	
-	# Checking of policy change only possible for root, hence iptables command
 	if [ "$(id -u)" == "0" ] ; then
-		CHANGE=$(check_policy_change "$2" "$3")
+		STATUS=$(check_chain_added "$CUSTOM_CHAIN")
 	
-		if [[ "$CHANGE" != "0" ]] ; then
-			log "$CHANGE"
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
 			FAILED=1
 		fi
 	fi
 	
+	test_end $FAILED
+}
+
+function test_rule_post()
+{
+	test_begin
+	FAILED=0
+		
+	STATUS=$(send_message "ManageChain" "REMOVE" $CHAIN_RESULT "string:filter" "string:$CUSTOM_CHAIN")
+	
+	if [[ "$STATUS" != "0" ]] ; then
+		log "$STATUS"
+		FAILED=1
+	fi
+	
 	test_progress
 	
+	if [ "$(id -u)" == "0" ] ; then
+		STATUS=$(check_chain_removed "$CUSTOM_CHAIN")
+	
+		if [[ "$STATUS" != "0" ]] ; then
+			log "$STATUS"
+			FAILED=1
+		fi
+	fi
+	
 	test_end $FAILED
+}
+
+function run_rule_tests()
+{
+	test_rule_pre
+	test_rule_ip
+	test_rule_ip_port
+	test_rule_ip_port_range
+	test_rule_ip_service
+	test_rule_port
+	test_rule_port_range
+	test_rule_service
+	test_rule_post
+}
+#run_policy_test "ChangeInputPolicy" "INPUT" "DROP" 
+function run_policy_tests()
+{
+	METHOD="ChangePolicy"
+	CHAINS="INPUT OUTPUT FORWARD"
+	POLICIES="DROP ACCEPT"
+	
+	for CHAIN in $CHAINS ; do
+		for POLICY in $POLICIES ; do
+		
+			FAILED=0
+			test_begin
+	
+			PROCESSED=$(send_message "$METHOD" "$POLICY" "$POLICY_RESULT" "string:filter" "string:$CHAIN")
+	
+			test_progress
+	
+			if [[ "$PROCESSED" != "0" ]] ; then
+				log "$PROCESSED"
+				FAILED=1
+			fi
+	
+			test_progress
+	
+			# Checking of policy change only possible for root, hence iptables command
+			if [ "$(id -u)" == "0" ] ; then
+				CHANGE=$(check_policy_change "$CHAIN" "$POLICY")
+	
+				if [[ "$CHANGE" != "0" ]] ; then
+					log "$CHANGE"
+					FAILED=1
+				fi
+			fi
+	
+			test_progress
+	
+			test_end $FAILED
+		done
+	done
 }
 
 function run_clear_test()
@@ -306,16 +661,9 @@ function run_tests()
 			;;
 	esac
 	
-	run_method_tests "INPUT" "ACCEPT" $METHODS_INPUT_ACCEPT
-	run_method_tests "OUTPUT" "ACCEPT" $METHODS_OUTPUT_ACCEPT
-	run_method_tests "INPUT" "DROP" $METHODS_INPUT_DROP
-	run_method_tests "OUTPUT" "DROP" $METHODS_OUTPUT_DROP
+	run_rule_tests
 	
-	run_policy_test "ChangeInputPolicy" "INPUT" "DROP" 
-	run_policy_test "ChangeInputPolicy" "INPUT" "ACCEPT"
-	
-	run_policy_test "ChangeOutputPolicy" "OUTPUT" "DROP" 
-	run_policy_test "ChangeOutputPolicy" "OUTPUT" "ACCEPT" 
+	run_policy_tests
 	
 	run_register_tests
 	
@@ -405,13 +753,7 @@ function set_expected_result()
 		"nemo" | "sailfish-mdm")
 			CLEAR_RESULT=$RESULT_ACCESS_DENIED
 			if [[ $PRIVILEGED -eq 0 ]] ; then
-				METHOD_INPUTS_RESULT[0]=$RESULT_ACCESS_DENIED
-				METHOD_INPUTS_RESULT[1]=$RESULT_ACCESS_DENIED
-				METHOD_INPUTS_RESULT[2]=$RESULT_ACCESS_DENIED
-				METHOD_INPUTS_RESULT[3]=$RESULT_ACCESS_DENIED
-				METHOD_INPUTS_RESULT[4]=$RESULT_ACCESS_DENIED
-				METHOD_INPUTS_RESULT[5]=$RESULT_ACCESS_DENIED
-				METHOD_INPUTS_RESULT[6]=$RESULT_ACCESS_DENIED
+				METHOD_INPUTS_RESULT=$RESULT_ACCESS_DENIED
 				POLICY_RESULT=$RESULT_ACCESS_DENIED
 				REGISTER_TEST_RESULT[0]='11'
 				REGISTER_TEST_RESULT[1]=$RESULT_ACCESS_DENIED

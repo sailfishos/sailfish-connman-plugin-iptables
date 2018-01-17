@@ -152,22 +152,13 @@ gboolean sailfish_iptables_policy_check_args(DBusMessage *message,
 		case ARGS_CLEAR:
 			return sailfish_iptables_policy_check(message, data,
 				SAILFISH_DBUS_ACCESS_FULL);
-		case ARGS_IP:
 		case ARGS_IP_FULL:
-		case ARGS_IP_PORT:
 		case ARGS_IP_PORT_FULL:
-		case ARGS_IP_PORT_RANGE:
 		case ARGS_IP_PORT_RANGE_FULL:
-		case ARGS_IP_SERVICE:
 		case ARGS_IP_SERVICE_FULL:
-		case ARGS_PORT:
 		case ARGS_PORT_FULL:
-		case ARGS_PORT_RANGE:
 		case ARGS_PORT_RANGE_FULL:
-		case ARGS_SERVICE:
 		case ARGS_SERVICE_FULL:
-		case ARGS_POLICY_IN:
-		case ARGS_POLICY_OUT:
 		case ARGS_POLICY:
 		case ARGS_CHAIN:
 		case ARGS_GET_CONTENT:

@@ -4,31 +4,16 @@
 		<description>Sailfish Connman iptables plugin automatic tests</description>
 		<set name="ete-tests" feature="Sailfish Connman iptables plugin">
 			<description>Sailfish Connman iptables plugin end-to-end tests OLD API</description>
-			<case manual="false" name="End-to-end test as root">
+			<case manual="false" name="End-to-end test as root" timeout="150">
 				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
 				</step>
 			</case>
-			<case manual="false" name="End-to-end test as privileged user">
+			<case manual="false" name="End-to-end test as privileged user" timeout="150">
 				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /bin/su -g privileged -c '/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test' nemo
 				</step>
 			</case>
-			<case manual="false" name="End-to-end test as regular user">
+			<case manual="false" name="End-to-end test as regular user" timeout="150">
 				<step>/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test
-				</step>
-			</case>
-		</set>
-		<set name="ete-tests-stable" feature="Sailfish Connman iptables plugin">
-			<description>Sailfish Connman iptables plugin end-to-end tests STABLE API</description>
-			<case manual="false" name="End-to-end STABLE test as root" timeout="150">
-				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-stable-test
-				</step>
-			</case>
-			<case manual="false" name="End-to-end STABLE test as privileged user" timeout="150">
-				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /bin/su -g privileged -c '/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-stable-test' nemo
-				</step>
-			</case>
-			<case manual="false" name="End-to-end STABLE test as regular user" timeout="150">
-				<step>/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-stable-test
 				</step>
 			</case>
 		</set>

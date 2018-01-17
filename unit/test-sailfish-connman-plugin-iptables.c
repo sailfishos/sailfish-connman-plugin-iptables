@@ -417,72 +417,6 @@ static void test_iptables_plugin_utils_format_ip()
 	g_assert(!format_ip(IPV4, NULL));
 }
 
-static void test_iptables_plugin_utils_get_port_range_tokens()
-{
-	gchar** tokens = NULL;
-	
-	tokens = get_port_range_tokens("1000:2000");
-	g_assert(tokens && g_strv_length(tokens) == 2);
-	g_assert(g_ascii_strcasecmp(tokens[0],"1000") == 0);
-	g_assert(g_ascii_strcasecmp(tokens[1],"2000") == 0);
-	g_strfreev(tokens);
-	
-	tokens = get_port_range_tokens(":");
-	g_assert(tokens && g_strv_length(tokens) == 2);
-	g_assert(g_ascii_strcasecmp(tokens[0],"") == 0);
-	g_assert(g_ascii_strcasecmp(tokens[1],"") == 0);
-	g_strfreev(tokens);
-	
-	g_assert(!get_port_range_tokens(""));
-	g_assert(!get_port_range_tokens(NULL));
-}
-
-static void test_iptables_plugin_utils_port_to_str()
-{
-	gchar* port = NULL;
-	
-	rule_params *params = rule_params_new(ARGS_PORT_RANGE);
-	params->port_dst[0] = 22;
-	params->port_dst[1] = 80;
-	
-	port = port_to_str(params);
-	
-	g_assert(g_ascii_strcasecmp(port,"22:80") == 0);
-	g_free(port);
-	
-	params->args = ARGS_IP_PORT_RANGE;
-	port = port_to_str(params);
-	g_assert(g_ascii_strcasecmp(port,"22:80") == 0);
-	g_free(port);
-	
-	params->args = ARGS_IP_PORT;
-	port = port_to_str(params);
-	g_assert(g_ascii_strcasecmp(port,"22") == 0);
-	g_free(port);
-	
-	params->args = ARGS_IP;
-	g_assert(!port_to_str(params));
-	
-	rule_params_free(params);
-	
-	g_assert(!port_to_str(NULL));
-}
-
-
-static void test_iptables_plugin_parameters_ip()
-{
-	/* IP only : ARGS_IP */
-	rule_params *params = rule_params_new(ARGS_IP);
-
-	g_assert(params);
-	g_assert(check_parameters(params) == INVALID_IP);
-	
-	params->ip_src = g_strdup("192.168.10.1");
-	g_assert(check_parameters(params) == OK);
-	
-	rule_params_free(params);
-}
-
 static void full_parameter_prepare(rule_params *params)
 {
 	g_assert(params);
@@ -520,33 +454,6 @@ static void test_iptables_plugin_parameters_ip_full()
 	g_free(params->ip_dst);
 	params->ip_dst = NULL;
 	g_assert(check_parameters(params) == INVALID_IP);
-	
-	rule_params_free(params);
-}
-
-static void test_iptables_plugin_parameters_port()
-{
-	/* Port only : ARGS_PORT */
-	rule_params *params = rule_params_new(ARGS_PORT);
-	guint16 i = 0;
-	
-	g_assert(params);
-	g_assert(check_parameters(params) == INVALID_PORT);
-	
-	params->port_dst[0] = 80;
-	g_assert(check_parameters(params) == INVALID_PROTOCOL);
-	
-	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == INVALID_REQUEST);
-	
-	for(i = 2; i < 4 ; i++)
-	{
-		params->operation = i;
-		if(i < 2)
-			g_assert(check_parameters(params) == OK);
-		else
-			g_assert(check_parameters(params) == INVALID_REQUEST);
-	}
 	
 	rule_params_free(params);
 }
@@ -609,36 +516,6 @@ static void test_iptables_plugin_parameters_port_full()
 	// Src set, pass 
 	params->port_dst[0] = 0;
 	g_assert(check_parameters(params) == OK);
-	
-	rule_params_free(params);
-}
-
-static void test_iptables_plugin_parameters_ip_and_port()
-{
-	/* Port and ip  : ARGS_IP_PORT */
-	rule_params *params = rule_params_new(ARGS_IP_PORT);
-	guint16 i = 0;
-	
-	g_assert(params);
-	g_assert(check_parameters(params) == INVALID_IP);
-	
-	params->ip_src = g_strdup("192.168.10.1");
-	g_assert(check_parameters(params) == INVALID_PORT);
-	
-	params->port_dst[0] = 80;
-	g_assert(check_parameters(params) == INVALID_PROTOCOL);
-	
-	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == INVALID_REQUEST);
-	
-	for(i = 0; i < 4 ; i++)
-	{
-		params->operation = i;
-		if(i < 2)
-			g_assert(check_parameters(params) == OK);
-		else
-			g_assert(check_parameters(params) == INVALID_REQUEST);
-	}
 	
 	rule_params_free(params);
 }
@@ -743,42 +620,6 @@ static void test_iptables_plugin_parameters_ip_and_port_full()
 	// Src set, pass 
 	params->port_dst[0] = 0;
 	g_assert(check_parameters(params) == OK);
-	
-	rule_params_free(params);
-}
-
-static void test_iptables_plugin_parameters_ip_and_port_range()
-{
-	/* Port and ip  : ARGS_IP_PORT */
-	rule_params *params = rule_params_new(ARGS_IP_PORT_RANGE);
-	guint16 i = 0;
-	
-	g_assert(params);
-	g_assert(check_parameters(params) == INVALID_IP);
-	
-	params->ip_src = g_strdup("192.168.10.1");
-	g_assert(check_parameters(params) == INVALID_PORT);
-	
-	params->port_dst[0] = 80;
-	g_assert(check_parameters(params) == INVALID_PORT);
-	
-	params->port_dst[1] = 22;
-	g_assert(check_parameters(params) == INVALID_PORT_RANGE);
-	
-	params->port_dst[1] = 8080;
-	g_assert(check_parameters(params) == INVALID_PROTOCOL);
-	
-	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == INVALID_REQUEST);
-	
-	for(i = 2; i < 4 ; i++)
-	{
-		params->operation = i;
-		if(i < 2)
-			g_assert(check_parameters(params) == OK);
-		else
-			g_assert(check_parameters(params) == INVALID_REQUEST);
-	}
 	
 	rule_params_free(params);
 }
@@ -1029,46 +870,6 @@ static void test_iptables_plugin_parameters_ip_and_port_range_full()
 	rule_params_free(params);
 }
 
-static void test_iptables_plugin_parameters_port_range()
-{
-	/* Port range  : ARGS_PORT_RANGE */
-	rule_params *params = rule_params_new(ARGS_PORT_RANGE);
-	guint16 i = 0;
-	
-	g_assert(params);
-
-	g_assert(check_parameters(params) == INVALID_PORT);
-	
-	params->port_dst[0] = 80;
-	g_assert(check_parameters(params) == INVALID_PORT);
-	
-	params->port_dst[1] = 80;
-	g_assert(check_parameters(params) == INVALID_PROTOCOL);
-	
-	params->port_dst[1] = 22;
-	g_assert(check_parameters(params) == INVALID_PORT_RANGE);
-	
-	params->port_dst[1] = 8080;
-	g_assert(check_parameters(params) == INVALID_PROTOCOL);
-	
-	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == INVALID_REQUEST);
-	
-	for(i = 2; i < 4 ; i++)
-	{
-		params->operation = i;
-		g_assert(check_parameters(params) == INVALID_REQUEST);
-	}
-
-	for(i = 0; i < 2 ; i++)
-	{
-		params->operation = i;
-		g_assert(check_parameters(params) == OK);
-	}
-	
-	rule_params_free(params);
-}
-
 static void test_iptables_plugin_parameters_port_range_full()
 {
 	/* Port and ip  : ARGS_PORT_RANGE_FULL */
@@ -1086,37 +887,6 @@ static void test_iptables_plugin_parameters_port_range_full()
 	
 	ip_port_and_range_full_negative(params);
 
-	rule_params_free(params);
-}
-
-static void test_iptables_plugin_parameters_service()
-{
-	/* service  : ARGS_SERVICE */
-	rule_params *params = rule_params_new(ARGS_SERVICE);
-	guint16 i = 0;
-	
-	g_assert(params);
-
-	g_assert(check_parameters(params) == INVALID_SERVICE);
-	
-	params->service_src = g_strdup("http");
-	g_assert(check_parameters(params) == INVALID_SERVICE);
-	
-	params->protocol = g_strdup("tcp");
-	g_assert(check_parameters(params) == INVALID_REQUEST);
-	
-	for(i = 2; i < 4 ; i++)
-	{
-		params->operation = i;
-		g_assert(check_parameters(params) == INVALID_REQUEST);
-	}
-
-	for(i = 0; i < 2 ; i++)
-	{
-		params->operation = i;
-		g_assert(check_parameters(params) == OK);
-	}
-		
 	rule_params_free(params);
 }
 
@@ -1208,7 +978,7 @@ static void test_iptables_plugin_parameters_check_operation()
 		g_assert(!check_operation(params));
 	}
 	
-	params->args = ARGS_IP;
+	params->args = ARGS_IP_FULL;
 	
 	// ADD, REMOVE and FLUSH ok for rest that require operation
 	for(i = 0; i < 2 ; i++)
@@ -1229,32 +999,9 @@ static void test_iptables_plugin_parameters_check_operation()
 static void test_iptables_plugin_parameters_check_ips()
 {
 	gint i = 0;
-	rule_params *params = rule_params_new(ARGS_IP);
+	rule_params *params = rule_params_new(ARGS_IP_FULL);
 	
 	g_assert(params);
-	
-	for(i = ARGS_IP ; i <= ARGS_IP_SERVICE ; i++)
-	{
-		params->args = i;
-		g_assert(!check_ips(params));
-		
-		params->ip_dst = g_strdup("1.2.3.4");
-		g_assert(!check_ips(params));
-		
-		params->ip_src = g_strdup("1.2.3.4");
-		g_assert(check_ips(params));
-		
-		g_free(params->ip_dst);
-		params->ip_dst = NULL;
-		g_assert(check_ips(params));
-		
-		g_free(params->ip_src);
-		params->ip_src = NULL;
-	}
-	
-	g_free(params->ip_dst);
-	g_free(params->ip_src);
-	params->ip_dst = params->ip_src = NULL;
 	
 	for(i = ARGS_IP_FULL ; i <= ARGS_IP_SERVICE_FULL ; i++)
 	{
@@ -1286,29 +1033,15 @@ static void test_iptables_plugin_parameters_check_ips()
 
 static void test_iptables_plugin_parameters_check_ports()
 {
-	rule_params *params = rule_params_new(ARGS_IP_PORT);
+	rule_params *params = rule_params_new(ARGS_IP_PORT_FULL);
 	
 	gint i = 0;
-	
-	gint basic[] = {
-		ARGS_IP_PORT,
-		ARGS_IP_SERVICE,
-		ARGS_PORT,
-		ARGS_SERVICE,
-		0
-	};
 	
 	gint basic_full[] = {
 		ARGS_IP_PORT_FULL,
 		ARGS_IP_SERVICE_FULL,
 		ARGS_PORT_FULL,
 		ARGS_SERVICE_FULL,
-		0
-	};
-	
-	gint basic_range[] = {
-		ARGS_IP_PORT_RANGE,
-		ARGS_PORT_RANGE,
 		0
 	};
 	
@@ -1321,43 +1054,6 @@ static void test_iptables_plugin_parameters_check_ports()
 	g_assert(params);
 	
 	g_assert(!check_ports(params));
-	
-/*----------- BASIC START ------------*/
-	for(i = 0; basic[i] ; i++)
-	{
-		params->args = basic[i];
-		g_assert(!check_ports(params));
-	}
-	
-	// Source should not be checked
-	params->port_src[0] = 80;
-	
-	for(i = 0; basic[i] ; i++)
-	{
-		params->args = basic[i];
-		g_assert(!check_ports(params));
-	}
-	
-	// Just destination port
-	params->port_dst[0] = 8080;
-	
-	for(i = 0; basic[i] ; i++)
-	{
-		params->args = basic[i];
-		g_assert(check_ports(params));
-	}
-	
-	// other ports have no effect
-	params->port_dst[1] = 443;
-	
-	for(i = 0; basic[i] ; i++)
-	{
-		params->args = basic[i];
-		g_assert(check_ports(params));
-	}
-
-	// Reset	
-	params->port_dst[0] = params->port_dst[1] = params->port_src[0] = params->port_src[1] = 0;
 	
 /*--------------BASIC FULL--------------*/
 	// Should fail
@@ -1392,43 +1088,6 @@ static void test_iptables_plugin_parameters_check_ports()
 	{
 		params->args = basic_full[i];
 		g_assert(check_ports(params));
-	}
-	
-	// Reset	
-	params->port_dst[0] = params->port_dst[1] = params->port_src[0] = params->port_src[1] = 0;
-	
-/*----------------BASIC RANGE-----------*/
-	for(i = 0; basic_range[i] ; i++)
-	{
-		params->args = basic_range[i];
-		g_assert(!check_ports(params));
-	}
-	
-	// Both should be set - fails
-	params->port_dst[0] = 80;
-	
-	for(i = 0; basic_range[i] ; i++)
-	{
-		params->args = basic_range[i];
-		g_assert(!check_ports(params));
-	}
-	
-	// Ok
-	params->port_dst[1] = 90;
-	
-	for(i = 0; basic_range[i] ; i++)
-	{
-		params->args = basic_range[i];
-		g_assert(check_ports(params));
-	}
-	
-	// Fails
-	params->port_dst[0] = 0;
-	
-	for(i = 0; basic_range[i] ; i++)
-	{
-		params->args = basic_range[i];
-		g_assert(!check_ports(params));
 	}
 	
 	// Reset	
@@ -1509,37 +1168,12 @@ static void test_iptables_plugin_parameters_check_ports()
 
 static void test_iptables_plugin_parameters_check_service()
 {
-	rule_params *params = rule_params_new(ARGS_SERVICE);
+	rule_params *params = rule_params_new(ARGS_SERVICE_FULL);
 	
 	g_assert(params);
 	
-	gint basic[] = { ARGS_SERVICE, ARGS_IP_SERVICE, 0 };
 	gint full[] = { ARGS_SERVICE_FULL, ARGS_IP_SERVICE_FULL, 0 };
 	gint i = 0;
-	
-	for(i = 0; basic[i]; i++)
-	{
-		params->args = basic[i];
-		
-		g_assert(!check_service(params));
-	
-		params->service_dst = g_strdup("http");
-		g_assert(!check_service(params));
-	
-		params->service_src = g_strdup("ssh");
-		g_assert(check_service(params));
-	
-		g_free(params->service_dst);
-		params->service_dst = NULL;
-		g_assert(check_service(params));
-	
-		g_free(params->service_src);
-		params->service_src = NULL;
-
-		g_free(params->service_dst);
-		g_free(params->service_src);
-		params->service_dst = params->service_src = NULL;
-	}
 
 	for(i = 0; full[i]; i++)
 	{
@@ -1603,7 +1237,7 @@ static void test_iptables_plugin_parameters_check_chain_restricted()
 
 static void test_iptables_plugin_parameters_check_port_range()
 {
-	rule_params *params = rule_params_new(ARGS_PORT_RANGE);
+	rule_params *params = rule_params_new(ARGS_PORT_RANGE_FULL);
 	
 	g_assert(params);
 	
@@ -2096,17 +1730,11 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_PARAMETERS "check_port_range", test_iptables_plugin_parameters_check_port_range);
 	g_test_add_func(PREFIX_PARAMETERS "check_service", test_iptables_plugin_parameters_check_service);
 	g_test_add_func(PREFIX_PARAMETERS "check_chain_restricted", test_iptables_plugin_parameters_check_chain_restricted);
-	g_test_add_func(PREFIX_PARAMETERS "ip", test_iptables_plugin_parameters_ip);
 	g_test_add_func(PREFIX_PARAMETERS "ip_full", test_iptables_plugin_parameters_ip_full);
-	g_test_add_func(PREFIX_PARAMETERS "port", test_iptables_plugin_parameters_port);
 	g_test_add_func(PREFIX_PARAMETERS "port_full", test_iptables_plugin_parameters_port_full);
-	g_test_add_func(PREFIX_PARAMETERS "ip_and_port", test_iptables_plugin_parameters_ip_and_port);
 	g_test_add_func(PREFIX_PARAMETERS "ip_and_port_full", test_iptables_plugin_parameters_ip_and_port_full);
-	g_test_add_func(PREFIX_PARAMETERS "ip_and_port_range", test_iptables_plugin_parameters_ip_and_port_range);
 	g_test_add_func(PREFIX_PARAMETERS "ip_and_port_range_full", test_iptables_plugin_parameters_ip_and_port_range_full);
-	g_test_add_func(PREFIX_PARAMETERS "port_range", test_iptables_plugin_parameters_port_range);
 	g_test_add_func(PREFIX_PARAMETERS "port_range_full", test_iptables_plugin_parameters_port_range_full);
-	g_test_add_func(PREFIX_PARAMETERS "service", test_iptables_plugin_parameters_service);
 	g_test_add_func(PREFIX_PARAMETERS "service_full", test_iptables_plugin_parameters_service_full);
 	g_test_add_func(PREFIX_PARAMETERS "chains", test_iptables_plugin_parameters_chain);
 	g_test_add_func(PREFIX_PARAMETERS "dbus_client", test_iptables_plugin_parameters_dbus_client);
@@ -2120,8 +1748,6 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_UTILS "protocol_for_port", test_iptables_plugin_utils_protocol_for_port);
 	g_test_add_func(PREFIX_UTILS "mask_to_cidr", test_iptables_plugin_utils_mask_to_cidr);
 	g_test_add_func(PREFIX_UTILS "format_ip", test_iptables_plugin_utils_format_ip);
-	g_test_add_func(PREFIX_UTILS "get_port_range_tokens", test_iptables_plugin_utils_get_port_range_tokens);
-	g_test_add_func(PREFIX_UTILS "port_to_str", test_iptables_plugin_utils_port_to_str);
 	
 	g_test_add_func(PREFIX_POLICY "basic", test_iptables_plugin_policy_check_basic);
 	g_test_add_func(PREFIX_POLICY "root", test_iptables_plugin_policy_check_root);

@@ -110,12 +110,6 @@ DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
 
 DBusMessage* sailfish_iptables_version(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_change_input_policy(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_change_output_policy(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
 
 DBusMessage* sailfish_iptables_change_policy(
 			DBusConnection *connection,	DBusMessage *message, void *user_data);
@@ -141,95 +135,6 @@ DBusMessage* sailfish_iptables_rule_ip_service(
 
 DBusMessage* sailfish_iptables_rule_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-// ALLOW INCOMING
-DBusMessage* sailfish_iptables_allow_incoming_ip(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_allow_incoming_ip_port(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_allow_incoming_ip_port_range(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_allow_incoming_ip_service(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_allow_incoming_port(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_allow_incoming_port_range(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_allow_incoming_service(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-// ALLOW OUTGOING
-DBusMessage* sailfish_iptables_allow_outgoing_ip(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_allow_outgoing_ip_port(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_allow_outgoing_ip_port_range(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_allow_outgoing_port(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_allow_outgoing_port_range(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_allow_outgoing_ip_service(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_allow_outgoing_service(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-// DENY INCOMING			
-DBusMessage* sailfish_iptables_deny_incoming_ip(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_deny_incoming_ip_port(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_deny_incoming_ip_port_range(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_deny_incoming_port(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_deny_incoming_port_range(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_deny_incoming_ip_service(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_deny_incoming_service(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-
-// DENY OUTGOING
-DBusMessage* sailfish_iptables_deny_outgoing_ip(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_deny_outgoing_ip_port(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_deny_outgoing_ip_port_range(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_deny_outgoing_port(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_deny_outgoing_port_range(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_deny_outgoing_ip_service(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_deny_outgoing_service(
-			DBusConnection *connection, DBusMessage *message, void *user_data);
 
 // Chain management
 DBusMessage* sailfish_iptables_manage_chain(

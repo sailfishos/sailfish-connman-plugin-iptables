@@ -43,7 +43,7 @@ RELEASE_BUILD_DIR = $(BUILD_DIR)/release
 CC = $(CROSS_COMPILE)gcc
 LD = $(CC)
 WARNINGS = -Wall
-BASE_FLAGS = -fPIC
+BASE_FLAGS = -fPIC -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -Wformat -Wformat-security -fmessage-length=0
 
 ADD_CFLAGS=`pkg-config --cflags glib-2.0 dbus-1 libdbusaccess libglibutil`
 ADD_LDFLAGS=`pkg-config --libs glib-2.0 dbus-1 libdbusaccess libglibutil`
@@ -92,6 +92,7 @@ release: $(RELEASE_LIB)
 
 clean:
 	$(RM) *~ $(SRC_DIR)/*~
+	$(RM) *.d *.o
 	$(RM) -r $(BUILD_DIR) RPMS installroot
 	make -C unit clean
 
