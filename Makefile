@@ -91,8 +91,8 @@ debug: $(DEBUG_LIB)
 release: $(RELEASE_LIB)
 
 clean:
-	$(RM) -f *~ $(SRC_DIR)/*~
-	$(RM) -fr $(BUILD_DIR) RPMS installroot
+	$(RM) *~ $(SRC_DIR)/*~
+	$(RM) -r $(BUILD_DIR) RPMS installroot
 	make -C unit clean
 
 $(DEBUG_BUILD_DIR):
