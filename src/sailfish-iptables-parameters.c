@@ -351,8 +351,6 @@ gboolean api_data_add_custom_chain(api_data *data, const gchar* table_name,
 gboolean api_data_delete_custom_chain(api_data *data, const gchar* table_name,
 	const gchar* chain)
 {
-	gint chains_count = 0;
-	
 	if(!data || !table_name || !(*table_name) || !chain || !(*chain))
 		return false;
 	
@@ -447,7 +445,7 @@ rule_params* rule_params_new(rule_args args)
 
 gboolean check_operation(rule_params *params)
 {
-	rule_args upper = FLUSH;
+	rule_operation upper = FLUSH;
 	
 	if(!params)
 		return false;
@@ -455,7 +453,7 @@ gboolean check_operation(rule_params *params)
 	if(params->args == ARGS_CHAIN)
 		upper = UNDEFINED;	
 	
-	return params->operation >= OK && params->operation < upper;
+	return params->operation >= ADD && params->operation < upper;
 }
 
 gboolean check_port_range(rule_params *params)
@@ -478,9 +476,6 @@ gboolean check_ips(rule_params *params)
 {
 	if(!params)
 		return false;
-
-	if(params->args >= ARGS_IP && params->args <= ARGS_IP_SERVICE)
-		return params->ip_src ? true : false;
 	
 	if(params->args >= ARGS_IP_FULL && params->args <= ARGS_IP_SERVICE_FULL)
 		return params->ip_src || params->ip_dst ? true : false;
@@ -496,12 +491,6 @@ gboolean check_ports(rule_params *params)
 		
 	switch(params->args)
 	{
-		// dst only
-		case ARGS_IP_PORT: 
-		case ARGS_IP_SERVICE:
-		case ARGS_PORT:
-		case ARGS_SERVICE:
-			return params->port_dst[0] ? true : false;
 		// src or dst has to be set
 		case ARGS_IP_PORT_FULL:
 		case ARGS_IP_SERVICE_FULL:
@@ -512,10 +501,6 @@ gboolean check_ports(rule_params *params)
 			if(params->port_src[0])
 				rval |= true;
 			return rval;
-		// dst both must be set
-		case ARGS_IP_PORT_RANGE:
-		case ARGS_PORT_RANGE:
-			return params->port_dst[0] && params->port_dst[1] ? true : false;
 		// either dst or src range must be set, or both
 		case ARGS_IP_PORT_RANGE_FULL:
 		case ARGS_PORT_RANGE_FULL:
@@ -536,9 +521,6 @@ gboolean check_service(rule_params *params)
 
 	switch(params->args)
 	{
-		case ARGS_IP_SERVICE:
-		case ARGS_SERVICE:
-			return params->service_src ? true : false;
 		case ARGS_IP_SERVICE_FULL:
 		case ARGS_SERVICE_FULL:
 			return params->service_src || params->service_dst ? true : false;
@@ -583,17 +565,14 @@ api_result check_parameters(rule_params* params)
 		
 	switch(params->args)
 	{
-		case ARGS_IP:
 		case ARGS_IP_FULL:
 			return check_ips(params) ? OK : INVALID_IP;
-		case ARGS_IP_PORT:
 		case ARGS_IP_PORT_FULL:
 			if(!check_ips(params)) return INVALID_IP;
 			if(!check_ports(params)) return INVALID_PORT;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_IP_PORT_RANGE:
 		case ARGS_IP_PORT_RANGE_FULL:
 			if(!check_ips(params)) return INVALID_IP;
 			if(!check_ports(params)) return INVALID_PORT;
@@ -601,7 +580,6 @@ api_result check_parameters(rule_params* params)
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_IP_SERVICE:
 		case ARGS_IP_SERVICE_FULL:
 			if(!check_ips(params)) return INVALID_IP;
 			if(!check_service(params)) return INVALID_SERVICE;
@@ -609,20 +587,17 @@ api_result check_parameters(rule_params* params)
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_PORT:
 		case ARGS_PORT_FULL:
 			if(!check_ports(params)) return INVALID_PORT;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_PORT_RANGE:
 		case ARGS_PORT_RANGE_FULL:
 			if(!check_ports(params)) return INVALID_PORT;
 			if(!check_port_range(params)) return INVALID_PORT_RANGE;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_SERVICE:
 		case ARGS_SERVICE_FULL:
 			if(!check_service(params)) return INVALID_SERVICE;
 			if(!params->protocol) return INVALID_SERVICE;
@@ -631,11 +606,6 @@ api_result check_parameters(rule_params* params)
 		case ARGS_CLEAR:
 		case ARGS_CLEAR_CHAINS:
 			if(!params->table) return INVALID_REQUEST;
-			return OK;
-		case ARGS_POLICY_IN:
-		case ARGS_POLICY_OUT:
-			if(!check_operation(params)) return INVALID_REQUEST;
-			if(!params->policy) return INVALID_POLICY;
 			return OK;
 		case ARGS_POLICY:
 			if(!params->chain) return INVALID_CHAIN_NAME;

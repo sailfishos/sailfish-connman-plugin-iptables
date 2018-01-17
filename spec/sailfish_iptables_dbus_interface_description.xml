@@ -44,8 +44,6 @@
 -->
 <interface name="org.sailfishos.connman.mdm.iptables">
 
-<property name="Result" type="q" access="read"/>
-
 <!--
 	ClearIptablesTable:
 	@table: Iptables table to clear.
@@ -67,7 +65,7 @@ Sends signal FirewallCleared
 	@result: result code, 0 = cleared, 8 = table name was invalid, 9 = cannot make change (iptables error), 100 = access denied
 	@string: result string.
 
-Clears all custom chains from given iptables table. Defaults to filter table, table parameter is ignored now.
+Clears all custom chains from given iptables table. Defaults to filter table, table parameter is ignored now. Each chain is flushed first. If there is a reference to any of the custom chains in any other chain (bultin or custom chain) the chain is not removed as iptables prevents such operation.
 -->
 <method name="ClearIptablesChains">
 <arg name="table" type="s" direction="in"/>
@@ -117,39 +115,6 @@ Registers the client to listen for signals emitted by iptables api.
 <arg name="string" type="s" direction="out"/>
 </method>
 
-
-<!--
-	ChangeInputPolicy:
-	@policy: Policy as string ACCEPT or DROP
-	@result: 0 = changed, 6 = invalid policy, 9 = cannot make change (iptables error), 100 = access denied
-	@string: result string.
-	
-	Change policy of filter table INPUT chain. Parameter is the same as iptables command (ACCEPT/DROP)
-
-	Sends signal PolicyChanged
--->
-<method name="ChangeInputPolicy">
-<arg name="policy" type="s" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-	ChangeOutputPolicy:
-	@policy: Policy as string ACCEPT or DROP
-	@result: 0 = changed, 6 = invalid policy, 9 = cannot make change (iptables error), 100 = access denied
-	@string: result string.
-	
-	Change policy of filter table OUTPUT chain. Parameter is the same as iptables command (ACCEPT/DROP)
-	
-	Sends signal PolicyChanged
--->
-<method name="ChangeOutputPolicy">
-<arg name="policy" type="s" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
 <!--
 	ChangePolicy:
 	@table: iptables table to change policy
@@ -178,7 +143,7 @@ Registers the client to listen for signals emitted by iptables api.
 	@result: 0 = changed, 6 = invalid policy, 8 = invalid operation, 9 = cannot make change (iptables error), 100 = access denied
 	@string: result string.
 	
-	Manage chains in filter table. Custom chains can be added (ADD), removed (REMOVE) and flushed (FLUSH). Builtin chains or duplicates are not allowed (returns error code 9).
+	Manage chains in filter table. Custom chains can be added (ADD), removed (REMOVE) and flushed (FLUSH). Builtin chains or duplicates are not allowed (returns error code 9). When a chain is called to remove it is first flushed. If there is a reference to any of the custom chains in any other chain (bultin or custom chain) the chain is not removed as iptables prevents such operation (result 9).
 
 Sends signal ChainChanged
 -->
@@ -195,13 +160,15 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_ip: Rule destination IP address, added with -d to iptables
-	@source_ip: Rule source IP address, added with -s to iptables
+	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
+	@source_ip: Rule source IP address, added with -s to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
 	@string: result string
 	
 	Either or both of ip addresses must be set. Empty string = not set.
+	
+	Sends signal RuleChanged.
 -->
 <method name="RuleIp">
 <arg name="table" type="s" direction="in"/>
@@ -219,8 +186,8 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_ip: Rule destination IP address, added with -d to iptables. Empty string is not processed. If empty source_ip must be set.
-	@source_ip: Rule source IP address, added with -s to iptables. Empty string is not processed. If empty destination_ip must be set.
+	@destination_ip: Rule destination IP address, added with -d to iptables. Empty string is not processed. If empty source_ip must be set. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
+	@source_ip: Rule source IP address, added with -s to iptables. Empty string is not processed. If empty destination_ip must be set. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@destination_port: destination port, can be 0 if source port is set
 	@source_port: source port, can be 0 if destination port is set
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
@@ -231,6 +198,8 @@ Sends signal ChainChanged
 	Protocol can be omitted if known port is used. Protocol detection does the check for destination_port first, if a suitable protocol is found this is used. If source port is also defined the protocol check is done only if protocol for destination port (if set) was not found. The protocol of destination port, therefore, dominates over source port. If a proper protocol was defined the checks based on ports is not done.
 	
 	Either or both of ip addresses must be set. Empty string = not set.
+	
+	Sends signal RuleChanged.
 -->
 <method name="RuleIpWithPort">
 <arg name="table" type="s" direction="in"/>
@@ -251,8 +220,8 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_ip: Rule destination IP address, added with -d to iptables
-	@source_ip: Rule source IP address, added with -s to iptables
+	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
+	@source_ip: Rule source IP address, added with -s to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@destination_port_start: Destination port range start (0 produces error unless both destination ports are 0 and source port range is set)
 	@destination_port_end: Destination port range end (0 produces error unless both destination ports are 0 and source port range is set)
 	@source_port_start: Source port range start (0 produces error unless both source ports are 0 and destination port range is set)
@@ -266,7 +235,9 @@ Sends signal ChainChanged
 	
 	Protocol can be omitted if known port is used. Protocol detection does the check for destination_port_start first, if a suitable protocol is found this is used. If source port start is also defined the protocol check is done only if protocol for destination port start (if set) was not found. The protocol of destination_port_start, therefore, dominates over source_port_start. If a proper protocol was defined the checks based on ports is not done.
 	
-	If only one of the port ranges needs to be set, the other range must be both 0. 
+	If only one of the port ranges needs to be set, the other range must be both 0.
+	
+	Sends signal RuleChanged.
 -->
 <method name="RuleIpWithPortRange">
 <arg name="table" type="s" direction="in"/>
@@ -289,8 +260,8 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_ip: Rule destination IP address, added with -d to iptables
-	@source_ip: Rule source IP address, added with -s to iptables
+	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
+	@source_ip: Rule source IP address, added with -s to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@destination_service: destination service name, case insensitive, port and protocol will be set if service is known using get getservbyname() (/etc/services)
 	@source_service: source service name, case insensitive, port and protocol will be set if service is known using get getservbyname() (/etc/services)
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
@@ -301,6 +272,8 @@ Sends signal ChainChanged
 	Either or both of ip addresses must be set. Empty string = not set.
 	
 	Either or both of services must be set. Empty string = not set.
+	
+	Sends signal RuleChanged.
 -->
 <method name="RuleIpWithService"><arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
@@ -330,6 +303,8 @@ Sends signal ChainChanged
 	Protocol can be omitted if known port is used. Protocol detection does the check for destination_port first, if a suitable protocol is found this is used. If source port is also defined the protocol check is done only if protocol for destination port (if set) was not found. The protocol of destination port, therefore, dominates over source port. If a proper protocol was defined the checks based on ports is not done.
 	
 	Either or both of the ports has to be set. Port == 0, not set.
+	
+	Sends signal RuleChanged.
 -->
 <method name="RulePort"><arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
@@ -360,7 +335,9 @@ Sends signal ChainChanged
 	
 	Protocol can be omitted if known port is used. Protocol detection does the check for destination_port_start first, if a suitable protocol is found this is used. If source port start is also defined the protocol check is done only if protocol for destination port start (if set) was not found. The protocol of destination_port_start, therefore, dominates over source_port_start. If a proper protocol was defined the checks based on ports is not done.
 	
-	If only one of the port ranges needs to be set, the other range must be both 0. 
+	If only one of the port ranges needs to be set, the other range must be both 0.
+	
+	Sends signal RuleChanged.
 -->
 <method name="RulePortRange"><arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
@@ -390,6 +367,8 @@ Sends signal ChainChanged
 	Either or both of services must be set. Empty string = not set.
 	
 	Defined protocol is the primary choise for protocol in rule. If protocol is empty protocol for destination service is tried, if that is not successfull then the protocol for source service is tried.
+	
+	Sends signal RuleChanged.
 -->
 <method name="RuleService"><arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
@@ -397,369 +376,6 @@ Sends signal ChainChanged
 <arg name="destination_service" type="s" direction="in"/>
 <arg name="source_service" type="s" direction="in"/>
 <arg name="protocol" type="u" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Following methods take following parameters as input:
- NAME		TYPE	DESCRIPTION
- ip		s		IP address or network with CIDR or dot notation (1.2.3.4/24
- 					or 1.2.3.4/255.255.255.0)
- port		q		Port number as unsigned 16bit integer
- port		s		Port as string, single port or port range, separator is ":"
- service	s		Service name, case insensitive, 
- operation	q 		0 = add, 1 = remove, 2 = flush (only with manage chain)
- protocol	s 		tcp/udp, case insensitive (sctp not supported by sailfishos
- 					iptables yet), usually defaults to TCP as tcp protocol is
- 					defined first in /etc/services. Can be empty if service/
- 					port is found from /etc/services.
-
-The methods are named with following convention:
-	Permission|Direction|Parameters
-	
-Permission:
-	Allow			Add rule to iptables with "-j ACCEPT"
-	Deny			Add rule to iptables with "-j DROP"
-	
-Direction:
-	Incoming		Add rule to chain INPUT of filter table
-	Outgoing		Add rule to chain OUTPUT of filter table
-	
-Parameters:
-	Ip			IP address as input
-	With			Combine two parameters
-	Port			Port parameter (integer q)
-	PortRange		Port or port range as parameter (string s)
-	Service			Service name as parameter
-	
-Each method sends signal RuleChanged if the rule was added to iptables.
--->
-
-<!-- Add IP address or network to filter table INPUT chain as ACCEPT. -->
-<method name="AllowIncomingIp">
-<arg name="ip" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network with port to filter table INPUT chain as ACCEPT.
-Parameter protocol can be omitted if port is of some known service (/etc/services)
--->
-<method name="AllowIncomingIpWithPort">
-<arg name="ip" type="s" direction="in"/>
-<arg name="port" type="q" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Add IP address or network with port range (e.g., 2000:3000,) to filter table
-INPUT chain as ACCEPT.
--->
-<method name="AllowIncomingIpWithPortRange">
-<arg name="ip" type="s" direction="in"/>
-<arg name="port" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Add port with address any (0.0.0.0) to filter table INPUT chain as ACCEPT.
-Parameter protocol can be omitted if port is of some known service (/etc/services)
--->
-<method name="AllowIncomingPort">
-<arg name="port" type="q" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add port range (e.g., 2000:3000) with address any (0.0.0.0) to filter table
-INPUT chain as ACCEPT.
--->
-<method name="AllowIncomingPortRange">
-<arg name="port" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network with service by name (has to exist in 
-/etc/services) to filter table INPUT chain as ACCEPT.
-Parameter protocol can be omitted, if service is found.
--->
-<method name="AllowIncomingIpWithService">
-<arg name="ip" type="s" direction="in"/>
-<arg name="service" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add service by name (has to exist in /etc/services) with address any
-(0.0.0.0) to filter table INPUT chain as ACCEPT.
-Parameter protocol can be omitted, if service is found.
--->
-<method name="AllowIncomingService">
-<arg name="service" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network to filter table OUTPUT chain as ACCEPT.
--->
-<method name="AllowOutgoingIp">
-<arg name="ip" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network with port to filter table OUTPUT chain as ACCEPT.
-protocol can be omitted if port is of some known service (/etc/services)
--->
-<method name="AllowOutgoingIpWithPort">
-<arg name="ip" type="s" direction="in"/>
-<arg name="port" type="q" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Add IP address or network with port range (e.g., 2000:3000,) to filter table
-OUTPUT chain as ACCEPT.
--->
-<method name="AllowOutgoingIpWithPortRange">
-<arg name="ip" type="s" direction="in"/>
-<arg name="port" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Add port with address any (0.0.0.0) to filter table OUTPUT chain as ACCEPT.
-Parameter protocol can be omitted if port is of some known service (/etc/services)
--->
-<method name="AllowOutgoingPort">
-<arg name="port" type="q" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add port range (e.g., 2000:3000) with address any (0.0.0.0) to filter table
-OUTPUT chain as ACCEPT.
--->
-<method name="AllowOutgoingPortRange">
-<arg name="port" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network with service by name (has to exist in
-/etc/services) to filter table OUTPUT chain as ACCEPT.
-Parameter protocol can be omitted, if service is found.
--->
-<method name="AllowOutgoingIpWithService">
-<arg name="ip" type="s" direction="in"/>
-<arg name="service" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add service by name (has to exist in /etc/services) with address any
-(0.0.0.0) to filter table OUTPUT chain as ACCEPT.
-Parameter protocol can be omitted, if service is found.
--->
-<method name="AllowOutgoingService">
-<arg name="service" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-
-<!-- Add IP address or network to filter table INPUT chain as DROP.
--->
-<method name="DenyIncomingIp">
-<arg name="ip" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network with port to filter table INPUT chain as DROP.
-protocol can be omitted if port is of some known service (/etc/services)
--->
-<method name="DenyIncomingIpWithPort">
-<arg name="ip" type="s" direction="in"/>
-<arg name="port" type="q" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Add IP address or network with port range (e.g., 2000:3000,) to filter table INPUT chain
-as DROP.
--->
-<method name="DenyIncomingIpWithPortRange">
-<arg name="ip" type="s" direction="in"/>
-<arg name="port" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Add port with address any (0.0.0.0) to filter table INPUT chain as DROP.
-Parameter protocol can be omitted if port is of some known service (/etc/services)
--->
-<method name="DenyIncomingPort">
-<arg name="port" type="q" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add port range (e.g., 2000:3000) with address any (0.0.0.0) to filter table
-INPUT chain as DROP.
--->
-<method name="DenyIncomingPortRange">
-<arg name="port" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network with service by name (has to exist in
-/etc/services) to filter table INPUT chain as DROP.
-Parameter protocol can be omitted, if service is found.
--->
-<method name="DenyIncomingIpWithService">
-<arg name="ip" type="s" direction="in"/>
-<arg name="service" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add service by name (has to exist in /etc/services) with address any
-(0.0.0.0) to filter table INPUT chain as DROP.
-Parameter protocol can be omitted, if service is found.
--->
-<method name="DenyIncomingService">
-<arg name="service" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network to filter table OUTPUT chain as DROP.
--->
-<method name="DenyOutgoingIp">
-<arg name="ip" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or networkwith port to filter table OUTPUT chain as DROP.
-protocol can be omitted if port is of some known service (/etc/services)
--->
-<method name="DenyOutgoingIpWithPort">
-<arg name="ip" type="s" direction="in"/>
-<arg name="port" type="q" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Add IP address or network with port range (e.g., 2000:3000,) to filter table OUTPUT chain 
-as DROP.
--->
-<method name="DenyOutgoingIpWithPortRange">
-<arg name="ip" type="s" direction="in"/>
-<arg name="port" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!--
-Add port with address any (0.0.0.0) to filter table OUTPUT chain as DROP.
-Parameter protocol can be omitted if port is of some known service (/etc/services)
--->
-<method name="DenyOutgoingPort">
-<arg name="port" type="q" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add port range (e.g., 2000:3000) with address any (0.0.0.0) to filter table
-OUTPUT chain as DROP.
--->
-<method name="DenyOutgoingPortRange">
-<arg name="port" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add IP address or network with service by name (has to exist in 
-/etc/services) to filter table OUTPUT chain as DROP.
-Parameter protocol can be omitted, if service is found.
--->
-<method name="DenyOutgoingIpWithService">
-<arg name="ip" type="s" direction="in"/>
-<arg name="service" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
-<arg name="operation" type="q" direction="in"/>
-<arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
-</method>
-
-<!-- Add service by name (has to exist in /etc/services) with address any
-(0.0.0.0) to filter table OUTPUT chain as DROP.
-Parameter protocol can be omitted, if service is found.
--->
-<method name="DenyOutgoingService">
-<arg name="service" type="s" direction="in"/>
-<arg name="protocol" type="s" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
 <arg name="string" type="s" direction="out"/>

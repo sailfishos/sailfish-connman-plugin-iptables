@@ -252,7 +252,9 @@ textual description as follows:
 |10 |"Unauthorized, please try again"|
 |11 |"Unregister failed"|
 |12 |"Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."|
-|13 |"Access denied"|
+|13 | "Invalid table name given." |
+|14	| "Invalid target name given."|
+|100 |"Access denied"|
 
 In addition, GetIptablesContent will return two string arrays (if error these
 are empty arrays):

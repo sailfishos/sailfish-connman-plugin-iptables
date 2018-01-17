@@ -63,12 +63,6 @@ extern "C" {
 #define IPTABLES_RULE_ACCEPT				" -j "IPTABLES_ACCEPT
 #define IPTABLES_RULE_DROP				" -j "IPTABLES_DROP
 
-#define OPERATION_IN 					0x0001
-#define OPERATION_OUT 					0x0002
-#define OPERATION_ACCEPT 				0x0004
-#define OPERATION_DENY 					0x0008
-#define OPERATION_PARAMS				0x0016
-
 #define IP_MASK_DELIM					"/"
 #define PORT_RANGE_DELIM				":"
 
@@ -85,6 +79,8 @@ extern "C" {
 #define IPV6_MASK_MAX					128
 #define IPV4_ADDR_MIN					6
 #define IPV6_ADDR_MIN					1 // "::" -> all zeroes
+
+#define EMPTY_STR					""
 
 typedef struct sailfish_iptables_dbus_client {
 	DAPeer *peer;
@@ -137,14 +133,7 @@ typedef enum sailfish_iptables_rule_operation {
 } rule_operation;
 
 typedef enum sailfish_iptables_dbus_rule_args {
-	ARGS_IP = 0,
-	ARGS_IP_PORT,
-	ARGS_IP_PORT_RANGE,
-	ARGS_IP_SERVICE,
-	ARGS_PORT,
-	ARGS_PORT_RANGE,
-	ARGS_SERVICE,
-	ARGS_IP_FULL,
+	ARGS_IP_FULL = 0,
 	ARGS_IP_PORT_FULL,
 	ARGS_IP_PORT_RANGE_FULL,
 	ARGS_IP_SERVICE_FULL,
@@ -153,8 +142,6 @@ typedef enum sailfish_iptables_dbus_rule_args {
 	ARGS_SERVICE_FULL, 
 	ARGS_CLEAR,
 	ARGS_CLEAR_CHAINS,
-	ARGS_POLICY_IN,
-	ARGS_POLICY_OUT,
 	ARGS_POLICY,
 	ARGS_GET_CONTENT,
 	ARGS_CHAIN
@@ -192,14 +179,9 @@ api_result clear_iptables_rules(rule_params* params, api_data *data);
 api_result clear_iptables_chains(rule_params* params, api_data *data);
 api_result get_iptables_content(rule_params* params, api_data *data);
 
+api_result add_rule_to_iptables(rule_params *params, api_data *data);
+
 api_result set_policy(rule_params* params, api_data *data);
-
-api_result allow_incoming(rule_params* params, api_data *data);
-api_result allow_outgoing(rule_params* params, api_data *data);
-api_result deny_incoming(rule_params* params, api_data *data);
-api_result deny_outgoing(rule_params* params, api_data *data);
-
-api_result iptables_rule(rule_params* params, api_data *data);
 
 api_result manage_chain(rule_params* params, api_data *data);
 

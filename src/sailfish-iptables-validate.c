@@ -282,7 +282,6 @@ gchar *validate_chain(const gchar *table, const gchar *chain)
 		case 0:
 			return custom_chain; // Return formatted chain that is prefixed
 		// TODO add DBG to these
-		case 1: 
 		case -1:
 		case -EINVAL:
 		default:
@@ -343,7 +342,6 @@ gchar* validate_target(const gchar *table, const gchar *target)
 		case 0:
 			return chain; // Return formatted chain that is prefixed
 		// TODO add DBG to these
-		case 1: 
 		case -1:
 		case -EINVAL:
 		default:

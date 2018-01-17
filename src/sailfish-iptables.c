@@ -126,37 +126,18 @@ api_result set_policy(rule_params* params, api_data *data)
 	return rval;
 }
 
-api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
+api_result add_rule_to_iptables(rule_params *params, api_data *data)
 {	
 	api_result rval = INVALID;
 	gint error = 0;
 	GString *rule = NULL;
 	gchar* str_rule = NULL;
 	const gchar* ipt_operation = NULL;
-	gchar ip_direction = 's';
 	
 	if((rval = check_parameters(params)) != OK)
 		return rval;
 
-	if (op == OPERATION_PARAMS)
-	{
-		DBG("add_rule_to_iptables() set chain: %s", params->chain);
-		ipt_operation = params->chain;
-	}
-	else if(op & OPERATION_OUT) // TODO get this from params
-	{
-		DBG("add_rule_to_iptables() out");
-		ipt_operation = IPTABLES_CHAIN_OUTPUT;
-		ip_direction = 'd';
-	}
-	else if (op & OPERATION_IN) // TODO get this from params
-	{
-		DBG("add_rule_to_iptables() in");
-		ipt_operation = IPTABLES_CHAIN_INPUT;
-		ip_direction = 's';
-	}
-	else
-		return INVALID;
+	ipt_operation = params->chain;
 		
 	rule = g_string_new("");
 	
@@ -164,26 +145,8 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 	
 	switch(params->args)
 	{
-		case ARGS_IP:
-			g_string_append_printf(rule,"-%c%s%s",
-				ip_direction, params->ip_negate_src ? " ! " : " ", params->ip_src);
-			break;
-		case ARGS_IP_PORT:
-		case ARGS_IP_SERVICE:
-			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %u",
-				ip_direction, params->ip_negate_src ? " ! " : " ",
-				params->ip_src, params->protocol, params->protocol,
-				params->port_dst[0]);
-			break;
-		case ARGS_IP_PORT_RANGE:
-			g_string_append_printf(rule,"-%c%s%s -p %s -m %s --dport %u:%u",
-				ip_direction, params->ip_negate_src ? " ! " : " ",
-				params->ip_src, params->protocol, params->protocol,
-				params->port_dst[0], params->port_dst[1]);
-			break;
-		case ARGS_PORT:
+		// TODO redo this
 		case ARGS_PORT_FULL:
-		case ARGS_SERVICE:
 		case ARGS_SERVICE_FULL:
 			g_string_append_printf(rule,"-p %s -m %s", 
 				params->protocol, params->protocol);
@@ -193,9 +156,7 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 				
 			if(params->port_src[0])
 				g_string_append_printf(rule," --sport %u", params->port_src[0]);
-				
 			break;
-		case ARGS_PORT_RANGE:
 		case ARGS_PORT_RANGE_FULL:
 			g_string_append_printf(rule,"-p %s -m %s",
 				params->protocol, params->protocol);
@@ -263,15 +224,7 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data, guint16 op)
 			break;
 	}
 	
-	// Add target to rule
-	if(op == OPERATION_PARAMS)
-		g_string_append_printf(rule," -j %s", params->target);
-	else if(op & OPERATION_ACCEPT)
-		g_string_append(rule,IPTABLES_RULE_ACCEPT);
-	else if(op & OPERATION_DENY)
-		g_string_append(rule,IPTABLES_RULE_DROP);
-	else
-		rval = INVALID_REQUEST;
+	g_string_append_printf(rule," -j %s", params->target);
 		
 	if(rval != OK)
 		goto param_error;
@@ -346,31 +299,6 @@ param_error:
 	DBG("%s %s %s %d", PLUGIN_NAME, "add_rule_to_iptables()", 
 		"invalid parameters given, rule is not added, error code", rval);
 	return rval;
-}
-
-api_result allow_incoming(rule_params* params, api_data *data)
-{
-	return add_rule_to_iptables(params, data, OPERATION_IN | OPERATION_ACCEPT);
-}
-
-api_result allow_outgoing(rule_params* params, api_data *data)
-{
-	return add_rule_to_iptables(params, data, OPERATION_OUT | OPERATION_ACCEPT);
-}
-
-api_result deny_incoming(rule_params* params, api_data *data)
-{
-	return add_rule_to_iptables(params, data, OPERATION_IN | OPERATION_DENY);
-}
-
-api_result deny_outgoing(rule_params* params, api_data *data)
-{
-	return add_rule_to_iptables(params, data, OPERATION_OUT | OPERATION_DENY);
-}
-
-api_result iptables_rule(rule_params* params, api_data *data)
-{
-	return add_rule_to_iptables(params, data, OPERATION_PARAMS);
 }
 
 api_result manage_chain(rule_params* params, api_data *data)

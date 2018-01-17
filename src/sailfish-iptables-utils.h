@@ -53,8 +53,6 @@ gchar* get_protocol_for_service(const gchar *service);
 gchar* get_protocol_for_port(guint16 port);
 guint32 mask_to_cidr(gint type, const gchar* mask_address);
 gchar* format_ip(gint type, const gchar* ip);
-gchar** get_port_range_tokens(const gchar* port_str);
-gchar *port_to_str(rule_params *params);
 
 #ifdef __cplusplus
 }

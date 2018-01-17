@@ -203,45 +203,6 @@ gchar* format_ip(gint type, const gchar* ip)
 	
 }
 
-gchar** get_port_range_tokens(const gchar* port_str)
-{
-	if(port_str && *port_str)
-		return g_strsplit(port_str,PORT_RANGE_DELIM,2);
-	return NULL;
-}
-
-gchar *port_to_str(rule_params *params)
-{
-	gchar* port_str = NULL;
-	
-	if(params)
-	{
-		switch(params->args)
-		{
-			case ARGS_IP_PORT_RANGE:
-			case ARGS_IP_PORT_RANGE_FULL:
-			case ARGS_PORT_RANGE:
-			case ARGS_PORT_RANGE_FULL:			
-				port_str = g_strdup_printf("%u:%u",
-					params->port_dst[0],params->port_dst[1]);
-				break;
-			case ARGS_IP_PORT:
-			case ARGS_IP_SERVICE:
-			case ARGS_PORT:
-			case ARGS_SERVICE:
-			case ARGS_IP_PORT_FULL:
-			case ARGS_IP_SERVICE_FULL:
-			case ARGS_PORT_FULL:
-			case ARGS_SERVICE_FULL:
-				port_str = g_strdup_printf("%u",params->port_dst[0]);
-				break;
-			default:
-				break;
-		}
-	}
-	return port_str;
-}
-
 /*
  * Local Variables:
  * mode: C
