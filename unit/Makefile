@@ -58,7 +58,7 @@ run:
 	gtester $(NAME)
 
 clean:
-	$(RM) -f *~ $/*~
+	$(RM) *~ $/*~
 	$(RM) *.d *.o
 	$(RM) $(NAME)
 
