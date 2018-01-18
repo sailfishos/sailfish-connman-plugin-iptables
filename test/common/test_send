@@ -41,3 +41,16 @@ function send_message()
 		echo "failure processing rule $METHOD_PREFIX.$1 ${@:4} $LAST_PARAM - method returned: $RETURN"
 	fi
 }
+
+# 1:Method 2:ADD/REMOVE 3:result 4:...rule: table, chain, target, rest of rule
+function send_rule_message()
+{	
+	RESULT=$(send_message "$1" "$2" "$METHOD_INPUTS_RESULT" "string:filter" "string:$3" "string:$4" ${@:5})
+	
+	if [[ "$RESULT" != "0" ]] ; then
+		log "$RESULT"
+		echo 1
+	else
+		echo 0
+	fi
+}

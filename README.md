@@ -179,6 +179,19 @@ string:filter string:INPUT string:ACCEPT \
 string:192.168.0.1 string: uint16:0
 ```
 
+### Add rule to deny outgoing connections to 192.168.0.2
+
+```
+dbus-send --system \
+--type=method_call \
+--print-reply \
+--dest="net.connman" \
+/org/sailfishos/connman/mdm/iptables \
+org.sailfishos.connman.mdm.iptables.RuleIp \
+string:filter string:OUTPUT string:DROP \
+string: string:192.168.0.2 uint16:0
+```
+
 ### Deny outgoing connections to tcp ports 8000 to 9000
 
 ```
@@ -217,7 +230,7 @@ dbus-send --system \
 /org/sailfishos/connman/mdm/iptables \
 org.sailfishos.connman.mdm.iptables.RuleIpWithService \
 string:filter string:INPUT string:DROP \
-string:"192.168.0.2" string:"ssh" string:"" uint16:1
+string:192.168.0.2 string: string:ssh string: uint16:1
 ```
 
 ### Add a custom chain to filter table
