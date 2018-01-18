@@ -160,8 +160,8 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@source_ip: Rule source IP address, added with -s to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
+	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
 	@string: result string
@@ -174,8 +174,8 @@ Sends signal ChainChanged
 <arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
 <arg name="target" type="s" direction="in"/>
-<arg name="destination_ip" type="s" direction="in"/>
 <arg name="source_ip" type="s" direction="in"/>
+<arg name="destination_ip" type="s" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
 <arg name="string" type="s" direction="out"/>
@@ -186,10 +186,10 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_ip: Rule destination IP address, added with -d to iptables. Empty string is not processed. If empty source_ip must be set. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@source_ip: Rule source IP address, added with -s to iptables. Empty string is not processed. If empty destination_ip must be set. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
-	@destination_port: destination port, can be 0 if source port is set
+	@destination_ip: Rule destination IP address, added with -d to iptables. Empty string is not processed. If empty source_ip must be set. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@source_port: source port, can be 0 if destination port is set
+	@destination_port: destination port, can be 0 if source port is set
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 2 = invalid port, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
@@ -205,10 +205,10 @@ Sends signal ChainChanged
 <arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
 <arg name="target" type="s" direction="in"/>
-<arg name="destination_ip" type="s" direction="in"/>
 <arg name="source_ip" type="s" direction="in"/>
-<arg name="destination_port" type="q" direction="in"/>
+<arg name="destination_ip" type="s" direction="in"/>
 <arg name="source_port" type="q" direction="in"/>
+<arg name="destination_port" type="q" direction="in"/>
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
@@ -220,12 +220,12 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@source_ip: Rule source IP address, added with -s to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
-	@destination_port_start: Destination port range start (0 produces error unless both destination ports are 0 and source port range is set)
-	@destination_port_end: Destination port range end (0 produces error unless both destination ports are 0 and source port range is set)
+	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@source_port_start: Source port range start (0 produces error unless both source ports are 0 and destination port range is set)
 	@source_port_end: Source port range end (0 produces error unless both source ports are 0 and destination port range is set)
+	@destination_port_start: Destination port range start (0 produces error unless both destination ports are 0 and source port range is set)
+	@destination_port_end: Destination port range end (0 produces error unless both destination ports are 0 and source port range is set)
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 2 = invalid port, 3 = invalid port range, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
@@ -243,12 +243,12 @@ Sends signal ChainChanged
 <arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
 <arg name="target" type="s" direction="in"/>
-<arg name="destination_ip" type="s" direction="in"/>
 <arg name="source_ip" type="s" direction="in"/>
-<arg name="destination_port_start" type="q" direction="in"/>
-<arg name="destination_port_end" type="q" direction="in"/>
+<arg name="destination_ip" type="s" direction="in"/>
 <arg name="source_port_start" type="q" direction="in"/>
 <arg name="source_port_end" type="q" direction="in"/>
+<arg name="destination_port_start" type="q" direction="in"/>
+<arg name="destination_port_end" type="q" direction="in"/>
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
@@ -260,10 +260,10 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@source_ip: Rule source IP address, added with -s to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
-	@destination_service: destination service name, case insensitive, port and protocol will be set if service is known using get getservbyname() (/etc/services)
+	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@source_service: source service name, case insensitive, port and protocol will be set if service is known using get getservbyname() (/etc/services)
+	@destination_service: destination service name, case insensitive, port and protocol will be set if service is known using get getservbyname() (/etc/services)
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 4 = invalid service, 5 = invalid protocol,7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
@@ -275,13 +275,14 @@ Sends signal ChainChanged
 	
 	Sends signal RuleChanged.
 -->
-<method name="RuleIpWithService"><arg name="table" type="s" direction="in"/>
+<method name="RuleIpWithService">
+<arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
 <arg name="target" type="s" direction="in"/>
-<arg name="destination_ip" type="s" direction="in"/>
 <arg name="source_ip" type="s" direction="in"/>
-<arg name="destination_service" type="s" direction="in"/>
+<arg name="destination_ip" type="s" direction="in"/>
 <arg name="source_service" type="s" direction="in"/>
+<arg name="destination_service" type="s" direction="in"/>
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
@@ -293,8 +294,8 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_port: destination port, can be 0 if source port is set
 	@source_port: source port, can be 0 if destination port is set
+	@destination_port: destination port, can be 0 if source port is set
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 2 = invalid port, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
@@ -306,11 +307,12 @@ Sends signal ChainChanged
 	
 	Sends signal RuleChanged.
 -->
-<method name="RulePort"><arg name="table" type="s" direction="in"/>
+<method name="RulePort">
+<arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
 <arg name="target" type="s" direction="in"/>
-<arg name="destination_port" type="q" direction="in"/>
 <arg name="source_port" type="q" direction="in"/>
+<arg name="destination_port" type="q" direction="in"/>
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
@@ -322,10 +324,10 @@ Sends signal ChainChanged
 	@table: Add this rule to table
 	@chain: Add this rule to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
-	@destination_port_start: Destination port range start (0 produces error unless both destination ports are 0 and source port range is set)
-	@destination_port_end: Destination port range end (0 produces error unless both destination ports are 0 and source port range is set)
 	@source_port_start: Source port range start (0 produces error unless both source ports are 0 and destination port range is set)
 	@source_port_end: Source port range end (0 produces error unless both source ports are 0 and destination port range is set)
+	@destination_port_start: Destination port range start (0 produces error unless both destination ports are 0 and source port range is set)
+	@destination_port_end: Destination port range end (0 produces error unless both destination ports are 0 and source port range is set)
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 2 = invalid port, 3 = invalid port range, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
@@ -339,13 +341,14 @@ Sends signal ChainChanged
 	
 	Sends signal RuleChanged.
 -->
-<method name="RulePortRange"><arg name="table" type="s" direction="in"/>
+<method name="RulePortRange">
+<arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
 <arg name="target" type="s" direction="in"/>
-<arg name="destination_port_start" type="q" direction="in"/>
-<arg name="destination_port_end" type="q" direction="in"/>
 <arg name="source_port_start" type="q" direction="in"/>
 <arg name="source_port_end" type="q" direction="in"/>
+<arg name="destination_port_start" type="q" direction="in"/>
+<arg name="destination_port_end" type="q" direction="in"/>
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
@@ -370,11 +373,12 @@ Sends signal ChainChanged
 	
 	Sends signal RuleChanged.
 -->
-<method name="RuleService"><arg name="table" type="s" direction="in"/>
+<method name="RuleService">
+<arg name="table" type="s" direction="in"/>
 <arg name="chain" type="s" direction="in"/>
 <arg name="target" type="s" direction="in"/>
-<arg name="destination_service" type="s" direction="in"/>
 <arg name="source_service" type="s" direction="in"/>
+<arg name="destination_service" type="s" direction="in"/>
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
@@ -442,12 +446,12 @@ Sent when policy is changed for a chain
 	@table: Rule added to table
 	@chain: Rule added to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name with sfos_ prefix
-	@destination_ip: Rule destination IP address
 	@source_ip: Rule source IP address
-	@destination_port_start: Destination port range start
-	@destination_port_end: Destination port range end
+	@destination_ip: Rule destination IP address
 	@source_port_start: Source port range start
 	@source_port_end: Source port range end
+	@destination_port_start: Destination port range start
+	@destination_port_end: Destination port range end
 	@protocol: Protocol as string
 	@operation: 0 = add, 1 = remove
 	
@@ -457,12 +461,12 @@ Sent after a rule is succesfully added to or removed from iptables. Any of the s
 <arg name="table" type="s"/>
 <arg name="chain" type="s"/>
 <arg name="target" type="s"/>
-<arg name="destination_ip" type="s"/>
 <arg name="source_ip" type="s"/>
-<arg name="destination_port_start" type="q"/>
-<arg name="destination_port_end" type="q"/>
+<arg name="destination_ip" type="s"/>
 <arg name="source_port_start" type="q"/>
 <arg name="source_port_end" type="q"/>
+<arg name="destination_port_start" type="q"/>
+<arg name="destination_port_end" type="q"/>
 <arg name="protocol" type="s"/>
 <arg name="operation" type="q"/>
 </signal>

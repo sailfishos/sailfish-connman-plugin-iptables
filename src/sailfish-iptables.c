@@ -150,24 +150,25 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 		case ARGS_SERVICE_FULL:
 			g_string_append_printf(rule,"-p %s -m %s", 
 				params->protocol, params->protocol);
+							
+			if(params->port_src[0])
+				g_string_append_printf(rule," --sport %u", params->port_src[0]);
 				
 			if(params->port_dst[0])
 				g_string_append_printf(rule," --dport %u", params->port_dst[0]);
 				
-			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u", params->port_src[0]);
 			break;
 		case ARGS_PORT_RANGE_FULL:
 			g_string_append_printf(rule,"-p %s -m %s",
 				params->protocol, params->protocol);
 				
-			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u:%u", params->port_dst[0],
-					params->port_dst[1]);
-				
 			if(params->port_src[0])
 				g_string_append_printf(rule," --sport %u:%u", params->port_src[0],
 					params->port_src[1]);
+					
+			if(params->port_dst[0])
+				g_string_append_printf(rule," --dport %u:%u", params->port_dst[0],
+					params->port_dst[1]);
 				
 			break;
 		case ARGS_IP_FULL:
@@ -192,11 +193,11 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 			g_string_append_printf(rule," -p %s -m %s",
 				params->protocol, params->protocol);
 				
-			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u", params->port_dst[0]);
-				
 			if(params->port_src[0])
 				g_string_append_printf(rule," --sport %u", params->port_src[0]);
+				
+			if(params->port_dst[0])
+				g_string_append_printf(rule," --dport %u", params->port_dst[0]);
 
 			break;
 		case ARGS_IP_PORT_RANGE_FULL:
@@ -211,13 +212,13 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 			g_string_append_printf(rule," -p %s -m %s",
 				params->protocol, params->protocol);
 				
-			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u:%u", params->port_dst[0],
-					params->port_dst[1]);
-				
 			if(params->port_src[0])
 				g_string_append_printf(rule," --sport %u:%u", params->port_src[0],
 					params->port_src[1]);
+					
+			if(params->port_dst[0])
+				g_string_append_printf(rule," --dport %u:%u", params->port_dst[0],
+					params->port_dst[1]);
 			break;
 		default:
 			rval = INVALID_REQUEST;

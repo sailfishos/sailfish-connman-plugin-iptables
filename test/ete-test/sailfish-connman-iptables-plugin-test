@@ -18,7 +18,6 @@ TEST_CHAINS="INPUT OUTPUT $CUSTOM_CHAIN"
 
 TEST_TARGETS="ACCEPT DROP REJECT $CUSTOM_CHAIN"
 
-# string:filter string:chain string:target
 IP_INPUTS[0]='string:192.168.10.1 string:'
 IP_INPUTS[1]='string: string:192.168.10.2'
 IP_INPUTS[2]='string:192.168.10.1 string:192.168.10.2'
@@ -44,9 +43,9 @@ PORT_INPUTS[1]='uint16:0 uint16:873 uint32:6'
 PORT_INPUTS[2]='uint16:80 uint16:443 uint32:6'
 PORT_INPUTS[3]=''
 
-PORT_INPUTS_VERIFY[0]='dpt:23'
-PORT_INPUTS_VERIFY[1]='spt:873'
-PORT_INPUTS_VERIFY[2]='spt:443 dpt:80'
+PORT_INPUTS_VERIFY[0]='spt:23'
+PORT_INPUTS_VERIFY[1]='dpt:873'
+PORT_INPUTS_VERIFY[2]='spt:80 dpt:443'
 PORT_INPUTS_VERIFY[3]=''
 
 PORT_RANGE_INPUTS[0]='uint16:23 uint16:24 uint16:0 uint16:0 uint32:17'
@@ -59,9 +58,9 @@ SERVICE_INPUTS[1]='string: string:rsync uint32:6'
 SERVICE_INPUTS[2]='string:http string:https uint32:6'
 SERVICE_INPUTS[3]=''
 
-PORT_RANGE_INPUTS_VERIFY[0]='dpts:23:24'
-PORT_RANGE_INPUTS_VERIFY[1]='spts:1000:2000'
-PORT_RANGE_INPUTS_VERIFY[2]='spts:1000:2000 dpts:23:24'
+PORT_RANGE_INPUTS_VERIFY[0]='spts:23:24'
+PORT_RANGE_INPUTS_VERIFY[1]='dpts:1000:2000'
+PORT_RANGE_INPUTS_VERIFY[2]='spts:23:24 dpts:1000:2000'
 PORT_RANGE_INPUTS_VERIFY[3]=''
 
 METHOD_INPUTS_RESULT="0"
@@ -87,19 +86,6 @@ function include_sources()
 			exit 1
 		fi
 	done
-}
-
-function run_method_test_rule()
-{	
-	# 1:Method 2:ADD/REMOVE 3:result 4:...rule: table, chain, target, rest of rule 
-	RESULT=$(send_message "$1" "$2" "$METHOD_INPUTS_RESULT" "string:filter" "string:$3" "string:$4" ${@:5})
-	
-	if [[ "$RESULT" != "0" ]] ; then
-		log "$RESULT"
-		echo 1
-	else
-		echo 0
-	fi
 }
 
 #$1=CHAIN $2=DROP/ACCEPT $3=proto $4=ip $5=port"
@@ -168,7 +154,7 @@ function test_rule_ip()
 			
 					test_begin
 					
-					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 					
@@ -176,7 +162,7 @@ function test_rule_ip()
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 					
-					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 					
@@ -211,7 +197,7 @@ function test_rule_ip_port()
 			
 						test_begin
 					
-						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
@@ -219,7 +205,7 @@ function test_rule_ip_port()
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
-						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
@@ -256,7 +242,7 @@ function test_rule_ip_port_range()
 			
 						test_begin
 					
-						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
@@ -264,7 +250,7 @@ function test_rule_ip_port_range()
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
-						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
@@ -300,7 +286,7 @@ function test_rule_ip_service()
 			
 						test_begin
 					
-						RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
@@ -308,7 +294,7 @@ function test_rule_ip_service()
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
-						RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
 						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 						test_progress
 					
@@ -342,7 +328,7 @@ function test_rule_port()
 	
 					test_begin
 					
-					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
@@ -350,7 +336,7 @@ function test_rule_port()
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
-					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
@@ -382,7 +368,7 @@ function test_rule_port_range()
 		
 					test_begin
 					
-					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
@@ -390,7 +376,7 @@ function test_rule_port_range()
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
-					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
@@ -422,7 +408,7 @@ function test_rule_service()
 		
 					test_begin
 					
-					RES=$(run_method_test_rule "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
@@ -430,7 +416,7 @@ function test_rule_service()
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
-					RES=$(run_method_test_rule "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
 					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
 					test_progress
 				
