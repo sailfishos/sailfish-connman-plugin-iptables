@@ -3,7 +3,7 @@ Version: 0.0.3
 Release: 1
 Summary: Sailfish Connman iptables management plugin
 Group: Development/Libraries
-License: GPLv2
+License: BSD-3-Clause
 URL: https://github.com/sailfishos/sailfish-connman-plugin-iptables
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
