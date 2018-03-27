@@ -49,7 +49,7 @@
 #include <connman/log.h>
 #include <connman/plugin.h>
 #include <connman/dbus.h>
-#include <connman/iptables_extension.h>
+#include <connman/iptables_ext.h>
 #include <connman/gdbus.h>
 
 #include "sailfish-iptables.h"

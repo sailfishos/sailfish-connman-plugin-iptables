@@ -48,7 +48,7 @@
 #include <connman/log.h>
 #include <connman/dbus.h>
 #include <connman/gdbus.h>
-#include <connman/iptables_extension.h>
+#include <connman/iptables_ext.h>
 
 #include "sailfish-iptables-parameters.h"
 #include "sailfish-iptables-policy.h"
