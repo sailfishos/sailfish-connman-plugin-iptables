@@ -2,13 +2,11 @@
  *
  *  Sailfish Connection Manager iptables plugin
  *
- *  Copyright (C) 2017 Jolla Ltd. All rights reserved.
- *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
- *
  *  BSD 3-Clause License
  * 
- *  Copyright (c) 2017, 
+ *  Copyright (c) 2017 - 2018, Jolla Ltd. 
  *  All rights reserved.
+ *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
 
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
@@ -43,7 +41,7 @@
 #include <dbus/dbus.h>
 #include <dbusaccess/dbusaccess_peer.h>
 #include <dbusaccess/dbusaccess_policy.h>
-#include <connman/iptables_extension.h>
+#include <connman/iptables_ext.h>
 
 #ifdef __cplusplus
 extern "C" {
