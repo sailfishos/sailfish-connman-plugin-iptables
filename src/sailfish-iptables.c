@@ -440,15 +440,10 @@ static int sailfish_iptables_init(void)
 {
 	DBG("%s %s", PLUGIN_NAME, "initialize");
 	
+	int err = 0;
 	api_data *data = api_data_new();
 		
-	int err = connman_iptables_restore(SAILFISH_IPTABLES_TABLE_NAME, NULL);
-	
-	if(err != 0)
-		DBG("%s %s %s", PLUGIN_NAME, "Cannot load default firewall",
-			connman_iptables_default_save_path(IPV4));
-	else
-		setup_custom_chains_from_output(data);
+	setup_custom_chains_from_output(data);
 		
 	err = sailfish_iptables_dbus_register(data);
 	
@@ -461,18 +456,6 @@ static int sailfish_iptables_init(void)
 static void sailfish_iptables_exit(void)
 {
 	DBG("%s %s", PLUGIN_NAME, "EXIT IPTABLES API");
-	
-	int err = connman_iptables_save(SAILFISH_IPTABLES_TABLE_NAME, NULL);
-	
-	if(err != 0)
-		DBG("%s %s %s", PLUGIN_NAME, "Cannot save firewall to",
-			connman_iptables_default_save_path(IPV4));
-			
-	err = connman_iptables_clear(SAILFISH_IPTABLES_TABLE_NAME);
-	
-	if(err != 0)
-		DBG("%s %s %s", PLUGIN_NAME, "Cannot clear firewall table",
-			SAILFISH_IPTABLES_TABLE_NAME);
 	
 	sailfish_iptables_dbus_unregister();
 }
