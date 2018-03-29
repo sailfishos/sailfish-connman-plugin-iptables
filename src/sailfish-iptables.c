@@ -56,7 +56,6 @@
 #include "sailfish-iptables-policy.h"
 
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
-//#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
 
 api_result clear_iptables_rules(rule_params* params, api_data *data)
 {

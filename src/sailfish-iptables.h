@@ -80,6 +80,9 @@ extern "C" {
 
 #define EMPTY_STR					""
 
+// Easier to use typedef
+typedef struct iptables_content connman_iptables_content;
+
 typedef struct sailfish_iptables_dbus_client {
 	DAPeer *peer;
 	// TODO: own list for added rules, identify with id -> users/groups
