@@ -7,13 +7,13 @@ License: BSD-3-Clause
 URL: https://github.com/sailfishos/sailfish-connman-plugin-iptables
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
-Requires: connman >= 1.32+git8.4
+Requires: connman >= 1.32+git9
 Requires: glib2 >= 2.28
 Requires: dbus >= 1.4
 Requires: libdbusaccess >= 1.0.2
 Requires: libglibutil >= 1.0.21
 BuildRequires: iptables-devel
-BuildRequires: connman-devel >= 1.32+git8.4
+BuildRequires: connman-devel >= 1.32+git9
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
 BuildRequires: pkgconfig(dbus-1) >= 1.4
 BuildRequires: pkgconfig(libdbusaccess) >= 1.0.2
@@ -23,6 +23,14 @@ Requires(postun): /sbin/ldconfig
 
 %description
 This package contains the Sailfish Connman plugin for iptables management.
+
+%package config
+Summary:    Configuration for Sailfish Connman plugin for iptables management
+Group:      Development/Tools
+Requires:   %{name} = %{version}
+
+%description config
+This package contains configuration for Sailfish Connman plugin for iptables management.
 
 %package unit-tests
 Summary:    Unit tests for Sailfish Connman iptables management plugin
@@ -45,7 +53,7 @@ This package contains the unit tests and unit test runner script for Sailfish Co
 Summary:    Test scripts for Sailfish Connman iptables management plugin
 Group:      Development/Tools
 Requires:   %{name} = %{version}
-Requires:   connman >= 1.32+git8.4
+Requires:   connman >= 1.32+git9
 Requires:   bash
 Requires:   dbus >= 1.4
 Requires:   iptables
@@ -107,6 +115,9 @@ cp -a test/common %{buildroot}/opt/tests/%{name}/
 %files
 %defattr(-,root,root,-)
 %{_libdir}/connman/plugins/sailfish-connman-iptables-plugin.so
+
+%files config
+%defattr(-,root,root,-)
 %config %{_sysconfdir}/connman/*.conf
 
 %files unit-tests

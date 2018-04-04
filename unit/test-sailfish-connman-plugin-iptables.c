@@ -259,46 +259,6 @@ static void test_iptables_plugin_policy_load()
 	g_free(policy);
 }
 
-static void test_iptables_plugin_utils_api_result_message()
-{
-	g_assert(g_ascii_strcasecmp(api_result_message(OK),"Ok") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(0),"Ok") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_IP),"Invalid IP") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(1),"Invalid IP") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PORT),"Invalid port") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(2),"Invalid port") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PORT_RANGE),"Invalid port range") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(3),"Invalid port range") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_SERVICE),"Invalid service name") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(4),"Invalid service name") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_PROTOCOL),"Invalid protocol") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(5),"Invalid protocol") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_POLICY),"Invalid policy") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(6),"Invalid policy") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(RULE_DOES_NOT_EXIST),"Rule does not exist") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(7),"Rule does not exist") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_REQUEST),"Cannot process request") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(8),"Cannot process request") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID),"Cannot perform operation") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(9),"Cannot perform operation") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(UNAUTHORIZED),"Unauthorized, please try again") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(10),"Unauthorized, please try again") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(REMOVE_FAILED),"Unregister failed") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(11),"Unregister failed") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_CHAIN_NAME), "Invalid chain name given. Chain name is reserved (add) or does not exist (remove).") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(12), "Invalid chain name given. Chain name is reserved (add) or does not exist (remove).") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_TABLE), "Invalid table name given.") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(13), "Invalid table name given.") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(INVALID_TARGET), "Invalid target name given.") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(14), "Invalid target name given.") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(ACCESS_DENIED),"Access denied") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(100),"Access denied") == 0);
-	
-	g_assert(!g_ascii_strcasecmp(api_result_message(14),"") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(15),"") == 0);
-	g_assert(g_ascii_strcasecmp(api_result_message(999),"") == 0);
-}
-
 static void test_iptables_plugin_utils_protocol_for_service()
 {
 	gchar* protocol = get_protocol_for_service("ssh");
@@ -1743,7 +1703,6 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_PARAMETERS "custom_chain", test_iptables_plugin_parameters_custom_chains);
 	g_test_add_func(PREFIX_PARAMETERS "disconnect_data", test_iptables_plugin_parameters_disconnect_data);
 	
-	g_test_add_func(PREFIX_UTILS "api_result_message", test_iptables_plugin_utils_api_result_message);
 	g_test_add_func(PREFIX_UTILS "protocol_for_service", test_iptables_plugin_utils_protocol_for_service);
 	g_test_add_func(PREFIX_UTILS "protocol_for_port", test_iptables_plugin_utils_protocol_for_port);
 	g_test_add_func(PREFIX_UTILS "mask_to_cidr", test_iptables_plugin_utils_mask_to_cidr);

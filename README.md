@@ -136,9 +136,16 @@ as strings as well as the new policy.
 
 Signal is sent to clients with at least listen() access.
 
-### RuleChanged
+### RuleAdded
 
-A rule has been changed (add or remove) in iptables. Ip address, port/port
+A rule has been added to iptables. Ip address, port/port
+range, protocol and operation (ADD/REMOVE) are sent as string parameters.
+
+Signal is sent to clients with at least listen() access.
+
+### RuleRemoved
+
+A rule has been removed from iptables. Ip address, port/port
 range, protocol and operation (ADD/REMOVE) are sent as string parameters.
 
 Signal is sent to clients with at least listen() access.
