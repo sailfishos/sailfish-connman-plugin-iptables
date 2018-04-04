@@ -134,6 +134,55 @@
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		{"policy", "s"}
 #define SAILFISH_IPTABLES_SIGNAL_TABLE			SAILFISH_IPTABLES_INPUT_TABLE
 
+/* These prototypes are connected to dbus */
+
+static DBusMessage* sailfish_iptables_register_client(DBusConnection* connection,
+			DBusMessage* message, void *user_data);
+			
+static DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
+			DBusMessage* message, void *user_data);
+
+static DBusMessage* sailfish_iptables_clear_iptables_rules(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+			
+static DBusMessage* sailfish_iptables_clear_iptables_chains(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+			
+static DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+
+static DBusMessage* sailfish_iptables_version(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+
+static DBusMessage* sailfish_iptables_change_policy(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+// New api functions
+static DBusMessage* sailfish_iptables_rule_ip(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+static DBusMessage* sailfish_iptables_rule_ip_port(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+static DBusMessage* sailfish_iptables_rule_ip_port_range(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+static DBusMessage* sailfish_iptables_rule_port(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+static DBusMessage* sailfish_iptables_rule_port_range(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+static DBusMessage* sailfish_iptables_rule_ip_service(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+static DBusMessage* sailfish_iptables_rule_service(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+// Chain management
+static DBusMessage* sailfish_iptables_manage_chain(
+			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
 const gchar const * OP_STR[] = {"Add", "Remove", "Undefined", NULL};
 
 // Signal names are defined in sailfish_iptables_dbus.h
@@ -174,7 +223,7 @@ static const GDBusSignalTable signals[] = {
 			))
 		},
 		{ GDBUS_SIGNAL(
-			SAILFISH_IPTABLES_SIGNAL_RULE,
+			SAILFISH_IPTABLES_SIGNAL_RULE_ADD,
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_INPUT_TABLE,
 				SAILFISH_IPTABLES_INPUT_CHAIN,
@@ -185,8 +234,22 @@ static const GDBusSignalTable signals[] = {
 				SAILFISH_IPTABLES_INPUT_PORT_SRC_B,
 				SAILFISH_IPTABLES_INPUT_PORT_DST_A,
 				SAILFISH_IPTABLES_INPUT_PORT_DST_B,
-				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR,
-				SAILFISH_IPTABLES_INPUT_OPERATION
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR
+			))
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_SIGNAL_RULE_REM,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC_A,
+				SAILFISH_IPTABLES_INPUT_PORT_SRC_B,
+				SAILFISH_IPTABLES_INPUT_PORT_DST_A,
+				SAILFISH_IPTABLES_INPUT_PORT_DST_B,
+				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR
 			))
 		},
 		{ }
@@ -631,13 +694,11 @@ DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message,
 	api_result result, rule_params *params)
 {
 	dbus_uint16_t res = (dbus_uint16_t)result;
-	const gchar* msg = api_result_message(result);
 	DBusMessage* reply = NULL;
 
 	if(!params || !params->iptables_content)
 		reply = g_dbus_create_reply(message,
 			DBUS_TYPE_UINT16,	&res,
-			DBUS_TYPE_STRING, 	&msg,
 			DBUS_TYPE_INVALID);
 	
 	else if(params->iptables_content)
@@ -650,7 +711,6 @@ DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message,
 		dbus_message_iter_init_append(reply, &iter);
 		
 		dbus_message_iter_append_basic(&iter, DBUS_TYPE_UINT16, &res);
-		dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &msg);
 		
 		// Chains
 		dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
@@ -693,6 +753,7 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 {
 	DBusMessage* signal = NULL;
 	gchar *empty = EMPTY_STR;
+	const gchar* signal_name = NULL;
 
 	switch(params->args)
 	{
@@ -703,8 +764,20 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 		case ARGS_PORT_FULL:
 		case ARGS_PORT_RANGE_FULL:
 		case ARGS_SERVICE_FULL:
+			switch(params->operation)
+			{
+				case ADD:
+					signal_name = SAILFISH_IPTABLES_SIGNAL_RULE_ADD;
+					break;
+				case REMOVE:
+					signal_name = SAILFISH_IPTABLES_SIGNAL_RULE_REM;
+					break;
+				// Rules can be only added or removed
+				default:
+					return NULL;
+			}
 			signal = sailfish_iptables_dbus_signal(
-				SAILFISH_IPTABLES_SIGNAL_RULE,
+				signal_name,
 				DBUS_TYPE_STRING,	params->table ? &(params->table) : &empty,
 				DBUS_TYPE_STRING,	params->chain ? &(params->chain) : &empty,
 				DBUS_TYPE_STRING,	params->target ? &(params->target) : &empty,
@@ -715,7 +788,6 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				DBUS_TYPE_UINT16,	&(params->port_dst[0]),
 				DBUS_TYPE_UINT16,	&(params->port_dst[1]),
 				DBUS_TYPE_STRING,	params->protocol ? &(params->protocol) : &empty,
-				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CLEAR:
@@ -828,7 +900,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_STRING, &target,
 						DBUS_TYPE_UINT16, &port_src,
 						DBUS_TYPE_UINT16, &port_dst,
-						DBUS_TYPE_UINT32, &protocol_int,			
+						DBUS_TYPE_UINT32, &protocol_int,
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;

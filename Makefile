@@ -43,7 +43,7 @@ RELEASE_BUILD_DIR = $(BUILD_DIR)/release
 CC = $(CROSS_COMPILE)gcc
 LD = $(CC)
 WARNINGS = -Wall
-BASE_FLAGS = -fPIC -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -Wformat -Wformat-security -fmessage-length=0
+BASE_FLAGS = -fPIC -fvisibility=hidden
 
 ADD_CFLAGS=`pkg-config --cflags glib-2.0 dbus-1 libdbusaccess libglibutil`
 ADD_LDFLAGS=`pkg-config --libs glib-2.0 dbus-1 libdbusaccess libglibutil`

@@ -48,39 +48,6 @@
 
 #include "sailfish-iptables-utils.h"
 
-#define ERRCODE_MAX 15
-
-const gchar const * RESULT_STR[] = {
-	"Ok",
-	"Invalid IP",
-	"Invalid port",
-	"Invalid port range",
-	"Invalid service name",
-	"Invalid protocol",
-	"Invalid policy",
-	"Rule does not exist",
-	"Cannot process request",
-	"Cannot perform operation",
-	"Unauthorized, please try again",
-	"Unregister failed",
-	"Invalid chain name given. Chain name is reserved (add) or does not exist (remove).",
-	"Invalid table name given.",
-	"Invalid target name given.",
-	"Access denied",
-	NULL
-};
-
-const char* api_result_message(api_result result)
-{
-	if(result >= OK && result < ERRCODE_MAX)
-		return RESULT_STR[result];
-		
-	if(result == ACCESS_DENIED)
-		return RESULT_STR[ERRCODE_MAX];
-		
-	return "";
-}
-
 gchar* get_protocol_for_service(const gchar *service)
 {
 	if(service && *service)

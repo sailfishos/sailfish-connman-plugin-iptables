@@ -622,6 +622,15 @@ function test_rule_post()
 {
 	test_begin
 	FAILED=0
+
+	CLEARED=$(send_message "ClearIptablesTable" "filter" "$CLEAR_RESULT")
+	
+	if [[ "$CLEARED" != "0" ]] ; then
+		log "$CLEARED"
+		FAILED=$((FAILED+1))
+	fi
+	
+	test_progress
 		
 	STATUS=$(send_message "ManageChain" "REMOVE" $CHAIN_RESULT "string:filter" "string:$CUSTOM_CHAIN")
 	

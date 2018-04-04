@@ -48,7 +48,6 @@
 	ClearIptablesTable:
 	@table: Iptables table to clear.
 	@result: result code, 0 = cleared, 8 = table name was invalid, 9 = cannot make change (iptables error), 100 = access denied
-	@string: result string.
 
 Clears given table from iptables. Defaults to filter table. Currentlty only filter table is used, table parameter is ignored for now.
 Sends signal FirewallCleared
@@ -56,28 +55,24 @@ Sends signal FirewallCleared
 <method name="ClearIptablesTable">
 <arg name="table" type="s" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
 	ClearIptablesChains:
 	@table: Iptables table to clear from used defined chains.
 	@result: result code, 0 = cleared, 8 = table name was invalid, 9 = cannot make change (iptables error), 100 = access denied
-	@string: result string.
 
 Clears all custom chains from given iptables table. Defaults to filter table, table parameter is ignored now. Each chain is flushed first. If there is a reference to any of the custom chains in any other chain (bultin or custom chain) the chain is not removed as iptables prevents such operation.
 -->
 <method name="ClearIptablesChains">
 <arg name="table" type="s" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
 	GetIptablesContent:
 	@table: Iptables table to get content from.
 	@result: result code, 0 = Request done, 8 = table name was invalid, 9 = cannot make change (iptables error), 100 = access denied
-	@string: result string.
 	@chains: list of chains in the table, format: CHAIN POLICY
 	@rules: list of rules in the table, format is similar to iptables-save command format
 
@@ -86,7 +81,6 @@ Get iptables content from given table. Defaults to filter table, table parameter
 <method name="GetIptablesContent">
 <arg name="table" type="s" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 <arg name="chains" type="as" direction="out"/>
 <arg name="rules" type="as" direction="out"/>
 </method>
@@ -94,25 +88,21 @@ Get iptables content from given table. Defaults to filter table, table parameter
 <!--
 	Register:
 	@result: 0 = registered, 10 = error authorizing please try again, 100 = access denied
-	@string: result string.
 
 Registers the client to listen for signals emitted by iptables api.
 -->
 <method name="Register">
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
 	Unregister:
 	@result: 0 = unregistered, 11 = unregister failed client not registered
-	@string: result string
 
 	Removes the client from signal listeners.
 -->
 <method name="Unregister">
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -121,7 +111,6 @@ Registers the client to listen for signals emitted by iptables api.
 	@chain: change policy of this chain
 	@policy: Policy 1 = ACCEPT or 2 = DROP
 	@result: 0 = changed, 6 = invalid policy, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table name, 100 = access denied
-	@string: result string.
 	
 	Change policy of filter table OUTPUT chain.
 	
@@ -132,7 +121,6 @@ Registers the client to listen for signals emitted by iptables api.
 <arg name="chain" type="s" direction="in"/>
 <arg name="policy" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -141,7 +129,6 @@ Registers the client to listen for signals emitted by iptables api.
 	@chain: Name of the chain to be managed
 	@operation: 0 = add, 1 = remove, 2 = flush
 	@result: 0 = changed, 6 = invalid policy, 8 = invalid operation, 9 = cannot make change (iptables error), 100 = access denied
-	@string: result string.
 	
 	Manage chains in filter table. Custom chains can be added (ADD), removed (REMOVE) and flushed (FLUSH). Builtin chains or duplicates are not allowed (returns error code 9). When a chain is called to remove it is first flushed. If there is a reference to any of the custom chains in any other chain (bultin or custom chain) the chain is not removed as iptables prevents such operation (result 9).
 
@@ -152,7 +139,6 @@ Sends signal ChainChanged
 <arg name="chain" type="s" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -164,11 +150,10 @@ Sends signal ChainChanged
 	@destination_ip: Rule destination IP address, added with -d to iptables. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
-	@string: result string
 	
 	Either or both of ip addresses must be set. Empty string = not set.
 	
-	Sends signal RuleChanged.
+	Sends signals RuleAdded when rule is added and RuleRemoved when rule is removed.
 -->
 <method name="RuleIp">
 <arg name="table" type="s" direction="in"/>
@@ -178,7 +163,6 @@ Sends signal ChainChanged
 <arg name="destination_ip" type="s" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -193,13 +177,12 @@ Sends signal ChainChanged
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 2 = invalid port, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
-	@string: result string
 	
 	Protocol can be omitted if known port is used. Protocol detection does the check for destination_port first, if a suitable protocol is found this is used. If source port is also defined the protocol check is done only if protocol for destination port (if set) was not found. The protocol of destination port, therefore, dominates over source port. If a proper protocol was defined the checks based on ports is not done.
 	
 	Either or both of ip addresses must be set. Empty string = not set.
 	
-	Sends signal RuleChanged.
+	Sends signals RuleAdded when rule is added and RuleRemoved when rule is removed.
 -->
 <method name="RuleIpWithPort">
 <arg name="table" type="s" direction="in"/>
@@ -212,7 +195,6 @@ Sends signal ChainChanged
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -229,7 +211,6 @@ Sends signal ChainChanged
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 2 = invalid port, 3 = invalid port range, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
-	@string: result string
 	
 	Either or both of ip addresses must be set. Empty string = not set.
 	
@@ -237,7 +218,7 @@ Sends signal ChainChanged
 	
 	If only one of the port ranges needs to be set, the other range must be both 0.
 	
-	Sends signal RuleChanged.
+	Sends signals RuleAdded when rule is added and RuleRemoved when rule is removed.
 -->
 <method name="RuleIpWithPortRange">
 <arg name="table" type="s" direction="in"/>
@@ -252,7 +233,6 @@ Sends signal ChainChanged
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -267,13 +247,12 @@ Sends signal ChainChanged
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 1 = invalid IP, 4 = invalid service, 5 = invalid protocol,7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
-	@string: result string
 	
 	Either or both of ip addresses must be set. Empty string = not set.
 	
 	Either or both of services must be set. Empty string = not set.
 	
-	Sends signal RuleChanged.
+	Sends signals RuleAdded when rule is added and RuleRemoved when rule is removed.
 -->
 <method name="RuleIpWithService">
 <arg name="table" type="s" direction="in"/>
@@ -286,7 +265,6 @@ Sends signal ChainChanged
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -299,13 +277,12 @@ Sends signal ChainChanged
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 2 = invalid port, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
-	@string: result string
 	
 	Protocol can be omitted if known port is used. Protocol detection does the check for destination_port first, if a suitable protocol is found this is used. If source port is also defined the protocol check is done only if protocol for destination port (if set) was not found. The protocol of destination port, therefore, dominates over source port. If a proper protocol was defined the checks based on ports is not done.
 	
 	Either or both of the ports has to be set. Port == 0, not set.
 	
-	Sends signal RuleChanged.
+	Sends signals RuleAdded when rule is added and RuleRemoved when rule is removed.
 -->
 <method name="RulePort">
 <arg name="table" type="s" direction="in"/>
@@ -316,7 +293,6 @@ Sends signal ChainChanged
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -331,7 +307,6 @@ Sends signal ChainChanged
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 2 = invalid port, 3 = invalid port range, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
-	@string: result string
 	
 	Add iptables rule with port range. In both source and destination port ranges start &lt;= end.
 	
@@ -339,7 +314,7 @@ Sends signal ChainChanged
 	
 	If only one of the port ranges needs to be set, the other range must be both 0.
 	
-	Sends signal RuleChanged.
+	Sends signals RuleAdded when rule is added and RuleRemoved when rule is removed.
 -->
 <method name="RulePortRange">
 <arg name="table" type="s" direction="in"/>
@@ -352,7 +327,6 @@ Sends signal ChainChanged
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!--
@@ -365,13 +339,12 @@ Sends signal ChainChanged
 	@protocol: Protocol number as in /etc/protocols, currently only tcp (6) and udp (17) are supported.
 	@operation: 0 = add, 1 = remove
 	@result: 0 = rule added, 4 = invalid service, 5 = invalid protocol, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 100 = access denied
-	@string: result string
 	
 	Either or both of services must be set. Empty string = not set.
 	
 	Defined protocol is the primary choise for protocol in rule. If protocol is empty protocol for destination service is tried, if that is not successfull then the protocol for source service is tried.
 	
-	Sends signal RuleChanged.
+	Sends signals RuleAdded when rule is added and RuleRemoved when rule is removed.
 -->
 <method name="RuleService">
 <arg name="table" type="s" direction="in"/>
@@ -382,7 +355,6 @@ Sends signal ChainChanged
 <arg name="protocol" type="u" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
-<arg name="string" type="s" direction="out"/>
 </method>
 
 <!-- 
@@ -442,7 +414,7 @@ Sent when policy is changed for a chain
 </signal>
 
 <!--
-	RuleChanged:
+	RuleAdded:
 	@table: Rule added to table
 	@chain: Rule added to chain in table
 	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name with sfos_ prefix
@@ -453,11 +425,10 @@ Sent when policy is changed for a chain
 	@destination_port_start: Destination port range start
 	@destination_port_end: Destination port range end
 	@protocol: Protocol as string
-	@operation: 0 = add, 1 = remove
 	
-Sent after a rule is succesfully added to or removed from iptables. Any of the string parameters can be empty "". If port is 0 then port is not added with the rule. If destination/source end port is 0 then port range is not utilized and the ports defined in destination/source start is only used.
+Sent after a rule is succesfully added to iptables. Any of the string parameters can be empty "". If port is 0 then port is not added with the rule. If destination/source end port is 0 then port range is not utilized and the ports defined in destination/source start is only used.
 -->
-<signal name="RuleChanged">
+<signal name="RuleAdded">
 <arg name="table" type="s"/>
 <arg name="chain" type="s"/>
 <arg name="target" type="s"/>
@@ -468,7 +439,34 @@ Sent after a rule is succesfully added to or removed from iptables. Any of the s
 <arg name="destination_port_start" type="q"/>
 <arg name="destination_port_end" type="q"/>
 <arg name="protocol" type="s"/>
-<arg name="operation" type="q"/>
+</signal>
+
+<!--
+	RuleRemoved:
+	@table: Rule removed from table
+	@chain: Rule removed from chain in table
+	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name with sfos_ prefix
+	@source_ip: Rule source IP address
+	@destination_ip: Rule destination IP address
+	@source_port_start: Source port range start
+	@source_port_end: Source port range end
+	@destination_port_start: Destination port range start
+	@destination_port_end: Destination port range end
+	@protocol: Protocol as string
+	
+Sent after a rule is succesfully removed from iptables. Any of the string parameters can be empty "". If port is 0 then port is not included with the rule. If destination/source end port is 0 then port range is not utilized and the ports defined in destination/source start is only used.
+-->
+<signal name="RuleRemoved">
+<arg name="table" type="s"/>
+<arg name="chain" type="s"/>
+<arg name="target" type="s"/>
+<arg name="source_ip" type="s"/>
+<arg name="destination_ip" type="s"/>
+<arg name="source_port_start" type="q"/>
+<arg name="source_port_end" type="q"/>
+<arg name="destination_port_start" type="q"/>
+<arg name="destination_port_end" type="q"/>
+<arg name="protocol" type="s"/>
 </signal>
 
 <!--

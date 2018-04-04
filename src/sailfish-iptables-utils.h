@@ -48,7 +48,6 @@ extern "C" {
 
 #include "sailfish-iptables.h"
 
-const char* api_result_message(api_result result);
 gchar* get_protocol_for_service(const gchar *service);
 gchar* get_protocol_for_port(guint16 port);
 guint32 mask_to_cidr(gint type, const gchar* mask_address);

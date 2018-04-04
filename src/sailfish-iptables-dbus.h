@@ -65,21 +65,15 @@
 #define SAILFISH_IPTABLES_SIGNAL_CLEAR		"IptablesTableCleared"
 #define SAILFISH_IPTABLES_SIGNAL_CLEAR_CHAINS	"IptablesChainsCleared"
 #define SAILFISH_IPTABLES_SIGNAL_POLICY		"PolicyChanged"
-#define SAILFISH_IPTABLES_SIGNAL_RULE		"RuleChanged"
+#define SAILFISH_IPTABLES_SIGNAL_RULE_ADD		"RuleAdded"
+#define SAILFISH_IPTABLES_SIGNAL_RULE_REM		"RuleRemoved"
 #define SAILFISH_IPTABLES_SIGNAL_CHAIN		"ChainChanged"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 gint sailfish_iptables_dbus_register(api_data* data);
 
 gint sailfish_iptables_dbus_unregister();
 
 DBusMessage* sailfish_iptables_dbus_signal(const gchar* signal,
-	gint first_arg_type, ...);
-
-DBusMessage* sailfish_iptables_dbus_method_return(DBusMessage* message,
 	gint first_arg_type, ...);
 	
 DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message,
@@ -91,58 +85,6 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 
 rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message, rule_args args);
 
-/* These prototypes are connected to dbus */
-
-DBusMessage* sailfish_iptables_register_client(DBusConnection* connection,
-			DBusMessage* message, void *user_data);
-			
-DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
-			DBusMessage* message, void *user_data);
-
-DBusMessage* sailfish_iptables_clear_iptables_rules(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_clear_iptables_chains(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
-			
-DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_version(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_change_policy(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-// New api functions
-DBusMessage* sailfish_iptables_rule_ip(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_rule_ip_port(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_rule_ip_port_range(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_rule_port(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_rule_port_range(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_rule_ip_service(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-DBusMessage* sailfish_iptables_rule_service(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-
-// Chain management
-DBusMessage* sailfish_iptables_manage_chain(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
-			
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __SAILFISH_IPTABLES_DBUS_H_ */
 
