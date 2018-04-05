@@ -2,38 +2,36 @@
  *
  *  Sailfish Connection Manager iptables plugin
  *
- *  Copyright (C) 2017 Jolla Ltd. All rights reserved.
- *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
- *
  *  BSD 3-Clause License
  * 
- *  Copyright (c) 2017, 
+ *  Copyright (c) 2017-2018, Jolla Ltd.
+ *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
  *  All rights reserved.
 
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
  * 
- *  * Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
+ *  Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
  * 
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
+ *  Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation
+ *  and/or other materials provided with the distribution.
  * 
- *  * Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
+ *  Neither the name of the copyright holder nor the names of its
+ *  contributors may be used to endorse or promote products derived from
+ *  this software without specific prior written permission.
 
- *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- *    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- *    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- *    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- *    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- *    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ *  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ *  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -107,8 +105,9 @@ api_result set_policy(rule_params* params, api_data *data)
 	
 	if((rval = check_parameters(params)) == OK)
 	{
-		if(!(error = connman_iptables_change_policy(SAILFISH_IPTABLES_TABLE_NAME,
-					params->chain, params->policy)))
+		if(!(error = connman_iptables_change_policy(
+					SAILFISH_IPTABLES_TABLE_NAME, params->chain,
+					params->policy)))
 		{
 			if(!(error = connman_iptables_commit(SAILFISH_IPTABLES_TABLE_NAME)))
 			{
@@ -145,32 +144,34 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 	switch(params->args)
 	{
 		// TODO redo this
-		case ARGS_PORT_FULL:
-		case ARGS_SERVICE_FULL:
+		case ARGS_PORT:
+		case ARGS_SERVICE:
 			g_string_append_printf(rule,"-p %s -m %s", 
 				params->protocol, params->protocol);
 							
 			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u", params->port_src[0]);
+				g_string_append_printf(rule," --sport %u",
+					params->port_src[0]);
 				
 			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u", params->port_dst[0]);
+				g_string_append_printf(rule," --dport %u",
+					params->port_dst[0]);
 				
 			break;
-		case ARGS_PORT_RANGE_FULL:
+		case ARGS_PORT_RANGE:
 			g_string_append_printf(rule,"-p %s -m %s",
 				params->protocol, params->protocol);
 				
 			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u:%u", params->port_src[0],
-					params->port_src[1]);
+				g_string_append_printf(rule," --sport %u:%u",
+					params->port_src[0], params->port_src[1]);
 					
 			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u:%u", params->port_dst[0],
-					params->port_dst[1]);
+				g_string_append_printf(rule," --dport %u:%u",
+					params->port_dst[0], params->port_dst[1]);
 				
 			break;
-		case ARGS_IP_FULL:
+		case ARGS_IP:
 			if(params->ip_src)
 				g_string_append_printf(rule,"-s%s%s", 
 					params->ip_negate_src ? " ! " : " ", params->ip_src);
@@ -179,8 +180,8 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 				g_string_append_printf(rule," -d%s%s",
 					params->ip_negate_dst ? " ! " : " ", params->ip_dst);
 			break;
-		case ARGS_IP_PORT_FULL:
-		case ARGS_IP_SERVICE_FULL:
+		case ARGS_IP_PORT:
+		case ARGS_IP_SERVICE:
 			if(params->ip_src)
 				g_string_append_printf(rule,"-s%s%s", 
 					params->ip_negate_src ? " ! " : " ", params->ip_src);
@@ -193,13 +194,15 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 				params->protocol, params->protocol);
 				
 			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u", params->port_src[0]);
+				g_string_append_printf(rule," --sport %u",
+					params->port_src[0]);
 				
 			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u", params->port_dst[0]);
+				g_string_append_printf(rule," --dport %u",
+					params->port_dst[0]);
 
 			break;
-		case ARGS_IP_PORT_RANGE_FULL:
+		case ARGS_IP_PORT_RANGE:
 			if(params->ip_src)
 				g_string_append_printf(rule,"-s%s%s", 
 					params->ip_negate_src ? " ! " : " ", params->ip_src);
@@ -212,12 +215,12 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 				params->protocol, params->protocol);
 				
 			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u:%u", params->port_src[0],
-					params->port_src[1]);
+				g_string_append_printf(rule," --sport %u:%u",
+					params->port_src[0], params->port_src[1]);
 					
 			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u:%u", params->port_dst[0],
-					params->port_dst[1]);
+				g_string_append_printf(rule," --dport %u:%u",
+					params->port_dst[0], params->port_dst[1]);
 			break;
 		default:
 			rval = INVALID_REQUEST;
@@ -387,6 +390,7 @@ DBusMessage* process_request(DBusMessage *message,
 {
 	api_result result = INVALID;
 	rule_params *params = NULL;
+	DBusMessage *signal = NULL;
 	
 	if(!sailfish_iptables_policy_check_args(message, data, args))
 		result = ACCESS_DENIED;
@@ -395,7 +399,7 @@ DBusMessage* process_request(DBusMessage *message,
 	{	
 		if((result = func(params, data)) == OK)
 		{
-			DBusMessage *signal = sailfish_iptables_dbus_signal_from_rule_params(params);
+			signal = sailfish_iptables_dbus_signal_from_rule_params(params);
 			if(signal)
 				sailfish_iptables_dbus_send_signal(signal, data);
 		}
@@ -426,7 +430,8 @@ void setup_custom_chains_from_output(api_data *data)
 		{
 			gchar **tokens = g_strsplit(chain," ", 2);
 			DBG("setup_custom_chains_from_output() adding %s", tokens[0]);
-			if(api_data_add_custom_chain(data, SAILFISH_IPTABLES_TABLE_NAME, tokens[0]))
+			if(api_data_add_custom_chain(data, SAILFISH_IPTABLES_TABLE_NAME,
+				tokens[0]))
 				DBG("setup_custom_chains_from_output() added %s", tokens[0]);
 			g_strfreev(tokens);
 		}

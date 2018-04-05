@@ -100,7 +100,7 @@ static void test_iptables_plugin_policy_check_user()
 	peer->name = g_strdup(peer_name);
 	
 	g_assert(!sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_MANAGE));
-	g_assert(!sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_FULL));
+	g_assert(!sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS));
 	g_assert(!sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_LISTEN));
 	
 	g_assert(!sailfish_iptables_policy_check_peer(data, peer, 0));
@@ -152,7 +152,7 @@ static void test_iptables_plugin_policy_check_root()
 	peer->name = g_strdup(peer_name);
 		
 	g_assert(sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_MANAGE));
-	g_assert(sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_FULL));
+	g_assert(sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS));
 	g_assert(sailfish_iptables_policy_check_peer(data, peer, SAILFISH_DBUS_ACCESS_LISTEN));
 	
 	g_assert(!sailfish_iptables_policy_check_peer(data, peer, 0));
@@ -395,7 +395,7 @@ static void full_parameter_prepare(rule_params *params)
 static void test_iptables_plugin_parameters_ip_full()
 {
 	/* IP only : ARGS_IP */
-	rule_params *params = rule_params_new(ARGS_IP_FULL);
+	rule_params *params = rule_params_new(ARGS_IP);
 
 	full_parameter_prepare(params);
 	
@@ -421,7 +421,7 @@ static void test_iptables_plugin_parameters_ip_full()
 static void test_iptables_plugin_parameters_port_full()
 {
 	/* Port only : ARGS_PORT */
-	rule_params *params = rule_params_new(ARGS_PORT_FULL);
+	rule_params *params = rule_params_new(ARGS_PORT);
 	guint16 i = 0;
 	
 	full_parameter_prepare(params);
@@ -483,7 +483,7 @@ static void test_iptables_plugin_parameters_port_full()
 static void test_iptables_plugin_parameters_ip_and_port_full()
 {
 	/* Port and ip  : ARGS_IP_PORT */
-	rule_params *params = rule_params_new(ARGS_IP_PORT_FULL);
+	rule_params *params = rule_params_new(ARGS_IP_PORT);
 	guint16 i = 0;
 	
 	full_parameter_prepare(params);
@@ -769,7 +769,7 @@ static void ip_port_and_range_full_negative(rule_params *params)
 static void test_iptables_plugin_parameters_ip_and_port_range_full()
 {
 	/* Port and ip  : ARGS_IP_PORT */
-	rule_params *params = rule_params_new(ARGS_IP_PORT_RANGE_FULL);
+	rule_params *params = rule_params_new(ARGS_IP_PORT_RANGE);
 	
 	full_parameter_prepare(params);
 	
@@ -832,8 +832,8 @@ static void test_iptables_plugin_parameters_ip_and_port_range_full()
 
 static void test_iptables_plugin_parameters_port_range_full()
 {
-	/* Port and ip  : ARGS_PORT_RANGE_FULL */
-	rule_params *params = rule_params_new(ARGS_PORT_RANGE_FULL);
+	/* Port and ip  : ARGS_PORT_RANGE */
+	rule_params *params = rule_params_new(ARGS_PORT_RANGE);
 	
 	full_parameter_prepare(params);
 	
@@ -853,7 +853,7 @@ static void test_iptables_plugin_parameters_port_range_full()
 static void test_iptables_plugin_parameters_service_full()
 {
 	/* service  : ARGS_SERVICE */
-	rule_params *params = rule_params_new(ARGS_SERVICE_FULL);
+	rule_params *params = rule_params_new(ARGS_SERVICE);
 	guint16 i = 0;
 	
 	g_assert(params);
@@ -938,7 +938,7 @@ static void test_iptables_plugin_parameters_check_operation()
 		g_assert(!check_operation(params));
 	}
 	
-	params->args = ARGS_IP_FULL;
+	params->args = ARGS_IP;
 	
 	// ADD, REMOVE and FLUSH ok for rest that require operation
 	for(i = 0; i < 2 ; i++)
@@ -959,11 +959,11 @@ static void test_iptables_plugin_parameters_check_operation()
 static void test_iptables_plugin_parameters_check_ips()
 {
 	gint i = 0;
-	rule_params *params = rule_params_new(ARGS_IP_FULL);
+	rule_params *params = rule_params_new(ARGS_IP);
 	
 	g_assert(params);
 	
-	for(i = ARGS_IP_FULL ; i <= ARGS_IP_SERVICE_FULL ; i++)
+	for(i = ARGS_IP ; i <= ARGS_IP_SERVICE ; i++)
 	{
 		params->args = i;
 		
@@ -993,21 +993,21 @@ static void test_iptables_plugin_parameters_check_ips()
 
 static void test_iptables_plugin_parameters_check_ports()
 {
-	rule_params *params = rule_params_new(ARGS_IP_PORT_FULL);
+	rule_params *params = rule_params_new(ARGS_IP_PORT);
 	
 	gint i = 0;
 	
 	gint basic_full[] = {
-		ARGS_IP_PORT_FULL,
-		ARGS_IP_SERVICE_FULL,
-		ARGS_PORT_FULL,
-		ARGS_SERVICE_FULL,
+		ARGS_IP_PORT,
+		ARGS_IP_SERVICE,
+		ARGS_PORT,
+		ARGS_SERVICE,
 		0
 	};
 	
 	gint src_and_dest_range[] = {
-		ARGS_IP_PORT_RANGE_FULL,
-		ARGS_PORT_RANGE_FULL,
+		ARGS_IP_PORT_RANGE,
+		ARGS_PORT_RANGE,
 		0
 	};
 	
@@ -1128,11 +1128,11 @@ static void test_iptables_plugin_parameters_check_ports()
 
 static void test_iptables_plugin_parameters_check_service()
 {
-	rule_params *params = rule_params_new(ARGS_SERVICE_FULL);
+	rule_params *params = rule_params_new(ARGS_SERVICE);
 	
 	g_assert(params);
 	
-	gint full[] = { ARGS_SERVICE_FULL, ARGS_IP_SERVICE_FULL, 0 };
+	gint full[] = { ARGS_SERVICE, ARGS_IP_SERVICE, 0 };
 	gint i = 0;
 
 	for(i = 0; full[i]; i++)
@@ -1197,7 +1197,7 @@ static void test_iptables_plugin_parameters_check_chain_restricted()
 
 static void test_iptables_plugin_parameters_check_port_range()
 {
-	rule_params *params = rule_params_new(ARGS_PORT_RANGE_FULL);
+	rule_params *params = rule_params_new(ARGS_PORT_RANGE);
 	
 	g_assert(params);
 	
