@@ -139,21 +139,22 @@ Signal is sent to clients with at least listen() access.
 ### RuleAdded
 
 A rule has been added to iptables. Ip address, port/port
-range, protocol and operation (ADD/REMOVE) are sent as string parameters.
+range and protocol are sent as string parameters.
 
 Signal is sent to clients with at least listen() access.
 
 ### RuleRemoved
 
 A rule has been removed from iptables. Ip address, port/port
-range, protocol and operation (ADD/REMOVE) are sent as string parameters.
+range and protocol are sent as string parameters.
 
 Signal is sent to clients with at least listen() access.
 
 ### ChainChanged
 
-A chain was added or removed in a table. Affected table and chain are sent as
-string parameter with operation type (ADD/REMOVE).
+A chain was added to or removed from a table, or table was flushed in a table.
+Affected table and chain are sent as string parameter with operation type
+(ADD=0, REMOVE=1, FLUSH=2).
 
 Signal is sent to clients with at least listen() access.
 
@@ -254,8 +255,8 @@ string:filter string:CUSTOM1 uint16:0
 
 ### Result codes to method calls
 
-Each method call results in a reply containing integer and corresponding
-textual description as follows:
+Each method call results in a reply containing a return value (integer). The
+return values and their textual descriptions are as follows:
 
 |Return value|Description|
 |------------|-----------|
