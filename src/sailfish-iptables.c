@@ -143,84 +143,71 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 	
 	switch(params->args)
 	{
-		// TODO redo this
 		case ARGS_PORT:
 		case ARGS_SERVICE:
-			g_string_append_printf(rule,"-p %s -m %s", 
-				params->protocol, params->protocol);
-							
-			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u",
-					params->port_src[0]);
-				
-			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u",
-					params->port_dst[0]);
-				
-			break;
 		case ARGS_PORT_RANGE:
 			g_string_append_printf(rule,"-p %s -m %s",
 				params->protocol, params->protocol);
-				
-			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u:%u",
-					params->port_src[0], params->port_src[1]);
 					
+			if(params->port_src[0])
+			{
+				if(params->port_src[1]) // Range specified
+					g_string_append_printf(rule," --sport %u:%u",
+						params->port_src[0], params->port_src[1]);
+				else
+					g_string_append_printf(rule," --sport %u",
+						params->port_src[0]);
+			}
+			
 			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u:%u",
+			{
+				if(params->port_dst[1]) // Range specified
+					g_string_append_printf(rule," --dport %u:%u",
 					params->port_dst[0], params->port_dst[1]);
-				
-			break;
-		case ARGS_IP:
-			if(params->ip_src)
-				g_string_append_printf(rule,"-s%s%s", 
-					params->ip_negate_src ? " ! " : " ", params->ip_src);
-					
-			if(params->ip_dst)
-				g_string_append_printf(rule," -d%s%s",
-					params->ip_negate_dst ? " ! " : " ", params->ip_dst);
-			break;
-		case ARGS_IP_PORT:
-		case ARGS_IP_SERVICE:
-			if(params->ip_src)
-				g_string_append_printf(rule,"-s%s%s", 
-					params->ip_negate_src ? " ! " : " ", params->ip_src);
-					
-			if(params->ip_dst)
-				g_string_append_printf(rule," -d%s%s",
-					params->ip_negate_dst ? " ! " : " ", params->ip_dst);
-					
-			g_string_append_printf(rule," -p %s -m %s",
-				params->protocol, params->protocol);
-				
-			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u",
-					params->port_src[0]);
-				
-			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u",
-					params->port_dst[0]);
+				else
+					g_string_append_printf(rule," --dport %u",
+						params->port_dst[0]);
+			}
 
 			break;
+		case ARGS_IP:
+		case ARGS_IP_PORT:
+		case ARGS_IP_SERVICE:
 		case ARGS_IP_PORT_RANGE:
 			if(params->ip_src)
 				g_string_append_printf(rule,"-s%s%s", 
 					params->ip_negate_src ? " ! " : " ", params->ip_src);
-					
+			
 			if(params->ip_dst)
 				g_string_append_printf(rule," -d%s%s",
 					params->ip_negate_dst ? " ! " : " ", params->ip_dst);
-					
+			
+			if(params->args == ARGS_IP) // Has no more parameters
+				break;
+			
 			g_string_append_printf(rule," -p %s -m %s",
 				params->protocol, params->protocol);
-				
+			
 			if(params->port_src[0])
-				g_string_append_printf(rule," --sport %u:%u",
-					params->port_src[0], params->port_src[1]);
-					
+			{
+				if(params->port_src[1]) // Range specified
+					g_string_append_printf(rule," --sport %u:%u",
+						params->port_src[0], params->port_src[1]);
+				else
+					g_string_append_printf(rule," --sport %u",
+						params->port_src[0]);
+			}
+			
 			if(params->port_dst[0])
-				g_string_append_printf(rule," --dport %u:%u",
+			{
+				if(params->port_dst[1]) // Range specified
+					g_string_append_printf(rule," --dport %u:%u",
 					params->port_dst[0], params->port_dst[1]);
+				else
+					g_string_append_printf(rule," --dport %u",
+						params->port_dst[0]);
+			}
+
 			break;
 		default:
 			rval = INVALID_REQUEST;
