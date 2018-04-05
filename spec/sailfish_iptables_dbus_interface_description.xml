@@ -473,14 +473,14 @@ Sent after a rule is succesfully removed from iptables. Any of the string parame
 	ChainChanged:
 	@table: Affected table name
 	@chain: Affected chain name
-	@operation: Type of change: ADD or REMOVE
+	@operation: Type of change: ADD=0, REMOVE=1, FLUSH=2
 	
 Sent when chain was added to or removed from a table.
 -->
 <signal name="ChainChanged">
 <arg name="table" type="s"/>
 <arg name="chain" type="s"/>
-<arg name="operation" type="s"/>
+<arg name="operation" type="q"/>
 </signal>
 
 
