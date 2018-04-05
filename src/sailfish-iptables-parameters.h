@@ -73,20 +73,6 @@ void client_disconnect_data_free(client_disconnect_data* data);
 void rule_params_free(rule_params *params);
 rule_params* rule_params_new(rule_args args);
 
-void rule_params_set_table(rule_params *params, const gchar *table);
-void rule_params_set_chain(rule_params *params, const gchar *chain);
-void rule_params_set_target(rule_params *params, const gchar *target);
-void rule_params_set_policy(rule_params *params, const gchar *policy);
-void rule_params_set_service(rule_params *params, const gchar *service);
-void rule_params_set_ip_src(rule_params *params, const gchar *ip);
-void rule_params_set_ip_dst(rule_params *params, const gchar *ip);
-void rule_params_set_port_src(rule_params *params, guint16 ports[2]);
-void rule_params_set_port_dst(rule_params *params, guint16 ports[2]);
-void rule_params_set_protocol_str(rule_params *params, const gchar *protocol);
-void rule_params_set_protocol(rule_params *params, guint16 protocol);
-void rule_params_set_ip_src_negate(rule_params *params, gboolean value);
-void rule_params_set_ip_dst_negate(rule_params *params, gboolean value);
-
 gboolean check_operation(rule_params *params);
 gboolean check_ips(rule_params *params);
 gboolean check_ports(rule_params *params);
