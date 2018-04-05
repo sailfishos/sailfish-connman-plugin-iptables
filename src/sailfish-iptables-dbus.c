@@ -54,32 +54,6 @@
 //#define DBG(fmt,arg...) connman_debug(fmt, ## arg)
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
 
-// Method names
-
-#define SAILFISH_IPTABLES_GET_VERSION			"GetVersion"
-
-#define SAILFISH_IPTABLES_RULE_IP			"RuleIp"
-#define SAILFISH_IPTABLES_RULE_IP_PORT			"RuleIpWithPort"
-#define SAILFISH_IPTABLES_RULE_IP_PORT_RANGE		"RuleIpWithPortRange"
-#define SAILFISH_IPTABLES_RULE_PORT			"RulePort"
-#define SAILFISH_IPTABLES_RULE_PORT_RANGE		"RulePortRange"
-#define SAILFISH_IPTABLES_RULE_IP_SERVICE		"RuleIpWithService"
-#define SAILFISH_IPTABLES_RULE_SERVICE			"RuleService"
-
-#define SAILFISH_IPTABLES_CHANGE_IN_POLICY		"ChangeInputPolicy"
-#define SAILFISH_IPTABLES_CHANGE_OUT_POLICY		"ChangeOutputPolicy"
-#define SAILFISH_IPTABLES_CHANGE_POLICY			"ChangePolicy"
-
-#define SAILFISH_IPTABLES_CLEAR_IPTABLES_TABLE		"ClearIptablesTable"
-#define SAILFISH_IPTABLES_CLEAR_IPTABLES_CHAINS		"ClearIptablesChains"
-
-#define SAILFISH_IPTABLES_REGISTER_CLIENT		"Register"
-#define SAILFISH_IPTABLES_UNREGISTER_CLIENT		"Unregister"
-
-#define SAILFISH_IPTABLES_MANAGE_CHAIN			"ManageChain"
-
-#define SAILFISH_IPTABLES_GET_IPTABLES_CONTENT		"GetIptablesContent"
-
 /*
 	Result codes (enum sailfish_iptables_result):
 	
