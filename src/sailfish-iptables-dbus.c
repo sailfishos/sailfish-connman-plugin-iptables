@@ -2,38 +2,36 @@
  *
  *  Sailfish Connection Manager iptables plugin
  *
- *  Copyright (C) 2017 Jolla Ltd. All rights reserved.
- *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
- *
  *  BSD 3-Clause License
  * 
- *  Copyright (c) 2017, 
+ *  Copyright (c) 2017-2018, Jolla Ltd.
+ *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
  *  All rights reserved.
 
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
  * 
- *  * Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
+ *  Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
  * 
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
+ *  Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation
+ *  and/or other materials provided with the distribution.
  * 
- *  * Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
+ *  Neither the name of the copyright holder nor the names of its
+ *  contributors may be used to endorse or promote products derived from
+ *  this software without specific prior written permission.
 
- *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- *    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- *    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- *    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- *    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- *    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ *  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ *  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
  
@@ -97,7 +95,7 @@
 	9 = "Cannot perform operation",
 	10 = "Unauthorized, please try again",
 	11 = "Unregister failed",
-	12 = "Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."
+	12 = "Invalid chain name given. Chain name is reserved or does not exist."
 	13 = "Invalid table name given."
 	100 = "Access denied",
 */
@@ -136,20 +134,20 @@
 
 /* These prototypes are connected to dbus */
 
-static DBusMessage* sailfish_iptables_register_client(DBusConnection* connection,
-			DBusMessage* message, void *user_data);
+static DBusMessage* sailfish_iptables_register_client(
+			DBusConnection* connection, DBusMessage* message, void *user_data);
 			
-static DBusMessage* sailfish_iptables_unregister_client(DBusConnection* connection,
-			DBusMessage* message, void *user_data);
+static DBusMessage* sailfish_iptables_unregister_client(
+			DBusConnection* connection, DBusMessage* message, void *user_data);
 
-static DBusMessage* sailfish_iptables_clear_iptables_rules(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
+static DBusMessage* sailfish_iptables_clear_iptables_rules(
+			DBusConnection *connection, DBusMessage *message, void *user_data);
 			
-static DBusMessage* sailfish_iptables_clear_iptables_chains(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
+static DBusMessage* sailfish_iptables_clear_iptables_chains(
+			DBusConnection *connection, DBusMessage *message, void *user_data);
 			
-static DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
-			DBusMessage *message, void *user_data);
+static DBusMessage* sailfish_iptables_get_iptables_content(
+			DBusConnection *connection, DBusMessage *message, void *user_data);
 
 static DBusMessage* sailfish_iptables_version(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
@@ -445,23 +443,6 @@ static const GDBusMethodTable methods[] = {
 		{ }
 	};
 
-	
-/* New method sailfish_iptables_rule:
-	Table:											s
-	Chain:	(INPUT, OUTPUT, CUSTOM)					s
-	Target:	uint8 (ACCEPT,DROP,QUEUE,RETURN,REJECT)	q
-	Dest IP: str / uint32 							a(si)
-	Source IP: str / uint32							a(si)
-	Mask: uint8 (0-128) 							q
-	Ports : uint16									a(q)
-	Protocol: uint8 (IPPROTO_TCP/UDP/SCTP))			q
-	Operation: uint8 0/1 (add-default,remove)		q
-	
-	
-	-> a(ssqa(si)a(si)qa(q)qq)
-*/
-
-
 static void dbus_client_destroy(void *user_data)
 {
 	if(user_data)
@@ -474,7 +455,8 @@ static void dbus_client_destroy(void *user_data)
 	}
 }
 
-static void dbus_client_disconnected(DBusConnection *connection, void *user_data)
+static void dbus_client_disconnected(DBusConnection *connection,
+	void *user_data)
 {
 	dbus_client_destroy(user_data);
 }
@@ -549,7 +531,8 @@ DBusMessage* sailfish_iptables_clear_iptables_chains(DBusConnection *connection,
 DBusMessage* sailfish_iptables_get_iptables_content(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	return process_request(message, &get_iptables_content, ARGS_GET_CONTENT, user_data);
+	return process_request(message, &get_iptables_content, ARGS_GET_CONTENT,
+		user_data);
 }
 
 DBusMessage* sailfish_iptables_version(DBusConnection *connection,
@@ -577,48 +560,49 @@ DBusMessage* sailfish_iptables_change_policy(
 DBusMessage* sailfish_iptables_rule_ip(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return process_request(message, &add_rule_to_iptables, ARGS_IP_FULL,
+	return process_request(message, &add_rule_to_iptables, ARGS_IP,
 		user_data);
 }
 
 DBusMessage* sailfish_iptables_rule_ip_port(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return process_request(message, &add_rule_to_iptables, ARGS_IP_PORT_FULL,
+	return process_request(message, &add_rule_to_iptables, ARGS_IP_PORT,
 		user_data);
 }
 
 DBusMessage* sailfish_iptables_rule_ip_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return process_request(message, &add_rule_to_iptables, ARGS_IP_PORT_RANGE_FULL,
+	return process_request(message, &add_rule_to_iptables, ARGS_IP_PORT_RANGE,
 		user_data);
 }
 
 DBusMessage* sailfish_iptables_rule_port(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return process_request(message, &add_rule_to_iptables, ARGS_PORT_FULL, user_data);
+	return process_request(message, &add_rule_to_iptables, ARGS_PORT,
+		user_data);
 }
 
 DBusMessage* sailfish_iptables_rule_port_range(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return process_request(message, &add_rule_to_iptables, ARGS_PORT_RANGE_FULL,
+	return process_request(message, &add_rule_to_iptables, ARGS_PORT_RANGE,
 		user_data);
 }
 
 DBusMessage* sailfish_iptables_rule_ip_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return process_request(message, &add_rule_to_iptables, ARGS_IP_SERVICE_FULL,
+	return process_request(message, &add_rule_to_iptables, ARGS_IP_SERVICE,
 		user_data);
 }
 
 DBusMessage* sailfish_iptables_rule_service(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
-	return process_request(message, &add_rule_to_iptables, ARGS_SERVICE_FULL,
+	return process_request(message, &add_rule_to_iptables, ARGS_SERVICE,
 		user_data);
 }
 
@@ -716,7 +700,9 @@ DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message,
 		dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
 			DBUS_TYPE_STRING_AS_STRING, &array);
 			
-		for(list_iter = params->iptables_content->chains ; list_iter ; list_iter = list_iter->next)
+		for(list_iter = params->iptables_content->chains ;
+			list_iter ;
+			list_iter = list_iter->next)
 		{
 			gchar* content = (gchar*)list_iter->data;
 			dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &content);
@@ -728,7 +714,9 @@ DBusMessage* sailfish_iptables_dbus_reply_result(DBusMessage *message,
 		dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
 			DBUS_TYPE_STRING_AS_STRING, &array);
 			
-		for(list_iter = params->iptables_content->rules ; list_iter ; list_iter = list_iter->next)
+		for(list_iter = params->iptables_content->rules ;
+			list_iter ;
+			list_iter = list_iter->next)
 		{
 			gchar* content = (gchar*)list_iter->data;
 			dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &content);
@@ -757,13 +745,13 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 
 	switch(params->args)
 	{
-		case ARGS_IP_FULL:
-		case ARGS_IP_PORT_FULL:
-		case ARGS_IP_PORT_RANGE_FULL:
-		case ARGS_IP_SERVICE_FULL:
-		case ARGS_PORT_FULL:
-		case ARGS_PORT_RANGE_FULL:
-		case ARGS_SERVICE_FULL:
+		case ARGS_IP:
+		case ARGS_IP_PORT:
+		case ARGS_IP_PORT_RANGE:
+		case ARGS_IP_SERVICE:
+		case ARGS_PORT:
+		case ARGS_PORT_RANGE:
+		case ARGS_SERVICE:
 			switch(params->operation)
 			{
 				case ADD:
@@ -787,7 +775,8 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				DBUS_TYPE_UINT16,	&(params->port_src[1]),
 				DBUS_TYPE_UINT16,	&(params->port_dst[0]),
 				DBUS_TYPE_UINT16,	&(params->port_dst[1]),
-				DBUS_TYPE_STRING,	params->protocol ? &(params->protocol) : &empty,
+				DBUS_TYPE_STRING,	params->protocol ? &(params->protocol) : 
+					&empty,
 				DBUS_TYPE_INVALID);
 			break;
 		case ARGS_CLEAR:
@@ -824,7 +813,8 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 	return signal;
 }
 
-rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message, rule_args args)
+rule_params* sailfish_iptables_dbus_get_parameters_from_msg(
+	DBusMessage* message, rule_args args)
 {
 	rule_params *params = rule_params_new(args);
 	DBusError* error = NULL;
@@ -842,7 +832,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 	
 	switch(params->args)
 	{
-		case ARGS_IP_FULL:
+		case ARGS_IP:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
 						DBUS_TYPE_STRING, &chain_name,
@@ -852,7 +842,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
-		case ARGS_IP_PORT_FULL:
+		case ARGS_IP_PORT:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
 						DBUS_TYPE_STRING, &chain_name,
@@ -865,7 +855,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
-		case ARGS_IP_PORT_RANGE_FULL:
+		case ARGS_IP_PORT_RANGE:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
 						DBUS_TYPE_STRING, &chain_name,
@@ -880,7 +870,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
-		case ARGS_IP_SERVICE_FULL:
+		case ARGS_IP_SERVICE:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
 						DBUS_TYPE_STRING, &chain_name,
@@ -893,7 +883,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
-		case ARGS_PORT_FULL:
+		case ARGS_PORT:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
 						DBUS_TYPE_STRING, &chain_name,
@@ -904,7 +894,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
-		case ARGS_PORT_RANGE_FULL:
+		case ARGS_PORT_RANGE:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
 						DBUS_TYPE_STRING, &chain_name,
@@ -917,7 +907,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 						DBUS_TYPE_UINT16, &operation,
 						DBUS_TYPE_INVALID);
 			break;
-		case ARGS_SERVICE_FULL:
+		case ARGS_SERVICE:
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
 						DBUS_TYPE_STRING, &chain_name,
@@ -1024,7 +1014,8 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 			params->service_src	= service_lowercase;
 			
 			if(!params->protocol)
-				params->protocol = get_protocol_for_service(params->service_src);
+				params->protocol = get_protocol_for_service(
+										params->service_src);
 		}
 	}
 	
@@ -1036,7 +1027,8 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 			params->port_dst[index] = port_dst[index];
 
 			if(!params->protocol)
-				params->protocol = get_protocol_for_port(params->port_dst[index]);
+				params->protocol = get_protocol_for_port(
+										params->port_dst[index]);
 		}
 		
 		if(port_src[index] && validate_port(port_src[index]))
@@ -1044,7 +1036,8 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(DBusMessage* message
 			params->port_src[index] = port_src[index];
 
 			if(!params->protocol)
-				params->protocol = get_protocol_for_port(params->port_src[index]);
+				params->protocol = get_protocol_for_port(
+										params->port_src[index]);
 		}
 	}
 	

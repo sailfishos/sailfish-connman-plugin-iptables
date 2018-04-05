@@ -2,38 +2,36 @@
  *
  *  Sailfish Connection Manager iptables plugin parameter handling functions.
  *
- *  Copyright (C) 2017 Jolla Ltd. All rights reserved.
- *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
- *
  *  BSD 3-Clause License
  * 
- *  Copyright (c) 2017, 
+ *  Copyright (c) 2017-2018, Jolla Ltd.
+ *  Contact: Jussi Laakkonen <jussi.laakkonen@jolla.com>
  *  All rights reserved.
 
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
  * 
- *  * Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
+ *  Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
  * 
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
+ *  Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation
+ *  and/or other materials provided with the distribution.
  * 
- *  * Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
+ *  Neither the name of the copyright holder nor the names of its
+ *  contributors may be used to endorse or promote products derived from
+ *  this software without specific prior written permission.
 
- *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- *    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- *    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- *    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- *    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- *    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ *  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ *  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
  
@@ -272,13 +270,15 @@ GList *api_data_get_custom_chain_table(api_data *data, const gchar* table_name)
 {
 	GList* iter = NULL;
 	
-	if(!data || !table_name || !(*table_name) || !g_list_length(data->custom_chains))
+	if(!data || !table_name || !(*table_name) || 
+		!g_list_length(data->custom_chains))
 		return NULL;
 		
 	for(iter = g_list_first(data->custom_chains); iter ; iter = iter->next)
 	{
 		custom_chain_item *item = (custom_chain_item*)iter->data;
-		if(item && item->table && *(item->table) && !g_ascii_strcasecmp(item->table, table_name))
+		if(item && item->table && *(item->table) && 
+			!g_ascii_strcasecmp(item->table, table_name))
 		{
 			DBG("%s get_custom_chain_table() found table %s chains size %d",
 				PLUGIN_NAME, item->table, g_list_length(item->chains));
@@ -304,7 +304,8 @@ gboolean api_data_remove_custom_chains(api_data *data, const gchar* table_name)
 		
 		custom_chain_item_free(item);
 		
-		data->custom_chains = g_list_remove_link(data->custom_chains, table_entry);
+		data->custom_chains = g_list_remove_link(data->custom_chains,
+								table_entry);
 		g_list_free_1(table_entry);
 		
 		return true;
@@ -477,7 +478,7 @@ gboolean check_ips(rule_params *params)
 	if(!params)
 		return false;
 	
-	if(params->args >= ARGS_IP_FULL && params->args <= ARGS_IP_SERVICE_FULL)
+	if(params->args >= ARGS_IP && params->args <= ARGS_IP_SERVICE)
 		return params->ip_src || params->ip_dst ? true : false;
 	
 	return false;
@@ -492,18 +493,18 @@ gboolean check_ports(rule_params *params)
 	switch(params->args)
 	{
 		// src or dst has to be set
-		case ARGS_IP_PORT_FULL:
-		case ARGS_IP_SERVICE_FULL:
-		case ARGS_PORT_FULL:
-		case ARGS_SERVICE_FULL:
+		case ARGS_IP_PORT:
+		case ARGS_IP_SERVICE:
+		case ARGS_PORT:
+		case ARGS_SERVICE:
 			if(params->port_dst[0])
 				rval = true;
 			if(params->port_src[0])
 				rval |= true;
 			return rval;
 		// either dst or src range must be set, or both
-		case ARGS_IP_PORT_RANGE_FULL:
-		case ARGS_PORT_RANGE_FULL:
+		case ARGS_IP_PORT_RANGE:
+		case ARGS_PORT_RANGE:
 			if(params->port_dst[0] && params->port_dst[1])
 				rval = true;
 			if(params->port_src[0] && params->port_src[1])
@@ -521,8 +522,8 @@ gboolean check_service(rule_params *params)
 
 	switch(params->args)
 	{
-		case ARGS_IP_SERVICE_FULL:
-		case ARGS_SERVICE_FULL:
+		case ARGS_IP_SERVICE:
+		case ARGS_SERVICE:
 			return params->service_src || params->service_dst ? true : false;
 		default:
 			return false;
@@ -556,7 +557,7 @@ api_result check_parameters(rule_params* params)
 	if(!params)
 		return INVALID;
 		
-	if(params->args >= ARGS_IP_FULL && params->args <= ARGS_SERVICE_FULL)
+	if(params->args >= ARGS_IP && params->args <= ARGS_SERVICE)
 	{
 		if(!params->table) return INVALID_TABLE;
 		if(!params->chain) return INVALID_CHAIN_NAME;
@@ -565,40 +566,40 @@ api_result check_parameters(rule_params* params)
 		
 	switch(params->args)
 	{
-		case ARGS_IP_FULL:
+		case ARGS_IP:
 			return check_ips(params) ? OK : INVALID_IP;
-		case ARGS_IP_PORT_FULL:
+		case ARGS_IP_PORT:
 			if(!check_ips(params)) return INVALID_IP;
 			if(!check_ports(params)) return INVALID_PORT;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_IP_PORT_RANGE_FULL:
+		case ARGS_IP_PORT_RANGE:
 			if(!check_ips(params)) return INVALID_IP;
 			if(!check_ports(params)) return INVALID_PORT;
 			if(!check_port_range(params)) return INVALID_PORT_RANGE;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_IP_SERVICE_FULL:
+		case ARGS_IP_SERVICE:
 			if(!check_ips(params)) return INVALID_IP;
 			if(!check_service(params)) return INVALID_SERVICE;
 			if(!check_ports(params)) return INVALID_SERVICE;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_PORT_FULL:
+		case ARGS_PORT:
 			if(!check_ports(params)) return INVALID_PORT;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_PORT_RANGE_FULL:
+		case ARGS_PORT_RANGE:
 			if(!check_ports(params)) return INVALID_PORT;
 			if(!check_port_range(params)) return INVALID_PORT_RANGE;
 			if(!params->protocol) return INVALID_PROTOCOL;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
-		case ARGS_SERVICE_FULL:
+		case ARGS_SERVICE:
 			if(!check_service(params)) return INVALID_SERVICE;
 			if(!params->protocol) return INVALID_SERVICE;
 			if(!check_operation(params)) return INVALID_REQUEST;
