@@ -154,6 +154,7 @@ gboolean sailfish_iptables_policy_check_args(DBusMessage *message,
 		case ARGS_IP_PORT:
 		case ARGS_IP_PORT_RANGE:
 		case ARGS_IP_SERVICE:
+		case ARGS_IP_ICMP:
 		case ARGS_PORT:
 		case ARGS_PORT_RANGE:
 		case ARGS_SERVICE:
@@ -161,6 +162,7 @@ gboolean sailfish_iptables_policy_check_args(DBusMessage *message,
 		case ARGS_CHAIN:
 		case ARGS_GET_CONTENT:
 		case ARGS_CLEAR_CHAINS:
+		case ARGS_ICMP:
 			return sailfish_iptables_policy_check(message, data,
 				SAILFISH_DBUS_ACCESS_MANAGE);
 		default:

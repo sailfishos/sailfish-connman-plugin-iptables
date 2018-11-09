@@ -78,6 +78,7 @@ gboolean check_ips(rule_params *params);
 gboolean check_ports(rule_params *params);
 gboolean check_service(rule_params *params);
 gboolean check_port_range(rule_params *params);
+gboolean check_icmp(rule_params *params);
 api_result check_parameters(rule_params* params);
 gboolean check_chain_restricted(rule_params *params);
 

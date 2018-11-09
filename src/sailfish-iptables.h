@@ -123,6 +123,7 @@ typedef enum sailfish_iptables_result {
 	INVALID_CHAIN_NAME, // 12
 	INVALID_TABLE, // 13
 	INVALID_TARGET, // 14
+	INVALID_ICMP, // 15
 	ACCESS_DENIED = 100 
 } api_result;
 
@@ -138,9 +139,11 @@ typedef enum sailfish_iptables_dbus_rule_args {
 	ARGS_IP_PORT,
 	ARGS_IP_PORT_RANGE,
 	ARGS_IP_SERVICE,
+	ARGS_IP_ICMP,
 	ARGS_PORT,
 	ARGS_PORT_RANGE,
 	ARGS_SERVICE,
+	ARGS_ICMP,
 	ARGS_CLEAR,
 	ARGS_CLEAR_CHAINS,
 	ARGS_POLICY,
@@ -161,6 +164,7 @@ typedef struct sailfish_iptables_rule_params {
 	gchar *service_dst;
 	guint16 port_src[2];
 	guint16 port_dst[2];
+	guint16 icmp[2];
 	gchar *protocol;
 	rule_operation operation;
 	connman_iptables_content *iptables_content;

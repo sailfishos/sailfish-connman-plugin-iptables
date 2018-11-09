@@ -423,24 +423,15 @@ void rule_params_free(rule_params *params)
 
 rule_params* rule_params_new(rule_args args)
 {
-	rule_params *params = g_new0(rule_params,1);
-	params->ip_src = NULL;
-	params->ip_dst = NULL;
-	params->ip_negate_src = false;
-	params->ip_negate_dst = false;
-	params->service_src = NULL;
-	params->service_dst = NULL;
-	params->port_dst[0] = params->port_dst[1] = 0;
-	params->port_src[0] = params->port_src[1] = 0;
-	params->protocol = NULL;
+	rule_params *params = g_try_new0(rule_params,1);
+
+	if (!params)
+		return NULL;
+
 	params->operation = UNDEFINED;
-	params->table = NULL;
-	params->policy = NULL;
-	params->chain = NULL;
-	params->target = NULL;
-	params->iptables_content = NULL;
 	params->args = args;
-	
+	params->icmp[0] = params->icmp[1] = G_MAXUINT16;
+
 	return params;
 }
 
@@ -477,10 +468,10 @@ gboolean check_ips(rule_params *params)
 {
 	if(!params)
 		return false;
-	
-	if(params->args >= ARGS_IP && params->args <= ARGS_IP_SERVICE)
+
+	if(params->args >= ARGS_IP && params->args <= ARGS_IP_ICMP)
 		return params->ip_src || params->ip_dst ? true : false;
-	
+
 	return false;
 }
 
@@ -530,6 +521,11 @@ gboolean check_service(rule_params *params)
 	}
 }
 
+gboolean check_icmp(rule_params *params)
+{
+	return params->icmp[0] != G_MAXUINT16 && params->icmp[1] != G_MAXUINT16;
+}
+
 gboolean check_chain_restricted(rule_params *params)
 {
 	const gchar const * DEFAULT_CHAINS[] = {
@@ -557,7 +553,7 @@ api_result check_parameters(rule_params* params)
 	if(!params)
 		return INVALID;
 		
-	if(params->args >= ARGS_IP && params->args <= ARGS_SERVICE)
+	if(params->args >= ARGS_IP && params->args <= ARGS_ICMP)
 	{
 		if(!params->table) return INVALID_TABLE;
 		if(!params->chain) return INVALID_CHAIN_NAME;
@@ -616,6 +612,12 @@ api_result check_parameters(rule_params* params)
 		case ARGS_CHAIN:
 			if(!params->chain) return INVALID_CHAIN_NAME;
 			if(!params->table) return INVALID_REQUEST;
+			if(!check_operation(params)) return INVALID_REQUEST;
+			return OK;
+		case ARGS_IP_ICMP:
+			if(!check_ips(params)) return INVALID_IP;
+		case ARGS_ICMP:
+			if(!check_icmp(params)) return INVALID_ICMP;
 			if(!check_operation(params)) return INVALID_REQUEST;
 			return OK;
 		case ARGS_GET_CONTENT:

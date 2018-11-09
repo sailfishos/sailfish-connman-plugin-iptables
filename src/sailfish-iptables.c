@@ -209,6 +209,22 @@ api_result add_rule_to_iptables(rule_params *params, api_data *data)
 			}
 
 			break;
+		case ARGS_IP_ICMP:
+			if(params->ip_src)
+				g_string_append_printf(rule,"-s%s%s",
+					params->ip_negate_src ? " ! " : " ",
+					params->ip_src);
+
+			if(params->ip_dst)
+				g_string_append_printf(rule," -d%s%s",
+					params->ip_negate_dst ? " ! " : " ",
+					params->ip_dst);
+		case ARGS_ICMP:
+			g_string_append_printf(rule, " -p icmp -m icmp"
+					" --icmp-type %u/%u", params->icmp[0],
+					params->icmp[1]);
+
+			break;
 		default:
 			rval = INVALID_REQUEST;
 			break;
@@ -391,8 +407,9 @@ DBusMessage* process_request(DBusMessage *message,
 				sailfish_iptables_dbus_send_signal(signal, data);
 		}
 		else
-			ERR("%s %s %s %d", PLUGIN_NAME, 
-				"process_request():", "request was not successful",
+			ERR("%s %s %s %d", PLUGIN_NAME,
+				"process_request():",
+				"request was not successful",
 				result);
 	}
 
