@@ -276,7 +276,8 @@ string:filter string:CUSTOM1 uint16:0
 ```
 
 ### Add rule to REJECT ICMP echo requests from 192.168.1.1
- ```
+
+```
 dbus-send --system \
 --type=method_call \
 --print-reply \
