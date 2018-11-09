@@ -40,6 +40,8 @@
 	
 	14: Invalid target name given.
 	
+	15: Invalid ICMP type or code given.
+	
 	100: Access denied
 -->
 <interface name="org.sailfishos.connman.mdm.iptables">
@@ -353,6 +355,36 @@ Sends signal ChainChanged
 <arg name="source_service" type="s" direction="in"/>
 <arg name="destination_service" type="s" direction="in"/>
 <arg name="protocol" type="u" direction="in"/>
+<arg name="operation" type="q" direction="in"/>
+<arg name="result" type="q" direction="out"/>
+</method>
+
+<!--
+	RuleICMP:
+	@table: Add this rule to table
+	@chain: Add this rule to chain in table
+	@target: Target for the rule (ACCEPT, DROP, REJECT, QUEUE, RETURN or user added custom chain name as it was added - no sfos_ prefix or error is returned)
+	@source_ip: Rule source IP address, added with -s to iptables. Empty string is not processed. If empty destination_ip must be set. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
+	@destination_ip: Rule destination IP address, added with -d to iptables. Empty string is not processed. If empty source_ip must be set. Can contain negation (!) at the beginning and a network mask at the end in dot-notation and CIDR (e.g., 192.168.0.1/24 192.168.0.1/255.255.255.0).
+	@icmp_type: IANA defined ICMP type 0...43
+	@icmp_code:  IANA defined ICMP code for type, 0...15
+	@operation: 0 = add, 1 = remove
+	@result: 0 = rule added, 1 = invalid IP, 7 = rule does not exist (when removing), 8 = invalid operation, 9 = cannot make change (iptables error), 12 = invalid chain name, 13 = invalid table, 14 = invalid target, 15 = invalid ICMP type or code, 100 = access denied
+
+	Valid ICMP types and codes can be viewed at: https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml - the combinations and valid codes for each are not yet checked.
+
+	IP addresses are optional, either or both of ip addresses can be set.
+
+	Sends signals RuleICMPAdded when rule is added and RuleICMPRemoved when rule is removed.
+-->
+<method name="RuleICMP">
+<arg name="table" type="s" direction="in"/>
+<arg name="chain" type="s" direction="in"/>
+<arg name="target" type="s" direction="in"/>
+<arg name="source_ip" type="s" direction="in"/>
+<arg name="destination_ip" type="s" direction="in"/>
+<arg name="icmp_type" type="q" direction="in"/>
+<arg name="icmp_code" type="q" direction="in"/>
 <arg name="operation" type="q" direction="in"/>
 <arg name="result" type="q" direction="out"/>
 </method>
