@@ -63,6 +63,16 @@ PORT_RANGE_INPUTS_VERIFY[1]='dpts:1000:2000'
 PORT_RANGE_INPUTS_VERIFY[2]='spts:23:24 dpts:1000:2000'
 PORT_RANGE_INPUTS_VERIFY[3]=''
 
+ICMP_INPUTS[0]='uint16:0 uint16:0'
+ICMP_INPUTS[1]='uint16:8 uint16:0'
+ICMP_INPUTS[2]='uint16:43 uint16:0'
+ICMP_INPUTS[3]=''
+
+ICMP_INPUTS_VERIFY[0]='icmptype 0 code 0'
+ICMP_INPUTS_VERIFY[1]='icmptype 8 code 0'
+ICMP_INPUTS_VERIFY[2]='icmptype 43 code 0'
+ICMP_INPUTS_VERIFY[3]=''
+
 METHOD_INPUTS_RESULT="0"
 CLEAR_RESULT="0"
 POLICY_RESULT="0"
@@ -433,6 +443,92 @@ function test_rule_service()
 	done
 }
 
+function test_rule_icmp()
+{
+	INDEX=0
+	METHOD="RuleICMP"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${ICMP_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="string: string: ${ICMP_INPUTS[$INDEX]}"
+					VERIFY="icmp ${ICMP_INPUTS_VERIFY[$INDEX]}"
+					FAILED=0
+		
+					test_begin
+				
+					RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					test_progress
+				
+					RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+					if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+				
+					test_end "$FAILED"
+				fi
+				INDEX=$((INDEX+1))
+				
+			done
+			INDEX=0
+		done
+	done
+}
+
+function test_rule_icmp_ip()
+{
+	INDEX=0
+	INDEX_IP=0
+	METHOD="RuleICMP"
+
+	for CHAIN in $TEST_CHAINS ; do
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${ICMP_INPUTS[$INDEX]} ]] ; do
+			
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						RULE="${IP_INPUTS[$INDEX_IP]} ${ICMP_INPUTS[$INDEX]}"
+						VERIFY="icmp ${IP_VERIFY[$INDEX_IP]} ${ICMP_INPUTS_VERIFY[$INDEX]}"
+						FAILED=0
+			
+						test_begin
+					
+						RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_change "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(send_rule_message "$METHOD" "REMOVE" "$CHAIN" "$TARGET" "$RULE")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+						test_progress
+					
+						RES=$(run_method_test_check_removed "$CHAIN" "$TARGET" "$VERIFY")
+						if [ "$RES" != "0" ] ; then FAILED=1 ; fi
+					
+						test_end "$FAILED"
+					fi
+					INDEX=$((INDEX+1))
+					
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+}
+
 function test_rule_pre()
 {
 	test_begin
@@ -495,6 +591,8 @@ function run_rule_tests()
 	test_rule_port
 	test_rule_port_range
 	test_rule_service
+	test_rule_icmp
+	test_rule_icmp_ip
 	test_rule_post
 }
 #run_policy_test "ChangeInputPolicy" "INPUT" "DROP" 

@@ -235,6 +235,21 @@ gboolean validate_port(guint16 port)
 	return port && port <= 0xFFFF;
 }
 
+gboolean validate_icmp(int protocol, guint16 *icmp)
+{
+	switch (protocol)
+	{
+		case IPV4:
+		case AF_INET:
+			return icmp[0] < 0x2c && icmp[1] < 0x10;
+		case IPV6:
+		case AF_INET6:
+			return icmp[0] < 0xa2 && icmp[1] < 0x100;
+	}
+
+	return false;
+}
+
 rule_operation validate_operation(guint16 operation)
 {
 	switch(operation)

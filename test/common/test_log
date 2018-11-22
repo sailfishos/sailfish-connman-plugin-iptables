@@ -10,9 +10,15 @@ function prepare_log()
 		TEST_ID="test$RANDOM"
 	else
 		TEST_ID="$1"
-	fi	
+	fi
+	
+	GROUP_PRIVILEGED=""
 
-	TEST_LOG_FILE="$TEST_LOG_FILE_PREFIX""$TEST_ID""$TEST_LOG_FILE_POSTFIX"
+	if [[ $(groups|grep privileged) ]] ; then
+		GROUP_PRIVILEGED=".privileged"
+	fi
+
+	TEST_LOG_FILE="$TEST_LOG_FILE_PREFIX""$TEST_ID""$GROUP_PRIVILEGED""$TEST_LOG_FILE_POSTFIX"
 	
 	if [ -f "$TEST_LOG_FILE" ] ; then
 		rm "$TEST_LOG_FILE"

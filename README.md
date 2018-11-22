@@ -61,6 +61,10 @@ Following parameters are supported:
  - Port with any address 0.0.0.0
  - Port range with any address 0.0.0.0
  - Service name with any address 0.0.0.0
+
+Additionally ICMP rule adding is also supported. Parameters for this are:
+ - ICMP type and code
+ - IP address (optional, can be left as empty strings if not required)
  
 Both source and destination parameters are supported for all. Either or both
 parameters (source or destination) must be set. They are added to iptables
@@ -138,15 +142,15 @@ Signal is sent to clients with at least listen() access.
 
 ### RuleAdded
 
-A rule has been added to iptables. Ip address, port/port
-range and protocol are sent as string parameters.
+A rule has been added to iptables. Ip address, port/port range and protocol are
+sent as string parameters along table, chain and target information.
 
 Signal is sent to clients with at least listen() access.
 
 ### RuleRemoved
 
-A rule has been removed from iptables. Ip address, port/port
-range and protocol are sent as string parameters.
+A rule has been removed from iptables. Ip address, port/port range and protocol
+are sent as string parameters along table, chain and target information.
 
 Signal is sent to clients with at least listen() access.
 
@@ -157,6 +161,23 @@ Affected table and chain are sent as string parameter with operation type
 (ADD=0, REMOVE=1, FLUSH=2).
 
 Signal is sent to clients with at least listen() access.
+
+### RuleICMPAdded
+
+An ICMP rule has been added to iptables. ICMP type and code + IP address (empty
+if not set) are sent as parameters along table, chain and target information.
+
+Signal is sent to clients with at least listen() access.
+
+
+### RuleICMPRemoved
+
+An ICMP rule has been removed from iptables. ICMP type and code + IP address
+(empty if not set) are sent as parameters along table, chain and target
+information.
+
+Signal is sent to clients with at least listen() access.
+
 
 ## Example of use
 
@@ -238,7 +259,8 @@ dbus-send --system \
 /org/sailfishos/connman/mdm/iptables \
 org.sailfishos.connman.mdm.iptables.RuleIpWithService \
 string:filter string:INPUT string:DROP \
-string:192.168.0.2 string: string:ssh string: uint16:1
+string:192.168.0.2 string: string:ssh string: \
+uint32:17 uint16:1
 ```
 
 ### Add a custom chain to filter table
@@ -251,6 +273,19 @@ dbus-send --system \
 /org/sailfishos/connman/mdm/iptables \
 org.sailfishos.connman.mdm.iptables.ManageChain \
 string:filter string:CUSTOM1 uint16:0
+```
+
+### Add rule to REJECT ICMP echo requests from 192.168.1.1
+
+```
+dbus-send --system \
+--type=method_call \
+--print-reply \
+--dest="net.connman" \
+/org/sailfishos/connman/mdm/iptables \
+org.sailfishos.connman.mdm.iptables.RuleICMP \
+string:filter string:OUTPUT string:"REJECT" \
+string:192.168.1.1 string: uint16:8 uint16:0 uint16:0
 ```
 
 ### Result codes to method calls
@@ -275,6 +310,7 @@ return values and their textual descriptions are as follows:
 |12 |"Invalid chain name given. Chain name is reserved (add) or does not exist (remove)."|
 |13 | "Invalid table name given." |
 |14	| "Invalid target name given."|
+|15	| "Invalid ICMP type or code given."|
 |100 |"Access denied"|
 
 In addition, GetIptablesContent will return two string arrays (if error these

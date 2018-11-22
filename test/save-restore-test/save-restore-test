@@ -58,6 +58,16 @@ PORT_RANGE_INPUTS_VERIFY[1]='dpts:1000:2000'
 PORT_RANGE_INPUTS_VERIFY[2]='spts:23:24 dpts:1000:2000'
 PORT_RANGE_INPUTS_VERIFY[3]=''
 
+ICMP_INPUTS[0]='uint16:0 uint16:0'
+ICMP_INPUTS[1]='uint16:8 uint16:0'
+ICMP_INPUTS[2]='uint16:43 uint16:0'
+ICMP_INPUTS[3]=''
+
+ICMP_INPUTS_VERIFY[0]='-p icmp -m icmp --icmp-type 0/0'
+ICMP_INPUTS_VERIFY[1]='-p icmp -m icmp --icmp-type 8/0'
+ICMP_INPUTS_VERIFY[2]='-p icmp -m icmp --icmp-type 43/0'
+ICMP_INPUTS_VERIFY[3]=''
+
 METHOD_INPUTS_RESULT="0"
 CLEAR_RESULT="0"
 POLICY_RESULT="0"
@@ -592,6 +602,142 @@ function test_rule_service_verify()
 	test_end "$FAILED"
 }
 
+function test_rule_icmp()
+{
+	INDEX=0
+	FAILED=0
+	METHOD="RuleICMP"
+
+	test_begin
+
+	for CHAIN in $TEST_CHAINS ; do
+		test_progress
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${ICMP_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					RULE="string: string: ${ICMP_INPUTS[$INDEX]}"
+
+					RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					
+					if [ "$RES" != "0" ] ; then
+						log "$RES"
+						FAILED=1
+					fi
+				fi
+				INDEX=$((INDEX+1))
+				
+			done
+			INDEX=0
+		done
+	done
+
+	test_end "$FAILED"
+}
+
+function test_rule_icmp_verify()
+{
+	INDEX=0
+	FAILED=0
+
+	test_begin
+
+	for CHAIN in $TEST_CHAINS ; do
+		test_progress
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${ICMP_INPUTS[$INDEX]} ]] ; do
+				if [ "$CHAIN" != "$TARGET" ] ; then
+					VERIFY="${ICMP_INPUTS_VERIFY[$INDEX]}"
+
+					RES=$(check_save_file_rule "$CHAIN" "$TARGET" "$VERIFY")
+					
+					if [ "$RES" != "0" ] ; then
+						log "$RES"
+						FAILED=1
+					fi
+				fi
+				INDEX=$((INDEX+1))
+				
+			done
+			INDEX=0
+		done
+	done
+
+	test_end "$FAILED"
+}
+
+function test_rule_icmp_ip()
+{
+	INDEX=0
+	INDEX_IP=0
+	FAILED=0
+	METHOD="RuleICMP"
+	
+	test_begin
+
+	for CHAIN in $TEST_CHAINS ; do
+		test_progress
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${ICMP_INPUTS[$INDEX]} ]] ; do
+			
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						RULE="${IP_INPUTS[$INDEX_IP]} ${ICMP_INPUTS[$INDEX]}"
+
+						RES=$(send_rule_message "$METHOD" "ADD" "$CHAIN" "$TARGET" "$RULE")
+					
+						if [ "$RES" != "0" ] ; then
+							log "$RES"
+							FAILED=1
+						fi
+					fi
+					INDEX=$((INDEX+1))
+					
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+
+	test_end "$FAILED"
+}
+
+function test_rule_icmp_ip_verify()
+{
+	INDEX=0
+	FAILED=0
+
+	test_begin
+
+	for CHAIN in $TEST_CHAINS ; do
+		test_progress
+		for TARGET in $TEST_TARGETS ; do
+			while [[ ! -z ${IP_INPUTS[$INDEX_IP]} ]] ; do
+				while [[ ! -z ${ICMP_INPUTS[$INDEX]} ]] ; do
+					if [ "$CHAIN" != "$TARGET" ] ; then
+						VERIFY="${IP_VERIFY[$INDEX_IP]}.*
+${ICMP_INPUTS_VERIFY[$INDEX]}"
+						RES=$(check_save_file_rule "$CHAIN" "$TARGET" "$VERIFY")
+	
+						if [ "$RES" != "0" ] ; then
+							log "$RES"
+							FAILED=1
+						fi
+					fi
+					INDEX=$((INDEX+1))
+					
+				done
+				INDEX=0
+				INDEX_IP=$((INDEX_IP+1))
+			done
+			INDEX_IP=0
+		done
+	done
+
+	test_end "$FAILED"
+}
+
 function test_rule_pre()
 {
 	test_begin
@@ -806,6 +952,8 @@ function run_add_test()
 	test_rule_port
 	test_rule_port_range
 	test_rule_service
+	test_rule_icmp
+	test_rule_icmp_ip
 }
 
 function run_add_test_check()
@@ -817,6 +965,8 @@ function run_add_test_check()
 	test_rule_port_verify
 	test_rule_port_range_verify
 	test_rule_service_verify
+	test_rule_icmp_verify
+	test_rule_icmp_ip_verify
 }
 
 function run_command_checks()

@@ -71,6 +71,8 @@
 	11 = "Unregister failed",
 	12 = "Invalid chain name given. Chain name is reserved or does not exist."
 	13 = "Invalid table name given."
+	14 = "Invalid target name given."
+	15 = "Invalid ICMP type or code."
 	100 = "Access denied",
 */
 
@@ -101,6 +103,8 @@
 #define SAILFISH_IPTABLES_INPUT_TABLE			{"table", "s"}
 #define SAILFISH_IPTABLES_INPUT_CHAIN			{"chain", "s"}
 #define SAILFISH_IPTABLES_INPUT_TARGET			{"target", "s"}
+#define SAILFISH_IPTABLES_INPUT_ICMP_TYPE		{"icmp_type", "q"}
+#define SAILFISH_IPTABLES_INPUT_ICMP_CODE		{"icmp_code", "q"}
 
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_CHAIN		SAILFISH_IPTABLES_INPUT_CHAIN
 #define SAILFISH_IPTABLES_SIGNAL_POLICY_TYPE		{"policy", "s"}
@@ -127,7 +131,8 @@ static DBusMessage* sailfish_iptables_version(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
 
 static DBusMessage* sailfish_iptables_change_policy(
-			DBusConnection *connection,	DBusMessage *message, void *user_data);
+				DBusConnection *connection,
+				DBusMessage *message, void *user_data);
 
 // New api functions
 static DBusMessage* sailfish_iptables_rule_ip(
@@ -154,6 +159,11 @@ static DBusMessage* sailfish_iptables_rule_service(
 // Chain management
 static DBusMessage* sailfish_iptables_manage_chain(
 			DBusConnection *connection,	DBusMessage *message, void *user_data);
+
+// ICMP
+static DBusMessage* sailfish_iptables_icmp_rule(
+				DBusConnection *connection,
+				DBusMessage *message, void *user_data);
 
 const gchar const * OP_STR[] = {"Add", "Remove", "Undefined", NULL};
 
@@ -224,6 +234,30 @@ static const GDBusSignalTable signals[] = {
 				SAILFISH_IPTABLES_INPUT_PROTOCOL_STR
 			))
 		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_SIGNAL_ICMP_ADD,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_ICMP_TYPE,
+				SAILFISH_IPTABLES_INPUT_ICMP_CODE
+			))
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_SIGNAL_ICMP_REM,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_ICMP_TYPE,
+				SAILFISH_IPTABLES_INPUT_ICMP_CODE
+			))
+		},
 		{ }
 	};
 	
@@ -231,38 +265,33 @@ static const GDBusMethodTable methods[] = {
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_REGISTER_CLIENT, 
 			NULL,
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_register_client)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_UNREGISTER_CLIENT, 
 			NULL,
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_unregister_client)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_CLEAR_IPTABLES_TABLE, 
 			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_TABLE),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING),
+				SAILFISH_IPTABLES_RESULT_TYPE),
 			sailfish_iptables_clear_iptables_rules)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_CLEAR_IPTABLES_CHAINS, 
 			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_TABLE),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING),
+				SAILFISH_IPTABLES_RESULT_TYPE),
 			sailfish_iptables_clear_iptables_chains)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_GET_IPTABLES_CONTENT, 
 			GDBUS_ARGS(SAILFISH_IPTABLES_INPUT_TABLE),
 			GDBUS_ARGS(
 				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING,
 				SAILFISH_IPTABLES_RESULT_CHAINS,
 				SAILFISH_IPTABLES_RESULT_RULES
 				),
@@ -274,8 +303,7 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_CHAIN,
 				SAILFISH_IPTABLES_INPUT_OPERATION),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_manage_chain)
 		},
@@ -285,8 +313,7 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_CHAIN,
 				SAILFISH_IPTABLES_INPUT_POLICY_INT),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_change_policy)
 		},
@@ -299,8 +326,7 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_IP_DST,
 				SAILFISH_IPTABLES_INPUT_OPERATION),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_rule_ip)
 		},
@@ -317,8 +343,7 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_rule_ip_port)
 		},
@@ -337,8 +362,7 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_rule_ip_port_range)
 		},
@@ -355,8 +379,7 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_rule_ip_service)
 		},
@@ -371,8 +394,7 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_rule_port)
 		},
@@ -389,8 +411,7 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_OPERATION
 			),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_rule_port_range)
 		},
@@ -404,10 +425,25 @@ static const GDBusMethodTable methods[] = {
 				SAILFISH_IPTABLES_INPUT_PROTOCOL,
 				SAILFISH_IPTABLES_INPUT_OPERATION),
 			GDBUS_ARGS(
-				SAILFISH_IPTABLES_RESULT_TYPE,
-				SAILFISH_IPTABLES_RESULT_STRING
+				SAILFISH_IPTABLES_RESULT_TYPE
 			),
 			sailfish_iptables_rule_service)
+		},
+		{ GDBUS_METHOD(SAILFISH_IPTABLES_RULE_ICMP,
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_INPUT_TABLE,
+				SAILFISH_IPTABLES_INPUT_CHAIN,
+				SAILFISH_IPTABLES_INPUT_TARGET,
+				SAILFISH_IPTABLES_INPUT_IP_SRC,
+				SAILFISH_IPTABLES_INPUT_IP_DST,
+				SAILFISH_IPTABLES_INPUT_ICMP_TYPE,
+				SAILFISH_IPTABLES_INPUT_ICMP_CODE,
+				SAILFISH_IPTABLES_INPUT_OPERATION
+			),
+			GDBUS_ARGS(
+				SAILFISH_IPTABLES_RESULT_TYPE
+			),
+			sailfish_iptables_icmp_rule)
 		},
 		{ GDBUS_METHOD(SAILFISH_IPTABLES_GET_VERSION, 
 			NULL,
@@ -584,6 +620,14 @@ DBusMessage* sailfish_iptables_manage_chain(
 			DBusConnection *connection,	DBusMessage *message, void *user_data)
 {
 	return process_request(message, &manage_chain, ARGS_CHAIN, user_data);
+}
+
+DBusMessage* sailfish_iptables_icmp_rule(
+				DBusConnection *connection,
+				DBusMessage *message, void *user_data)
+{
+	return process_request(message, &add_rule_to_iptables, ARGS_ICMP,
+			user_data);
 }
 
 void sailfish_iptables_dbus_send_signal(DBusMessage *signal, api_data* data)
@@ -780,6 +824,40 @@ DBusMessage* sailfish_iptables_dbus_signal_from_rule_params(rule_params* params)
 				DBUS_TYPE_STRING,	params->chain ? &(params->chain) : &empty,
 				DBUS_TYPE_UINT16,	&(params->operation),
 				DBUS_TYPE_INVALID);
+		case ARGS_IP_ICMP:
+		case ARGS_ICMP:
+			switch(params->operation)
+			{
+				case ADD:
+					signal_name =
+						SAILFISH_IPTABLES_SIGNAL_ICMP_ADD;
+					break;
+				case REMOVE:
+					signal_name =
+						SAILFISH_IPTABLES_SIGNAL_ICMP_REM;
+					break;
+				// Rules can be only added or removed
+				default:
+					return NULL;
+			}
+			signal = sailfish_iptables_dbus_signal(
+				signal_name,
+				DBUS_TYPE_STRING,
+				params->table ? &(params->table) : &empty,
+				DBUS_TYPE_STRING,
+				params->chain ? &(params->chain) : &empty,
+				DBUS_TYPE_STRING,
+				params->target ? &(params->target) : &empty,
+				DBUS_TYPE_STRING,
+				params->ip_src ? &(params->ip_src) : &empty,
+				DBUS_TYPE_STRING,
+				params->ip_dst ? &(params->ip_dst) : &empty,
+				DBUS_TYPE_UINT16,
+				&(params->icmp[0]),
+				DBUS_TYPE_UINT16,
+				&(params->icmp[1]),
+				DBUS_TYPE_INVALID);
+			break;
 		default:
 			break;
 	}
@@ -798,6 +876,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(
 	gchar *service_dst = NULL, *service_src = NULL, *service_lowercase = NULL;
 	dbus_uint16_t port_dst[2] = {0};
 	dbus_uint16_t port_src[2] = {0};
+	dbus_uint16_t icmp[2] = {0};
 	dbus_uint16_t operation = 0, policy_int = 0;
 	dbus_uint32_t protocol_int = 0;
 	gint index = 0;
@@ -916,6 +995,26 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(
 			rval = dbus_message_get_args(message, error,
 						DBUS_TYPE_STRING, &table,
 						DBUS_TYPE_INVALID);
+		case ARGS_IP_ICMP:
+		case ARGS_ICMP:
+			rval = dbus_message_get_args(message, error,
+						DBUS_TYPE_STRING, &table,
+						DBUS_TYPE_STRING, &chain_name,
+						DBUS_TYPE_STRING, &target,
+						DBUS_TYPE_STRING, &ip_src,
+						DBUS_TYPE_STRING, &ip_dst,
+						DBUS_TYPE_UINT16, &(icmp[0]),
+						DBUS_TYPE_UINT16, &(icmp[1]),
+						DBUS_TYPE_UINT16, &operation,
+						DBUS_TYPE_INVALID);
+			/*
+			 * IP address is optional with ICMP, if either the
+			 * values is set the value(s) must pass ip check.
+			 * IP check is enabled by changing the type to
+			 * ARGS_IP_ICMP, which is not otherwise enabled.
+			*/
+			if ((ip_src && *ip_src) || (ip_dst && *ip_dst))
+				params->args = ARGS_IP_ICMP;
 			break;
 	}
 	
@@ -928,7 +1027,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(
 		dbus_error_free(error);
 		return NULL;
 	}
-	
+
 	// Source IP (iptables -s)
 	if(ip_src && g_utf8_validate(ip_src,-1,NULL) &&
 		validate_ip_address(IPV4, ip_src))
@@ -941,7 +1040,7 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(
 		else
 			params->ip_src = format_ip(IPV4, ip_src);
 	}
-	
+
 	// Destination IP (iptables -d)
 	if(ip_dst && g_utf8_validate(ip_dst,-1,NULL) &&
 		validate_ip_address(IPV4,ip_dst))
@@ -1015,6 +1114,12 @@ rule_params* sailfish_iptables_dbus_get_parameters_from_msg(
 		}
 	}
 	
+	// Check icmp type and code
+	if (validate_icmp(IPV4, icmp)) {
+		params->icmp[0] = icmp[0];
+		params->icmp[1] = icmp[1];
+	}
+
 	// Operation is always set, if operation is UNDEFINED check_parameters()
 	// will return INVALID_REQUEST
 	params->operation = validate_operation(operation);

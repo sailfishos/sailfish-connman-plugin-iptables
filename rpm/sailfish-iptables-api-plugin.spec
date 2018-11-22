@@ -1,5 +1,5 @@
 Name: sailfish-connman-iptables-plugin
-Version: 0.0.4
+Version: 0.0.5
 Release: 1
 Summary: Sailfish Connman iptables management plugin
 Group: Development/Libraries

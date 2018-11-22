@@ -883,6 +883,59 @@ static void test_iptables_plugin_parameters_service_full()
 	rule_params_free(params);
 }
 
+static void test_iptables_plugin_parameters_check_icmp_full()
+{
+	rule_params *params = rule_params_new(ARGS_ICMP);
+	
+	g_assert(params);
+	
+	full_parameter_prepare(params);
+	g_assert(check_parameters(params) == INVALID_ICMP);
+	
+	params->icmp[0] = params->icmp[1] = 0;
+	g_assert(check_parameters(params) == INVALID_REQUEST);
+	
+	params->operation = ADD;
+	g_assert(check_parameters(params) == OK);
+	
+	params->icmp[0] = 8;
+	params->icmp[1] = 15;
+	g_assert(check_parameters(params) == OK);
+	
+	params->icmp[0] = params->icmp[1] = G_MAXUINT16;
+	g_assert(check_parameters(params) == INVALID_ICMP);
+	
+	params->icmp[0] = 160;
+	g_assert(check_parameters(params) == INVALID_ICMP);
+	
+	params->icmp[0] = 0xffff;
+	params->icmp[1] = 1;
+	g_assert(check_parameters(params) == INVALID_ICMP);
+	
+	params->args = ARGS_IP_ICMP;
+	g_assert(check_parameters(params) == INVALID_IP);
+	
+	params->ip_src = g_strdup("192.168.10.1");
+	g_assert(check_parameters(params));
+	
+	params->ip_dst = g_strdup("192.168.10.1");
+	g_assert(check_parameters(params) == INVALID_ICMP);
+	
+	params->icmp[0] = 8;
+	params->icmp[1] = 15;
+	g_assert(check_parameters(params) == OK);
+	
+	params->icmp[0] = params->icmp[1] = G_MAXUINT16;
+	g_free(params->ip_src);
+	params->ip_src = NULL;
+	g_assert(check_parameters(params) == INVALID_ICMP);
+	
+	params->icmp[0] = params->icmp[1] = 0;
+	g_assert(check_parameters(params) == OK);
+
+	rule_params_free(params);
+}
+
 static void test_iptables_plugin_parameters_chain()
 {
 	/* service  : ARGS_SERVICE */
@@ -1213,6 +1266,38 @@ static void test_iptables_plugin_parameters_check_port_range()
 	params->port_src[1] = 23;
 	g_assert(check_port_range(params));
 	
+	rule_params_free(params);
+}
+
+static void test_iptables_plugin_parameters_check_icmp()
+{
+	rule_params *params = rule_params_new(ARGS_ICMP);
+	
+	g_assert(params);
+	
+	g_assert(!check_icmp(params));
+	
+	params->icmp[0] = params->icmp[1] = 0;
+	
+	g_assert(check_icmp(params));
+	
+	params->icmp[0] = 8;
+	params->icmp[1] = 15;
+	
+	g_assert(check_icmp(params));
+	
+	params->icmp[0] = 161;
+	
+	g_assert(check_icmp(params));
+
+	params->icmp[1] = G_MAXUINT16;
+
+	g_assert(!check_icmp(params));
+	
+	params->icmp[0] = G_MAXUINT16;
+	params->icmp[1] = 1;
+	g_assert(!check_icmp(params));
+
 	rule_params_free(params);
 }
 
@@ -1660,6 +1745,62 @@ static void test_iptables_plugin_validate_policy()
 	g_assert(!validate_policy("QUEUE"));
 }
 
+static void test_iptables_plugin_validate_icmp()
+{
+	guint16 icmp[2] = {0};
+	int type = IPV4;
+	
+	g_assert(validate_icmp(type, icmp));
+	
+	icmp[0] = 8;
+	icmp[1] = 10;
+	
+	g_assert(validate_icmp(type, icmp));
+	
+	icmp[0] = 44;
+	
+	g_assert(!validate_icmp(type, icmp));
+	
+	icmp[0] = 8;
+	icmp[1] = 16;
+	
+	g_assert(!validate_icmp(type, icmp));
+	
+	icmp[0] = 44;
+	icmp[1] = 16;
+	
+	g_assert(!validate_icmp(type, icmp));
+	
+	type = IPV6;
+	icmp[0] = icmp[1] = 0;
+	
+	g_assert(validate_icmp(type, icmp));
+	
+	icmp[0] = 8;
+	icmp[1] = 10;
+	
+	g_assert(validate_icmp(type, icmp));
+	
+	icmp[0] = 161;
+	icmp[1] = 255;
+	
+	g_assert(validate_icmp(type, icmp));
+	
+	icmp[0] = 163;
+	
+	g_assert(!validate_icmp(type, icmp));
+	
+	icmp[0] = 161;
+	icmp[1] = 256;
+	
+	g_assert(!validate_icmp(type, icmp));
+	
+	icmp[0] = 200;
+	icmp[1] = 257;
+	
+	g_assert(!validate_icmp(type, icmp));
+}
+
 #define PREFIX				"/sailfish_connman_plugin_iptables_"
 #define PREFIX_VALIDATE			PREFIX"validate/"
 #define PREFIX_PARAMETERS		PREFIX"parameters/"
@@ -1683,6 +1824,7 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_VALIDATE "negated_ip_address", test_iptables_plugin_negated_ip_address);
 	g_test_add_func(PREFIX_VALIDATE "chain", test_iptables_plugin_validate_chain);
 	g_test_add_func(PREFIX_VALIDATE "target", test_iptables_plugin_validate_target);
+	g_test_add_func(PREFIX_VALIDATE "icmp", test_iptables_plugin_validate_icmp);
 	
 	g_test_add_func(PREFIX_PARAMETERS "check_operation", test_iptables_plugin_parameters_check_operation);
 	g_test_add_func(PREFIX_PARAMETERS "check_ips", test_iptables_plugin_parameters_check_ips);
@@ -1690,12 +1832,14 @@ int main(int argc, char *argv[])
 	g_test_add_func(PREFIX_PARAMETERS "check_port_range", test_iptables_plugin_parameters_check_port_range);
 	g_test_add_func(PREFIX_PARAMETERS "check_service", test_iptables_plugin_parameters_check_service);
 	g_test_add_func(PREFIX_PARAMETERS "check_chain_restricted", test_iptables_plugin_parameters_check_chain_restricted);
+	g_test_add_func(PREFIX_PARAMETERS "check_icmp", test_iptables_plugin_parameters_check_icmp);
 	g_test_add_func(PREFIX_PARAMETERS "ip_full", test_iptables_plugin_parameters_ip_full);
 	g_test_add_func(PREFIX_PARAMETERS "port_full", test_iptables_plugin_parameters_port_full);
 	g_test_add_func(PREFIX_PARAMETERS "ip_and_port_full", test_iptables_plugin_parameters_ip_and_port_full);
 	g_test_add_func(PREFIX_PARAMETERS "ip_and_port_range_full", test_iptables_plugin_parameters_ip_and_port_range_full);
 	g_test_add_func(PREFIX_PARAMETERS "port_range_full", test_iptables_plugin_parameters_port_range_full);
 	g_test_add_func(PREFIX_PARAMETERS "service_full", test_iptables_plugin_parameters_service_full);
+	g_test_add_func(PREFIX_PARAMETERS "icmp_full", test_iptables_plugin_parameters_check_icmp_full);
 	g_test_add_func(PREFIX_PARAMETERS "chains", test_iptables_plugin_parameters_chain);
 	g_test_add_func(PREFIX_PARAMETERS "dbus_client", test_iptables_plugin_parameters_dbus_client);
 	g_test_add_func(PREFIX_PARAMETERS "api_data", test_iptables_plugin_parameters_api_data);

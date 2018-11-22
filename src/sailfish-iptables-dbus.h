@@ -68,6 +68,7 @@
 #define SAILFISH_IPTABLES_RULE_PORT_RANGE		"RulePortRange"
 #define SAILFISH_IPTABLES_RULE_IP_SERVICE		"RuleIpWithService"
 #define SAILFISH_IPTABLES_RULE_SERVICE			"RuleService"
+#define SAILFISH_IPTABLES_RULE_ICMP			"RuleICMP"
 
 #define SAILFISH_IPTABLES_CHANGE_IN_POLICY		"ChangeInputPolicy"
 #define SAILFISH_IPTABLES_CHANGE_OUT_POLICY		"ChangeOutputPolicy"
@@ -92,6 +93,8 @@
 #define SAILFISH_IPTABLES_SIGNAL_POLICY		"PolicyChanged"
 #define SAILFISH_IPTABLES_SIGNAL_RULE_ADD		"RuleAdded"
 #define SAILFISH_IPTABLES_SIGNAL_RULE_REM		"RuleRemoved"
+#define SAILFISH_IPTABLES_SIGNAL_ICMP_ADD	"RuleICMPAdded"
+#define SAILFISH_IPTABLES_SIGNAL_ICMP_REM	"RuleICMPRemoved"
 #define SAILFISH_IPTABLES_SIGNAL_CHAIN		"ChainChanged"
 
 gint sailfish_iptables_dbus_register(api_data* data);

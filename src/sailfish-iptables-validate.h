@@ -55,6 +55,7 @@ guint16 validate_service_name(const gchar *service);
 gboolean validate_protocol(const gchar *protocol);
 gchar* validate_protocol_int(gint protocol);
 gboolean validate_port(guint16 port);
+gboolean validate_icmp(int protocol, guint16 *icmp);
 rule_operation validate_operation(guint16 operation);
 gchar* validate_chain(const gchar *table, const gchar *chain);
 gchar* validate_target(const gchar* table, const gchar *target);
