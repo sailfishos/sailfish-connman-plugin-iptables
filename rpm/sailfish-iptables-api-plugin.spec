@@ -63,12 +63,13 @@ Requires:   blts-tools
 %description tests
 This package contains the functional (end-to-end) testing scripts for Sailfish Connman iptables management plugin. Testing scripts require to be run as root or the user has to have privileges to use iptables commands. The testing script saves iptables filter table to a temporary file, executes tests on clean filter table and restores the previous state of iptables filter table. Tests are conducted using the sailfish iptables API over D-Bus. All changes are made to iptables filter table and the changes are removed after tests are done.
 
-%package docs
+%package doc
 Summary:  Documentation for Sailfish Connman iptables management plugin
 Group:    Documentation
 BuildRequires: glib2-devel >= 2.28
+Obsoletes: %{name}-docs
 
-%description docs
+%description doc
 This package contains documentation for Sailfish Connman iptables management plugin. Contains readme, license and also API documentation. API documentation is provided as docbook xml from which other formats can be created.
 
 %prep
@@ -106,6 +107,10 @@ install -m 755 test/save-restore-test/save-restore-test %{buildroot}/opt/tests/%
 
 cp -a test/common %{buildroot}/opt/tests/%{name}/
 
+mkdir -p %{buildroot}%{_docdir}/%{name}-%{version}
+install -m0644 -t %{buildroot}%{_docdir}/%{name}-%{version} README.md \
+        doc/generated-doc-org.sailfishos.connman.mdm.iptables.xml
+
 %preun
 
 %post -p /sbin/ldconfig
@@ -114,6 +119,7 @@ cp -a test/common %{buildroot}/opt/tests/%{name}/
 
 %files
 %defattr(-,root,root,-)
+%license LICENSE.md
 %{_libdir}/connman/plugins/sailfish-connman-iptables-plugin.so
 
 %files config
@@ -126,9 +132,9 @@ cp -a test/common %{buildroot}/opt/tests/%{name}/
 
 %files tests
 %defattr(-,root,root,-)
+%dir /opt/tests/%{name}
 /opt/tests/%{name}/*
 
-%files docs
+%files doc
 %defattr(-,root,root,-)
-%doc README.md LICENSE.md
-%doc doc/generated-doc-org.sailfishos.connman.mdm.iptables.xml 
+%{_docdir}/%{name}-%{version}
