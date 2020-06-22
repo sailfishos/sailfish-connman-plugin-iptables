@@ -1,8 +1,7 @@
 Name: sailfish-connman-iptables-plugin
-Version: 0.0.5
+Version: 0.0.7
 Release: 1
 Summary: Sailfish Connman iptables management plugin
-Group: Development/Libraries
 License: BSD-3-Clause
 URL: https://github.com/sailfishos/sailfish-connman-plugin-iptables
 Source: %{name}-%{version}.tar.bz2
@@ -26,7 +25,6 @@ This package contains the Sailfish Connman plugin for iptables management.
 
 %package config
 Summary:    Configuration for Sailfish Connman plugin for iptables management
-Group:      Development/Tools
 Requires:   %{name} = %{version}
 
 %description config
@@ -34,7 +32,6 @@ This package contains configuration for Sailfish Connman plugin for iptables man
 
 %package unit-tests
 Summary:    Unit tests for Sailfish Connman iptables management plugin
-Group:      Development/Tools
 Requires:   %{name} = %{version}
 Requires:   bash
 Requires:   glib2-devel >= 2.28
@@ -51,7 +48,6 @@ This package contains the unit tests and unit test runner script for Sailfish Co
 
 %package tests
 Summary:    Test scripts for Sailfish Connman iptables management plugin
-Group:      Development/Tools
 Requires:   %{name} = %{version}
 Requires:   connman >= 1.32+git9
 Requires:   bash
@@ -65,7 +61,6 @@ This package contains the functional (end-to-end) testing scripts for Sailfish C
 
 %package doc
 Summary:  Documentation for Sailfish Connman iptables management plugin
-Group:    Documentation
 BuildRequires: glib2-devel >= 2.28
 Obsoletes: %{name}-docs
 
@@ -85,7 +80,7 @@ make -C unit test
 
 %install
 rm -rf %{buildroot}
-%make_install
+make DESTDIR=%{buildroot} LIBDIR=%{_libdir} install
 
 mkdir -p %{buildroot}/%{_libdir}/connman/plugins
 
