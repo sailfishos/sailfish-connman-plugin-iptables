@@ -8,7 +8,8 @@ REQUIRED_COMMANDS_BASE="dbus-send grep id"
 REQUIRED_COMMANDS_PRIV="$REQUIRED_COMMANDS_BASE"
 REQUIRED_COMMANDS_ROOT="$REQUIRED_COMMANDS_BASE iptables iptables-save iptables-restore"
 
-REQUIRED_USERS="root nemo"
+DEFAULT_USERNAME="defaultuser"
+REQUIRED_USERS="root $DEFAULT_USERNAME"
 REQUIRED_GROUPS="users privileged"
 PRIVILEGED=0
 
@@ -657,7 +658,7 @@ function run_clear_test()
 function run_register_tests()
 {
 	# 1. unregister, 11 for all
-	# 2. register, 0 for root, privileged, 12 for nemo
+	# 2. register, 0 for root, privileged, 12 for defaultuser
 	# 3. unregister, 11 for all since dbus-send quits after send
 	
 	MESSAGES="Unregister Register Unregister"
@@ -740,7 +741,7 @@ function run_tests()
 {
 	USER=$(whoami)
 	case $USER in
-		"nemo" | "sailfish_mdm")
+		"$DEFAULT_USERNAME" | "sailfish_mdm")
 			run_clear_test
 			;;
 	esac
@@ -834,7 +835,7 @@ function set_expected_result()
 	case $USER in
 		"root")
 			;;
-		"nemo" | "sailfish-mdm")
+		"$DEFAULT_USERNAME" | "sailfish-mdm")
 			CLEAR_RESULT=$RESULT_ACCESS_DENIED
 			if [[ $PRIVILEGED -eq 0 ]] ; then
 				METHOD_INPUTS_RESULT=$RESULT_ACCESS_DENIED
