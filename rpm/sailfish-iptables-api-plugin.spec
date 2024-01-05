@@ -50,7 +50,7 @@ This package contains the unit tests and unit test runner script for Sailfish Co
 Summary:    Test scripts for Sailfish Connman iptables management plugin
 Requires:   %{name} = %{version}
 Requires:   connman >= 1.32+git9
-Requires:   bash
+Requires:   gnu-bash
 Requires:   dbus >= 1.4
 Requires:   iptables
 Requires:   nemo-test-tools

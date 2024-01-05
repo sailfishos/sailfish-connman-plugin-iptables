@@ -81,7 +81,7 @@ EMPTY_IPTABLES[4]=':OUTPUT ACCEPT.*'
 EMPTY_IPTABLES[5]='COMMIT'
 EMPTY_IPTABLES[6]='# Completed on.*'
 
-CONNMAN_SAVE_FILE="/var/lib/connman/iptables/filter.v4"
+CONNMAN_SAVE_FILE="/home/.system/var/lib/connman/iptables/filter.v4"
 
 function include_sources()
 {

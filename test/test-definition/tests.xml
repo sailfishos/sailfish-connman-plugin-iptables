@@ -9,7 +9,7 @@
 				</step>
 			</case>
 			<case manual="false" name="End-to-end test as privileged user" timeout="150">
-				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /bin/su -g privileged -c '/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test' nemo
+				<step>PATH=/sbin:$PATH /usr/sbin/run-blts-root /bin/su -g privileged -c '/opt/tests/sailfish-connman-iptables-plugin/ete-test/sailfish-connman-iptables-plugin-test' defaultuser
 				</step>
 			</case>
 			<case manual="false" name="End-to-end test as regular user" timeout="150">
