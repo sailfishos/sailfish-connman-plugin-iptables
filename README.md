@@ -191,8 +191,10 @@ dbus-send --system \
 --print-reply \
 --dest="net.connman" \
 /org/sailfishos/connman/mdm/iptables \
-org.sailfishos.connman.mdm.iptables.ChangeInputPolicy \
-string:"drop"
+org.sailfishos.connman.mdm.iptables.ChangePolicy \
+string:"filter" \
+string:"input" \
+uint16:2
 ```
 
 ### Add rule to allow incoming connections from 192.168.0.1
