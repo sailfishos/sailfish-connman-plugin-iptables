@@ -29,14 +29,14 @@ IP_VERIFY[1]='192.168.123.2'
 IP_VERIFY[2]='192.168.123.1.*192.168.123.2'
 IP_VERIFY[3]=''
 
-IP_INPUTS_VERIFY[0]="0 ${IP_VERIFY[0]}"
-IP_INPUTS_VERIFY[1]="0 ${IP_VERIFY[1]}"
-IP_INPUTS_VERIFY[2]="0 ${IP_VERIFY[2]}"
+IP_INPUTS_VERIFY[0]="\(all\|0\) ${IP_VERIFY[0]}"
+IP_INPUTS_VERIFY[1]="\(all\|0\) ${IP_VERIFY[1]}"
+IP_INPUTS_VERIFY[2]="\(all\|0\) ${IP_VERIFY[2]}"
 IP_INPUTS_VERIFY[3]=''
 
-PORT_VERIFY_PRE[0]='17' # UDP
-PORT_VERIFY_PRE[1]='6'  # TCP
-PORT_VERIFY_PRE[2]='6'  # TCP
+PORT_VERIFY_PRE[0]="\(udp\|17\)" # UDP
+PORT_VERIFY_PRE[1]="\(tcp\|6\)"  # TCP
+PORT_VERIFY_PRE[2]="\(tcp\|6\)"  # TCP
 PORT_VERIFY_PRE[3]=''
 
 PORT_INPUTS[0]='uint16:23 uint16:0 uint32:17'
@@ -454,7 +454,7 @@ function test_rule_icmp()
 			while [[ ! -z ${ICMP_INPUTS[$INDEX]} ]] ; do
 				if [ "$CHAIN" != "$TARGET" ] ; then
 					RULE="string: string: ${ICMP_INPUTS[$INDEX]}"
-					VERIFY="1 ${ICMP_INPUTS_VERIFY[$INDEX]}"
+					VERIFY="\(icmp\|1\) ${ICMP_INPUTS_VERIFY[$INDEX]}"
 					FAILED=0
 
 					test_begin
@@ -497,7 +497,7 @@ function test_rule_icmp_ip()
 
 					if [ "$CHAIN" != "$TARGET" ] ; then
 						RULE="${IP_INPUTS[$INDEX_IP]} ${ICMP_INPUTS[$INDEX]}"
-						VERIFY="1 ${IP_VERIFY[$INDEX_IP]} ${ICMP_INPUTS_VERIFY[$INDEX]}"
+						VERIFY="\(icmp\|1\) ${IP_VERIFY[$INDEX_IP]} ${ICMP_INPUTS_VERIFY[$INDEX]}"
 						FAILED=0
 
 						test_begin
